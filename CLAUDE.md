@@ -28,6 +28,10 @@
   БД и backend — только во внутренней docker-сети (Docker обходит ufw!).
 - Деплой: docker compose; образы собираются в CI (GitHub Actions), не на сервере.
 - Бэкапы: pg_dump в S3 (настроить).
+- Код на сервере: `/opt/impact-log` (клон репозитория).
+- GitHub Actions secrets: `SSH_HOST`, `SSH_USER`, `SSH_KNOWN_HOSTS`, `SSH_PRIVATE_KEY` (ключ CI → сервер).
+- Схема деплоя: push в `main` → Actions собирает образы → GHCR → ssh на сервер →
+  `git pull && docker compose pull && docker compose up -d`.
 
 ## Стек
 Не выбран — ожидает решения владельца.
