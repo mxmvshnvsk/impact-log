@@ -12,3 +12,10 @@
 .l-content {
   max-width: var(--content-max-width);
 }
+
+/* Вертикальный ритм: дочерние элементы с равным отступом */
+.l-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap, var(--space-4));
+}

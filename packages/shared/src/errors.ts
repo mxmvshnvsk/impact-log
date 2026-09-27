@@ -7,8 +7,15 @@ export const ERROR_CODES = [
   'VALIDATION_ERROR',
   'NOT_FOUND',
   'UNAUTHORIZED',
+  'FORBIDDEN',
   'RATE_LIMITED',
   'INTERNAL_ERROR',
+  // auth
+  'LOGIN_TAKEN',
+  'INVALID_CREDENTIALS',
+  'INVALID_CODE',
+  'SESSION_EXPIRED',
+  'REGISTRATION_CLOSED',
 ] as const
 
 export const errorCodeSchema = z.enum(ERROR_CODES)

@@ -1,0 +1,79 @@
+.register__progress {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-6);
+}
+
+.register__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.register__steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text-secondary);
+}
+
+.register__qr {
+  align-self: center;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: #ffffff; /* QR всегда на белом — иначе камеры сканируют хуже (в т.ч. в тёмной теме) */
+  line-height: 0;
+}
+
+.register__qr img {
+  width: 184px;
+  height: 184px;
+}
+
+.register__secret {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.register__secret-label {
+  width: 100%;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.register__secret-value {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-sm);
+  letter-spacing: 0.04em;
+}
+
+.register__codes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  list-style: none;
+}
+
+.register__codes code {
+  font-size: var(--text-sm);
+  letter-spacing: 0.03em;
+}
+
+.register__codes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

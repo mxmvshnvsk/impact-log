@@ -1,0 +1,32 @@
+.app-footer {
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.app-footer--compact {
+  border-top: 0;
+}
+
+.app-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
+  padding-block: var(--space-5);
+}
+
+.app-footer__links a {
+  color: var(--color-text-secondary);
+}
+
+/* пасхалка из заглушки: приглашение терминала, курсор — статус сервера */
+.app-footer__status {
+  margin-left: auto;
+  font-family: var(--font-mono);
+}
+
+.app-footer__prompt {
+  margin-right: 0.6ch;
+  color: var(--color-text-muted);
+}

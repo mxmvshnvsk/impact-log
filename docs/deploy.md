@@ -30,7 +30,15 @@ nano .env        # GHCR_OWNER=<github-логин в нижнем регистр�
 chmod 600 .env
 ```
 
-### 3. Первый деплой
+### 3. Ключ шифрования 2FA
+```bash
+cd /opt/impact-log
+echo "TOTP_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> .env
+```
+**Не меняйте его после появления пользователей** — иначе их 2FA перестанет работать. Сохраните копию ключа
+в менеджере паролей: без него бэкап базы бесполезен для входа.
+
+### 4. Первый деплой
 Сделать push в `main` (или GitHub → Actions → CI / Deploy → Run workflow).
 Проверить:
 ```bash

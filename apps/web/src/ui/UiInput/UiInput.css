@@ -1,0 +1,100 @@
+.ui-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-input__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.ui-input__control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ui-input__field {
+  width: 100%;
+  height: var(--control-md);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--text-md);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.ui-input--mono .ui-input__field {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.ui-input__field::placeholder {
+  color: var(--color-text-muted);
+}
+
+.ui-input__field:hover {
+  border-color: var(--color-border-strong);
+}
+
+.ui-input__field:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.ui-input--error .ui-input__field {
+  border-color: var(--color-danger);
+}
+
+.ui-input--error .ui-input__field:focus {
+  box-shadow: var(--shadow-focus-danger);
+}
+
+.ui-input--disabled .ui-input__field {
+  background: var(--color-surface-muted);
+  cursor: not-allowed;
+}
+
+.ui-input__control:has(.ui-input__reveal) .ui-input__field {
+  padding-right: calc(var(--control-md));
+}
+
+.ui-input__reveal {
+  position: absolute;
+  right: var(--space-1);
+  display: grid;
+  place-items: center;
+  width: calc(var(--control-md) - 8px);
+  height: calc(var(--control-md) - 8px);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.ui-input__reveal:hover {
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+}
+
+.ui-input__hint,
+.ui-input__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.ui-input__hint {
+  color: var(--color-text-muted);
+}
+
+.ui-input__error {
+  color: var(--color-danger);
+}

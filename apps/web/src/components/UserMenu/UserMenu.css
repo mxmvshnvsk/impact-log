@@ -1,0 +1,32 @@
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.user-menu__avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+  font-weight: var(--weight-bold);
+}
+
+.user-menu__login {
+  display: none;
+  font-weight: var(--weight-semibold);
+}
+
+.user-menu__logout-text {
+  display: none;
+}
+
+@media (--tablet) {
+  .user-menu__login,
+  .user-menu__logout-text {
+    display: inline;
+  }
+}

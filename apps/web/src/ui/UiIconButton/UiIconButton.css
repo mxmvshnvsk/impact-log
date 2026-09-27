@@ -1,0 +1,41 @@
+.ui-icon-button {
+  display: grid;
+  place-items: center;
+  width: var(--control-md);
+  height: var(--control-md);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.ui-icon-button:hover:not(:disabled) {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.ui-icon-button:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.ui-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.ui-icon-button--solid {
+  border-color: var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.ui-icon-button--active {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}

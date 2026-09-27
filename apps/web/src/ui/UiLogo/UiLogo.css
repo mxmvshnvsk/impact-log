@@ -1,0 +1,28 @@
+.ui-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-logo);
+}
+
+.ui-logo__mark {
+  display: inline-flex;
+}
+
+.ui-logo__word {
+  white-space: nowrap;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text);
+}
+
+.ui-logo--responsive .ui-logo__word {
+  display: none;
+}
+
+@media (--tablet) {
+  .ui-logo--responsive .ui-logo__word {
+    display: inline;
+  }
+}

@@ -1,0 +1,343 @@
+/* Маскот — ретро-монитор с глазами, персонаж impact log. Анимации — только transform/opacity */
+.mascot {
+  --mascot-case: #dfe6e2;
+  --mascot-case-edge: #b7c3bd;
+  --mascot-bezel: #c9d3ce;
+  --mascot-foot: #aab7b0;
+  --mascot-glow: #3dff8f;
+
+  position: relative;
+  width: 150px;
+}
+
+.mascot__svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.mascot__svg * {
+  transform-box: fill-box;
+}
+
+.mascot__shadow {
+  fill: rgb(15 26 21 / 0.14);
+}
+
+.mascot__case {
+  fill: var(--mascot-case);
+  stroke: var(--mascot-case-edge);
+  stroke-width: 2;
+}
+
+.mascot__bezel {
+  fill: var(--mascot-bezel);
+}
+
+.mascot__foot {
+  fill: var(--mascot-foot);
+}
+
+.mascot__scanlines {
+  stroke: rgb(255 255 255 / 0.04);
+  stroke-width: 2;
+}
+
+.mascot__eye {
+  fill: var(--mascot-glow);
+}
+
+.mascot__eyes {
+  filter: drop-shadow(0 0 4px rgb(61 255 143 / 0.7));
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.mascot__eye {
+  transform-origin: center;
+  animation: mascot-blink 5.5s infinite;
+}
+
+.mascot__eyes-closed,
+.mascot__eyes-happy,
+.mascot__eyes-oops,
+.mascot__squint {
+  fill: none;
+  stroke: var(--mascot-glow);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  filter: drop-shadow(0 0 3px rgb(61 255 143 / 0.7));
+}
+
+.mascot__eyes-oops {
+  stroke: #ff5a6a;
+  filter: drop-shadow(0 0 3px rgb(255 90 106 / 0.7));
+}
+
+.mascot__cursor {
+  fill: var(--mascot-glow);
+  animation: mascot-cursor 1s steps(1, end) infinite;
+}
+
+.mascot__led {
+  fill: var(--mascot-glow);
+  filter: drop-shadow(0 0 3px rgb(61 255 143 / 0.9));
+}
+
+.mascot__vents {
+  fill: none;
+  stroke: var(--mascot-case-edge);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.mascot__body-group {
+  transform-origin: 50% 100%;
+}
+
+.mascot__zzz {
+  fill: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  opacity: 0;
+}
+
+/* ---------- настроения ---------- */
+
+/* прячется (пароль, код 2FA): зажмуривается > < */
+.mascot--hiding .mascot__squint {
+  opacity: 1;
+}
+
+/* подглядывает (пароль показан): левый глаз зажмурен, правый открыт и косится вверх */
+.mascot--peeking .mascot__eye--left {
+  opacity: 0;
+}
+
+.mascot--peeking .mascot__squint--left {
+  opacity: 1;
+}
+
+.mascot--peeking .mascot__eyes {
+  transform: translate(2px, -3px);
+}
+
+.mascot--hiding .mascot__eye,
+.mascot--peeking .mascot__eye {
+  animation: none;
+}
+
+.mascot--sleeping .mascot__eyes,
+.mascot--hiding .mascot__eyes,
+.mascot--happy .mascot__eyes,
+.mascot--oops .mascot__eyes {
+  opacity: 0;
+}
+
+.mascot--sleeping .mascot__eyes-closed,
+.mascot--happy .mascot__eyes-happy,
+.mascot--oops .mascot__eyes-oops {
+  opacity: 1;
+}
+
+.mascot--sleeping .mascot__face {
+  opacity: 0.55;
+}
+
+.mascot--sleeping .mascot__cursor {
+  animation: none;
+  opacity: 0.4;
+}
+
+.mascot--sleeping .mascot__led {
+  animation: mascot-led-sleep 2.4s ease-in-out infinite;
+}
+
+.mascot--sleeping .mascot__body-group {
+  animation: mascot-breathe 3.2s ease-in-out infinite;
+}
+
+.mascot--sleeping .mascot__zzz {
+  animation: mascot-zzz 3.2s ease-in-out infinite;
+}
+
+.mascot--happy .mascot__body-group {
+  animation: mascot-hop 0.6s var(--ease-out) 2;
+}
+
+.mascot--oops .mascot__body-group {
+  animation: mascot-shake 0.5s ease-in-out;
+}
+
+.mascot--oops .mascot__led {
+  fill: #ff5a6a;
+}
+
+/* ---------- действия в ожидании ---------- */
+.mascot--act-tilt .mascot__body-group {
+  animation: mascot-tilt 1.6s var(--ease-out);
+}
+
+.mascot--act-hop .mascot__body-group {
+  animation: mascot-hop 0.6s var(--ease-out) 2;
+}
+
+.mascot--act-look-around .mascot__eyes {
+  animation: mascot-look-around 1.8s ease-in-out;
+}
+
+/* «глюк»: экран на мгновение сбоит — лицо дёргается, сканлайны мерцают */
+.mascot--act-glitch .mascot__face {
+  animation: mascot-glitch 0.9s steps(1, end);
+}
+
+.mascot--act-glitch .mascot__scanlines {
+  animation: mascot-flicker 0.9s steps(1, end);
+}
+
+/* ---------- облачко с репликой ---------- */
+.mascot__bubble {
+  position: absolute;
+  bottom: 86%;
+  left: 74%;
+  width: max-content;
+  max-width: 190px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px 14px 14px 4px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: 1.35;
+  color: var(--color-text);
+  animation: mascot-bubble-in var(--duration-slow) var(--ease-spring);
+}
+
+/* Уменьшение движения в системе: без анимаций, только статичные позы */
+.mascot.mascot--static,
+.mascot.mascot--static * {
+  animation: none;
+  transition: none;
+}
+
+/* ---------- ключевые кадры ---------- */
+@keyframes mascot-blink {
+  0%,
+  94%,
+  100% {
+    transform: scaleY(1);
+  }
+  97% {
+    transform: scaleY(0.12);
+  }
+}
+
+@keyframes mascot-cursor {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes mascot-led-sleep {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes mascot-breathe {
+  50% {
+    transform: scale(1.015, 0.99);
+  }
+}
+
+@keyframes mascot-zzz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 6px);
+  }
+  30%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(6px, -6px);
+  }
+}
+
+@keyframes mascot-hop {
+  40% {
+    transform: translateY(-12px);
+  }
+  70% {
+    transform: translateY(0) scale(1.03, 0.97);
+  }
+}
+
+@keyframes mascot-shake {
+  20%,
+  60% {
+    transform: rotate(-5deg);
+  }
+  40%,
+  80% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes mascot-tilt {
+  30%,
+  70% {
+    transform: rotate(-8deg);
+  }
+}
+
+@keyframes mascot-look-around {
+  25% {
+    transform: translate(-9px, 0);
+  }
+  60% {
+    transform: translate(9px, -2px);
+  }
+}
+
+@keyframes mascot-glitch {
+  10% {
+    transform: translate(-4px, 0);
+  }
+  20% {
+    transform: translate(3px, 1px);
+    opacity: 0.6;
+  }
+  30% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  60% {
+    transform: translate(2px, -1px);
+  }
+  70% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes mascot-flicker {
+  10%,
+  60% {
+    stroke: rgb(61 255 143 / 0.12);
+  }
+  30%,
+  80% {
+    stroke: rgb(255 255 255 / 0.04);
+  }
+}
+
+@keyframes mascot-bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+}

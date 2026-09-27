@@ -2,7 +2,7 @@
 {$DOMAIN:localhost} {
 	encode zstd gzip
 
-	# Логи доступа: IP усечены (IPv4 /24, IPv6 /48), чувствительные заголовки удалены — ADR-0001
+	# Логи доступа: IP усечены (IPv4 /24, IPv6 /48), заголовки (cookie, user-agent…) не пишутся — ADR-0001
 	log {
 		output stdout
 		format filter {
@@ -10,9 +10,8 @@
 			fields {
 				request>remote_ip ip_mask 24 48
 				request>client_ip ip_mask 24 48
-				request>headers>Cookie delete
-				request>headers>Authorization delete
-				resp_headers>Set-Cookie delete
+				request>headers delete
+				resp_headers delete
 			}
 		}
 	}

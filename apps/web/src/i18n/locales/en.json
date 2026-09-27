@@ -1,13 +1,239 @@
 {
-  "home": {
-    "eyebrow": "coming soon",
-    "title": "your impact log",
-    "subtitle": "Write down what you did and what it led to — and come to your review with facts, not a struggle to remember.",
-    "terminal": {
-      "connected": "Connected. Welcome to impact-log v0.1.0-alpha",
-      "collecting": "Collecting the retrospective of your achievements…",
-      "status": "Your impact log is coming soon."
+  "common": {
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "nav": {
+    "label": "Sections",
+    "home": "Home",
+    "entries": "Entries",
+    "summaries": "Summaries",
+    "principles": "Principles",
+    "soon": "soon",
+    "logout": "Sign out",
+    "openApp": "Open impact log"
+  },
+  "footer": {
+    "label": "Links"
+  },
+  "ui": {
+    "input": {
+      "show": "Show password",
+      "hide": "Hide password"
     }
+  },
+  "auth": {
+    "fields": {
+      "login": "Login",
+      "password": "Password",
+      "passwordConfirm": "Repeat password",
+      "totp": "Code from the app",
+      "recoveryCode": "Recovery code"
+    },
+    "login": {
+      "eyebrow": "Welcome back",
+      "title": "Sign in",
+      "subtitle": "Your impact log is waiting for new entries.",
+      "submit": "Sign in",
+      "noAccount": "No account yet?"
+    },
+    "secondFactor": {
+      "eyebrow": "Two-factor protection",
+      "title": "Verification code",
+      "subtitleTotp": "Enter the 6 digits from your authenticator app.",
+      "subtitleRecovery": "Enter one of the recovery codes you saved during sign-up.",
+      "submit": "Verify",
+      "useRecovery": "No access to the app?",
+      "useTotp": "Use a code from the app",
+      "back": "Another account"
+    },
+    "register": {
+      "cta": "Sign up",
+      "next": "Next",
+      "stepOf": "Step {step} of {total}",
+      "title": "Sign up",
+      "titles": {
+        "credentials": "Create an account",
+        "totp": "Set up 2FA",
+        "recovery": "Save your codes"
+      },
+      "subtitles": {
+        "credentials": "Just a login and a password — no email, no phone.",
+        "totp": "Two-factor protection is mandatory: your entries stay safe even if your password leaks.",
+        "recovery": "They are the only way to regain access if you lose your phone."
+      },
+      "loginHint": "3–32 characters: latin letters, digits, “-” and “_”.",
+      "passwordHint": "At least 12 characters. A phrase of several words works great.",
+      "haveAccount": "Already have an account?",
+      "howWeStore": "How we store data"
+    },
+    "totp": {
+      "step1": "Open your authenticator app (Google Authenticator, 1Password, Bitwarden, Aegis…) and scan the QR code.",
+      "step2": "Enter the 6-digit code the app shows.",
+      "qrAlt": "QR code for the authenticator app",
+      "manual": "Or enter the key manually",
+      "codeLabel": "Code from the app",
+      "submit": "Verify and finish"
+    },
+    "recovery": {
+      "warning": "Each code works once. We don’t have your email — without these codes the account can’t be recovered.",
+      "copy": "Copy all",
+      "download": "Download .txt",
+      "confirm": "I saved my recovery codes in a safe place",
+      "finish": "Go to impact log",
+      "fileTitle": "Recovery codes"
+    }
+  },
+  "mascot": {
+    "idle": "Hi! I’ll keep an eye on your impact log.",
+    "watching": "Hmm, taking notes…",
+    "hiding": "Not peeking!",
+    "peeking": "Oops, just a tiny peek…",
+    "sleeping": "Zzz… wake me up when you’re ready",
+    "happy": "Yay, it worked!",
+    "oops": "Hmm, something’s off"
+  },
+  "validation": {
+    "login": {
+      "tooShort": "Login must be at least 3 characters",
+      "tooLong": "Login must be at most 32 characters",
+      "format": "Only latin letters, digits, “-” and “_”; must start and end with a letter or digit"
+    },
+    "password": {
+      "tooShort": "Password must be at least 12 characters",
+      "tooLong": "Password is too long (max 128 characters)",
+      "required": "Enter your password",
+      "mismatch": "Passwords don’t match"
+    },
+    "code": {
+      "format": "The code is 6 digits"
+    },
+    "recoveryCode": {
+      "format": "A recovery code has 12 characters, e.g. abcd-efgh-jkmn"
+    }
+  },
+  "home": {
+    "eyebrow": "Alpha",
+    "greeting": "Hi, {login}!",
+    "lead": "This is where your impact log will live: notes on what you did and what it led to, plus summaries for your review.",
+    "stats": {
+      "label": "Statistics",
+      "total": "Total entries",
+      "streak": "Weekly streak",
+      "month": "This month"
+    },
+    "empty": {
+      "title": "Nothing here yet",
+      "text": "Entries arrive in the next update. Meanwhile, our little terminal is already on duty.",
+      "cta": "New entry"
+    }
+  },
+  "principles": {
+    "eyebrow": "Principles",
+    "title": "Your data is yours",
+    "lead": "impact log stores notes about your work, so privacy and security matter more to us than convenience. Here we explain, honestly and in detail, what guides us, what we store and how.",
+    "values": {
+      "title": "What guides us",
+      "items": {
+        "minimal": {
+          "title": "Minimal data",
+          "text": "An account needs only a login and a password. We don’t ask for your email, phone or name, and we don’t try to find out who you are."
+        },
+        "yours": {
+          "title": "Your data belongs to you",
+          "text": "Your entries are yours. We use them for nothing but showing them to you, and we’ll provide full export and full deletion."
+        },
+        "secure": {
+          "title": "Secure by default",
+          "text": "Two-factor protection is mandatory for everyone, passwords are stored only as hashes, everything travels over HTTPS."
+        },
+        "noTracking": {
+          "title": "No tracking",
+          "text": "No analytics, no trackers, no third-party scripts, no ads. We don’t know what you click and don’t want to."
+        },
+        "honest": {
+          "title": "Honest about limits",
+          "text": "If something isn’t there yet, we say so. Any change in how we handle data will appear on this page."
+        }
+      }
+    },
+    "stored": {
+      "title": "What we store and how",
+      "lead": "The complete list. If it isn’t here, we don’t store it.",
+      "items": {
+        "login": {
+          "what": "Login",
+          "how": "The nickname you chose at sign-up. Used to sign in."
+        },
+        "password": {
+          "what": "Password",
+          "how": "Only an Argon2id hash. We don’t know your password and can’t recover it."
+        },
+        "totp": {
+          "what": "2FA key",
+          "how": "The secret for app codes is stored encrypted (AES-256-GCM). The encryption key is kept separately from the database."
+        },
+        "recovery": {
+          "what": "Recovery codes",
+          "how": "10 one-time codes. We store only their SHA-256 hashes and whether they were used."
+        },
+        "sessions": {
+          "what": "Sessions",
+          "how": "A random token in a cookie with HttpOnly, Secure and SameSite=Strict flags. The database keeps only the token hash and expiry (up to 30 days)."
+        },
+        "entries": {
+          "what": "Your entries",
+          "how": "Coming soon: notes on your work, tags, projects. Stored in the database on our server and accessible only to your account. Not end-to-end encrypted yet — technically the server administrator can access them; we are considering end-to-end encryption."
+        },
+        "logs": {
+          "what": "Technical logs",
+          "how": "Time, request method and path, response code and a truncated IP address (last octet zeroed). No headers, cookies or request bodies. Logs are rotated and kept briefly."
+        },
+        "locale": {
+          "what": "Interface language and theme",
+          "how": "Stored only in your browser (localStorage) and never sent anywhere."
+        }
+      }
+    },
+    "notCollected": {
+      "title": "What we don’t collect",
+      "items": {
+        "email": "Email",
+        "phone": "Phone number",
+        "name": "Name or other personal details",
+        "analytics": "Analytics and behaviour metrics",
+        "thirdParty": "Third-party scripts, fonts and pixels",
+        "ads": "Advertising identifiers",
+        "sale": "Anything to sell or share with third parties"
+      }
+    },
+    "infra": {
+      "title": "Where and how it runs",
+      "items": {
+        "location": {
+          "title": "Server in Russia",
+          "text": "All data lives on a single server in a data center in Moscow. No cloud data-processing services."
+        },
+        "transport": {
+          "title": "Secure connection",
+          "text": "HTTPS only with HSTS, a strict content security policy (CSP) and rate-limited sign-in attempts."
+        },
+        "alpha": {
+          "title": "Alpha stage",
+          "text": "The service is under active development. Regular database backups are being set up — for now, don’t keep anything here you can’t afford to lose."
+        }
+      }
+    },
+    "control": {
+      "title": "You are in control",
+      "items": {
+        "export": "Full export of all your data as JSON and Markdown.",
+        "delete": "Account deletion with all data — no trash bins or delayed retention.",
+        "sessions": "A list of active sessions and signing out everywhere.",
+        "ai": "AI features, if they appear, only with explicit consent and a warning that entry text will be sent to an external provider."
+      }
+    },
+    "updated": "Last updated on September 27, 2026."
   },
   "apiStatus": {
     "label": "Server status",
@@ -18,7 +244,8 @@
     "version": "version {version}"
   },
   "notFound": {
-    "title": "no such file or directory",
+    "title": "Page not found",
+    "error": "no such file or directory",
     "home": "go home"
   },
   "locale": {
@@ -30,9 +257,21 @@
     "VALIDATION_ERROR": "Please check your input",
     "NOT_FOUND": "Not found",
     "UNAUTHORIZED": "Please sign in",
-    "RATE_LIMITED": "Too many attempts, please wait a bit",
+    "FORBIDDEN": "Request rejected",
+    "RATE_LIMITED": "Too many attempts — please wait a few minutes",
     "INTERNAL_ERROR": "Something went wrong on the server",
     "NETWORK_ERROR": "Cannot reach the server",
-    "UNKNOWN_ERROR": "Unknown error"
+    "UNKNOWN_ERROR": "Unknown error",
+    "LOGIN_TAKEN": "This login is already taken",
+    "INVALID_CREDENTIALS": "Wrong login or password",
+    "INVALID_CODE": "Wrong code, try again",
+    "SESSION_EXPIRED": "Time to enter the code ran out or there were too many attempts — start over",
+    "REGISTRATION_CLOSED": "Sign-up is closed right now"
+  },
+  "theme": {
+    "label": "Theme: {mode}. Click to change",
+    "system": "system",
+    "light": "light",
+    "dark": "dark"
   }
 }

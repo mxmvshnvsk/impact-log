@@ -18,4 +18,6 @@ export function createDb(url: string) {
   return { sql, db, ping }
 }
 
-export type Db = ReturnType<typeof createDb>
+export type Database = ReturnType<typeof createDb>['db']
+/** Сам db или транзакция — функции работы с данными принимают любой из них */
+export type Executor = Database | Parameters<Parameters<Database['transaction']>[0]>[0]

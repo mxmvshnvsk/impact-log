@@ -1,13 +1,22 @@
 import { buildApp } from './app'
 import { loadConfig } from './config'
 import { createDb } from './db/client'
+import { cleanupExpired } from './modules/auth/sessions'
+
+const HOUR = 60 * 60 * 1000
 
 const config = loadConfig()
-const { sql, ping } = createDb(config.DATABASE_URL)
-const app = await buildApp({ config, ping })
+const { sql, db, ping } = createDb(config.DATABASE_URL)
+const app = await buildApp({ config, db, ping })
+
+// Уборка истёкших сессий и брошенных регистраций
+const cleanup = setInterval(() => {
+  cleanupExpired(db).catch((error) => app.log.error(error, 'cleanup failed'))
+}, HOUR)
 
 async function shutdown(signal: string) {
   app.log.info({ signal }, 'shutting down')
+  clearInterval(cleanup)
   await app.close()
   await sql.end({ timeout: 5 })
   process.exit(0)

@@ -1,0 +1,52 @@
+.auth-layout {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* мягкие мятные пятна на фоне (мотив референса) */
+.auth-layout::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(
+      600px 400px at 15% 10%,
+      color-mix(in srgb, var(--color-accent) 12%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      500px 400px at 90% 80%,
+      color-mix(in srgb, var(--color-accent) 10%, transparent),
+      transparent 70%
+    ),
+    var(--color-bg);
+}
+
+.auth-layout__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-height);
+}
+
+.auth-layout__logo {
+  display: inline-flex;
+}
+
+.auth-layout__main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4) var(--gutter) var(--space-12);
+}
+
+.auth-layout__prefs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

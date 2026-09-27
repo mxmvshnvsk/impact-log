@@ -1,0 +1,28 @@
+/* Метка над заголовком: «• раздел» (мотив из референса) */
+.ui-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 12px 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  box-shadow: var(--shadow-xs);
+}
+
+.ui-eyebrow::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+
+.ui-eyebrow--neutral::before {
+  background: var(--color-text-muted);
+  box-shadow: none;
+}

@@ -1,0 +1,33 @@
+.login__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.login__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.login__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent-strong);
+}
+
+.login__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login__link--muted {
+  color: var(--color-text-secondary);
+}

@@ -21,6 +21,8 @@ export default defineConfig({
     },
   },
   build: {
+    // Ничего не встраиваем как data: URI — строгая CSP (font-src 'self') такое блокирует
+    assetsInlineLimit: 0,
     // .map генерируются, но бандл на них не ссылается, а Caddy их не отдаёт (ADR-0002)
     sourcemap: 'hidden',
   },

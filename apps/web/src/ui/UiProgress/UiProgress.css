@@ -1,0 +1,18 @@
+.ui-progress {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  overflow: hidden;
+}
+
+.ui-progress__bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-accent) 45%, var(--color-surface)),
+    var(--color-accent)
+  );
+  transition: width var(--duration-slow) var(--ease-out);
+}

@@ -1,18 +1,31 @@
+.not-found {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-12);
+}
+
+.not-found__terminal {
+  width: 100%;
+  max-width: var(--content-max-width);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
 .not-found__line {
-  margin: 0 0 4px;
+  margin-bottom: var(--space-1);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .not-found__line--error {
-  color: var(--color-error);
+  color: var(--color-danger);
 }
 
 .not-found__prompt {
   margin-right: 1ch;
-  color: var(--color-accent);
+  color: var(--color-accent-strong);
 }
 
 .not-found__hint {
-  color: var(--color-muted);
+  color: var(--color-text-muted);
 }

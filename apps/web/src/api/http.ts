@@ -47,3 +47,12 @@ export async function request<T>(
   }
   return parsed.data
 }
+
+/** POST с JSON-телом (API принимает изменяющие запросы только как application/json) */
+export function post<T>(path: string, schema: ZodType<T>, body: unknown): Promise<T> {
+  return request(path, schema, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}

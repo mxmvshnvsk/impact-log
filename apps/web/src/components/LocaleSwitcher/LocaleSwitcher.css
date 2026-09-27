@@ -1,22 +1,22 @@
 .locale-switcher {
   display: inline-flex;
-  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
 }
 
 .locale-switcher__button {
-  padding: 2px 4px;
+  min-width: 34px;
+  height: 28px;
+  padding: 0 var(--space-2);
   border: 0;
+  border-radius: var(--radius-pill);
   background: transparent;
-  color: var(--color-muted);
-  text-transform: lowercase;
-}
-
-.locale-switcher__button::before {
-  content: "\00a0";
-}
-
-.locale-switcher__button::after {
-  content: "\00a0";
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 .locale-switcher__button:hover {
@@ -24,13 +24,10 @@
 }
 
 .locale-switcher__button--active {
-  color: var(--color-accent);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
-.locale-switcher__button--active::before {
-  content: "[";
-}
-
-.locale-switcher__button--active::after {
-  content: "]";
+.locale-switcher__button--active:hover {
+  color: var(--color-on-primary);
 }

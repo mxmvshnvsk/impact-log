@@ -11,9 +11,15 @@
     "db:migrate": "tsx src/db/migrate.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
     "@fastify/helmet": "^13.0.0",
+    "@fastify/rate-limit": "^11.2.0",
+    "@node-rs/argon2": "^2.2.1",
+    "@oslojs/encoding": "^1.1.0",
+    "@oslojs/otp": "^1.1.0",
     "drizzle-orm": "^0.44.0",
     "fastify": "^5.4.0",
+    "fastify-plugin": "^6.0.0",
     "fastify-type-provider-zod": "^5.0.0",
     "postgres": "^3.4.5",
     "zod": "^4.1.0"

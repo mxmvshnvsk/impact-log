@@ -1,0 +1,46 @@
+.ui-kit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+
+.ui-kit__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ui-kit__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ui-kit__form,
+.ui-kit__stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 420px;
+}
+
+.ui-kit__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.ui-kit__mascots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-6);
+  padding-top: var(--space-10);
+}
+
+.ui-kit__mascot {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}

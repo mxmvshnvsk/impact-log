@@ -1,44 +1,4 @@
-/* Временная тема «терминал» для заглушки — заменим после выбора дизайна */
-:root {
-  --color-bg: #07090a;
-  --color-surface: #0d1110;
-  --color-text: #c9d4ce;
-  --color-muted: #5d6b64;
-  --color-border: #1c2421;
-  --color-accent: #3dff8f;
-  --color-ok: #3dff8f;
-  --color-warn: #ffb020;
-  --color-error: #ff4d5e;
-
-  --font-mono:
-    ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, "Liberation Mono",
-    monospace;
-
-  /* Сетка (ADR-0003) */
-  --layout-max-width: 1200px; /* каркас: шапка, сайдбар + контент, дашборды */
-  --content-max-width: 720px; /* колонка текста: записи, Markdown, выжимки */
-  --gutter: 16px; /* боковые отступы: 16 / 24 / 32 */
-
-  color-scheme: dark;
-  font-family: var(--font-mono);
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--color-text);
-  background: var(--color-bg);
-}
-
-@media (--tablet) {
-  :root {
-    --gutter: 24px;
-    font-size: 15px;
-  }
-}
-
-@media (--desktop) {
-  :root {
-    --gutter: 32px;
-  }
-}
+/* Базовые стили документа. Токены — в tokens.css */
 
 *,
 *::before,
@@ -46,47 +6,74 @@
   box-sizing: border-box;
 }
 
+:root {
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 body {
   margin: 0;
-  min-height: 100vh;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgb(61 255 143 / 0.07), transparent 60%),
-    linear-gradient(rgb(61 255 143 / 0.035) 1px, transparent 1px) 0 0 / 100% 32px,
-    linear-gradient(90deg, rgb(61 255 143 / 0.035) 1px, transparent 1px) 0 0 / 32px 100%,
-    var(--color-bg);
+  min-height: 100dvh;
 }
 
-/* CRT-сканлайны поверх всего */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 2px,
-    rgb(0 0 0 / 0.18) 3px
-  );
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
 }
 
-::selection {
-  background: var(--color-accent);
-  color: var(--color-bg);
-}
-
-button {
-  font: inherit;
-  cursor: pointer;
+p {
+  margin: 0;
 }
 
 a {
-  color: var(--color-accent);
+  color: var(--color-accent-strong);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+code,
+kbd,
+samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-text);
 }
 
 :focus-visible {
-  outline: 1px dashed var(--color-accent);
-  outline-offset: 3px;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .sr-only {

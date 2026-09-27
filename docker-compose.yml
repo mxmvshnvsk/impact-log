@@ -31,6 +31,8 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?TOTP_ENCRYPTION_KEY is required (openssl rand -hex 32)}
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
     depends_on:
       migrate:
         condition: service_completed_successfully

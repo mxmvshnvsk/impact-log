@@ -24,6 +24,7 @@
 ## Стек (см. ADR-0002)
 - Монорепо pnpm: `apps/web` (Vue 3 + Vite + vue-router + vue-i18n + zod), `apps/api` (Fastify 5 + Drizzle),
   `packages/shared` (zod-схемы, типы, коды ошибок).
+- Дизайн-система — ADR-0004 и `docs/design-system.md` (токены, компоненты `src/ui`, правила форм, маскот).
 - PostgreSQL 17, Node 24, TypeScript strict, Biome.
 
 ## Команды
@@ -39,6 +40,13 @@
   `X.vue` (template + тонкий script setup) + `useX.ts` (логика) + `X.css` (стили) + `index.ts`.
   Не-Vue код — в `src/utils`, запросы — в `src/api`, общие composables — в `src/composables`.
 - Pinia не используем; если появится потребность в глобальном сторе — сообщить владельцу.
+  Сейчас единственное глобальное состояние — текущий пользователь (`composables/useSession.ts`, синглтон модуля).
+- UI собирается из примитивов `src/ui/Ui*`; стили — только через токены `styles/tokens.css`.
+- Две темы (светлая/тёмная, ADR-0004): цвета только из токенов, каждый экран проверять в обеих темах.
+- Маскот — ретро-монитор с глазами (`components/AppMascot`), управляется через `useMascot`.
+- Формы — `useZodForm` + схемы из `packages/shared`, правила — docs/design-system.md, раздел «Формы».
+- Страница «Принципы» (`views/PrinciplesView`, i18n `principles.*`) — публичное описание того, что и как
+  мы храним. **Любое изменение в хранении/обработке данных должно сразу отражаться там.**
 - **Адаптивность** (ADR-0003): mobile-first; mobile < 720 ≤ tablet < 1200 ≤ desktop. Каркас 1200px (`.l-container`),
   текст 720px (`.l-content`). В CSS — только именованные `@media (--tablet)` / `(--desktop)`, не числа.
   `useBreakpoint()` — только если на разных экранах разные компоненты. Проверять вёрстку на 375 / 720 / 1200.
@@ -67,3 +75,5 @@
   → GHCR → ssh на сервер → `git pull && docker compose pull && docker compose up -d`.
   Миграции БД применяет одноразовый сервис `migrate` перед стартом api.
 - Бэкапы: pg_dump в S3 (настроить).
+- Прод-переменные api: `TOTP_ENCRYPTION_KEY` (обязательна, не менять после появления пользователей),
+  `REGISTRATION_ENABLED` (по умолчанию true).
