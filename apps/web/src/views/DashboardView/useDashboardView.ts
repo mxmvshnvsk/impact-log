@@ -10,7 +10,7 @@ const STATS = [
   { key: 'month', icon: CalendarDays },
 ] as const
 
-export function useHomeView() {
+export function useDashboardView() {
   const { t } = useI18n()
   const { user } = useSession()
   const login = computed(() => user.value?.login ?? '')

@@ -122,7 +122,7 @@ export function useRegisterView() {
   async function finish() {
     if (!user.value) return
     session.setUser(user.value)
-    await router.replace({ name: 'home' })
+    await router.replace({ name: 'dashboard' })
   }
 
   // Не даём случайно закрыть вкладку, пока коды не сохранены / 2FA не подтверждена

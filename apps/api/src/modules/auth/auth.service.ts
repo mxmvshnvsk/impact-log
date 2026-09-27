@@ -1,5 +1,6 @@
-import type { LoginRequest, SecondFactorRequest, User } from '@impact-log/shared'
+import type { LoginRequest, secondFactorRequestSchema, User } from '@impact-log/shared'
 import { and, eq, isNull } from 'drizzle-orm'
+import type { z } from 'zod'
 import type { Database } from '../../db/client'
 import { recoveryCodes, type UserRow, users } from '../../db/schema'
 import type { Cipher } from '../../lib/crypto'
@@ -17,6 +18,9 @@ import {
   SESSION_TTL,
 } from './sessions'
 import { generateTotpKey, totpEnrollment, verifyTotp } from './totp'
+import { forgetUserDevices, isTrustedDevice, trustDevice } from './trustedDevices'
+
+type SecondFactorInput = z.output<typeof secondFactorRequestSchema>
 
 type Deps = {
   db: Database
@@ -97,8 +101,11 @@ export function createAuthService({ db, cipher, registrationEnabled }: Deps) {
     return { ...result, recoveryCodes: codes.map(formatRecoveryCode) }
   }
 
-  /** Вход, шаг 1: логин + пароль → сессия «ждём второй фактор» */
-  async function login(input: LoginRequest) {
+  /**
+   * Вход, шаг 1: логин + пароль → сессия «ждём второй фактор».
+   * С доверенного устройства («Запомнить этот компьютер») код не нужен — сразу полная сессия на 30 дней.
+   */
+  async function login(input: LoginRequest, deviceToken: string | undefined) {
     const [user] = await db.select().from(users).where(eq(users.login, input.login))
     if (user?.status !== 'active') {
       await verifyDummy(input.password)
@@ -107,11 +114,21 @@ export function createAuthService({ db, cipher, registrationEnabled }: Deps) {
     if (!(await verifyPassword(user.passwordHash, input.password))) {
       throw new AppError('INVALID_CREDENTIALS', 401)
     }
-    return createSession(db, user.id, 'second-factor')
+    if (deviceToken && (await isTrustedDevice(db, deviceToken, user.id))) {
+      return {
+        next: 'done' as const,
+        user,
+        session: await createSession(db, user.id, 'full', true),
+      }
+    }
+    return {
+      next: 'second-factor' as const,
+      session: await createSession(db, user.id, 'second-factor'),
+    }
   }
 
   /** Вход, шаг 2: код из приложения или резервный код → полная сессия */
-  async function verifySecondFactor(current: ActiveSession, input: SecondFactorRequest) {
+  async function verifySecondFactor(current: ActiveSession, input: SecondFactorInput) {
     const { user } = current
 
     if (input.method === 'totp') {
@@ -134,12 +151,19 @@ export function createAuthService({ db, cipher, registrationEnabled }: Deps) {
     }
 
     await deleteSession(db, current.id)
-    return { user, session: await createSession(db, user.id, 'full') }
+    const session = await createSession(db, user.id, 'full', input.remember)
+    const device = input.remember ? await trustDevice(db, user.id) : null
+    return { user, session, device }
   }
 
+  /** everywhere — выход на всех устройствах и сброс доверенных устройств */
   async function logout(current: ActiveSession, everywhere = false) {
-    if (everywhere) await deleteUserSessions(db, current.user.id)
-    else await deleteSession(db, current.id)
+    if (everywhere) {
+      await deleteUserSessions(db, current.user.id)
+      await forgetUserDevices(db, current.user.id)
+    } else {
+      await deleteSession(db, current.id)
+    }
   }
 
   /** Неверный код: считаем попытку; после лимита сессия сгорает и нужно начинать заново */

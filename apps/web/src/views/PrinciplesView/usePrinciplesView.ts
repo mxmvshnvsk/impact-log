@@ -28,6 +28,7 @@ const STORED = [
   'totp',
   'recovery',
   'sessions',
+  'trustedDevices',
   'entries',
   'logs',
   'locale',

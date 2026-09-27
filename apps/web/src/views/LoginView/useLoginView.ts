@@ -1,4 +1,10 @@
-import { loginRequestSchema, recoveryCodeSchema, totpCodeSchema } from '@impact-log/shared'
+import {
+  type LoginResponse,
+  loginRequestSchema,
+  recoveryCodeSchema,
+  totpCodeSchema,
+  type User,
+} from '@impact-log/shared'
 import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -37,12 +43,18 @@ export function useLoginView() {
 
   async function submitCredentials() {
     expired.value = false
+    let result: LoginResponse | null = null
     const ok = await credentials.submit(async (data) => {
-      await authApi.login(data)
+      result = await authApi.login(data)
     })
-    if (ok) {
-      step.value = 'second-factor'
+    if (ok && result) {
       mascot.react('happy')
+      // Доверенное устройство («Запомнить этот компьютер») — код не нужен
+      if ((result as LoginResponse).next === 'done') {
+        await finish((result as Extract<LoginResponse, { next: 'done' }>).user)
+        return
+      }
+      step.value = 'second-factor'
     } else if (credentials.formError) {
       mascot.react('oops')
     }
@@ -51,6 +63,8 @@ export function useLoginView() {
   // ---------- шаг 2: код из приложения или резервный код ----------
   const method = ref<Method>('totp')
   const code = ref('')
+  /** «Запомнить этот компьютер»: сессия на 30 дней и вход без кода с этого устройства */
+  const remember = ref(false)
   const codeError = ref<string | null>(null)
   const verifying = ref(false)
   const otpRef = ref<{ focus: () => void } | null>(null)
@@ -72,10 +86,13 @@ export function useLoginView() {
 
     verifying.value = true
     try {
-      const { user } = await authApi.verifySecondFactor({ method: method.value, code: parsed.data })
+      const { user } = await authApi.verifySecondFactor({
+        method: method.value,
+        code: parsed.data,
+        remember: remember.value,
+      })
       mascot.react('happy')
-      session.setUser(user)
-      await router.replace(safeRedirect(route.query.redirect))
+      await finish(user)
     } catch (error) {
       const errorCode = error instanceof ApiError ? error.code : 'UNKNOWN_ERROR'
       mascot.react('oops')
@@ -90,6 +107,11 @@ export function useLoginView() {
     } finally {
       verifying.value = false
     }
+  }
+
+  async function finish(user: User) {
+    session.setUser(user)
+    await router.replace(safeRedirect(route.query.redirect))
   }
 
   function toggleMethod() {
@@ -114,6 +136,7 @@ export function useLoginView() {
     submitCredentials,
     method,
     code,
+    remember,
     codeError,
     verifying,
     otpRef,

@@ -6,6 +6,8 @@ import { AppError } from '../lib/errors'
 import { type ActiveSession, findSession } from '../modules/auth/sessions'
 
 export const SESSION_COOKIE = 'il_session'
+/** Токен доверенного устройства («Запомнить этот компьютер») */
+export const DEVICE_COOKIE = 'il_device'
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -13,12 +15,15 @@ declare module 'fastify' {
     session: ActiveSession | null
   }
   interface FastifyReply {
-    setSessionCookie(token: string, expiresAt: Date): FastifyReply
+    /** persistent=false — cookie живёт до закрытия браузера */
+    setSessionCookie(session: SessionCookie): FastifyReply
     clearSessionCookie(): FastifyReply
+    setDeviceCookie(device: { token: string; expiresAt: Date }): FastifyReply
   }
 }
 
 type Options = { db: Database; secureCookie: boolean }
+type SessionCookie = { token: string; expiresAt: Date; persistent: boolean }
 
 /** Читает cookie сессии в каждом запросе и даёт хелперы для установки/сброса cookie */
 export const sessionPlugin = fp<Options>(async (app, { db, secureCookie }) => {
@@ -31,10 +36,21 @@ export const sessionPlugin = fp<Options>(async (app, { db, secureCookie }) => {
 
   app.decorateRequest('session', null)
 
+  app.decorateReply('setSessionCookie', function (this: FastifyReply, session: SessionCookie) {
+    return this.setCookie(SESSION_COOKIE, session.token, {
+      ...cookieOptions,
+      ...(session.persistent ? { expires: session.expiresAt } : {}),
+    })
+  })
+
   app.decorateReply(
-    'setSessionCookie',
-    function (this: FastifyReply, token: string, expiresAt: Date) {
-      return this.setCookie(SESSION_COOKIE, token, { ...cookieOptions, expires: expiresAt })
+    'setDeviceCookie',
+    function (this: FastifyReply, device: { token: string; expiresAt: Date }) {
+      return this.setCookie(DEVICE_COOKIE, device.token, {
+        ...cookieOptions,
+        path: '/api/auth',
+        expires: device.expiresAt,
+      })
     },
   )
 

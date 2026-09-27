@@ -1,7 +1,7 @@
 <template>
   <div class="app-layout">
     <aside class="app-layout__sidebar">
-      <RouterLink :to="{ name: 'home' }" class="app-layout__logo">
+      <RouterLink :to="{ name: 'dashboard' }" class="app-layout__logo">
         <UiLogo compact />
       </RouterLink>
       <nav class="app-layout__nav" :aria-label="t('nav.label')">
@@ -21,7 +21,7 @@
     <div class="app-layout__main">
       <header class="app-layout__header">
         <div class="app-layout__header-inner l-container">
-          <RouterLink :to="{ name: 'home' }" class="app-layout__header-logo">
+          <RouterLink :to="{ name: 'dashboard' }" class="app-layout__header-logo">
             <UiLogo compact />
           </RouterLink>
           <p class="app-layout__title">{{ title }}</p>

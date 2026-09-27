@@ -19,9 +19,15 @@ export const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: () => import('@/views/HomeView'),
-      meta: { layout: 'app', access: 'user', title: 'nav.home' },
+      name: 'landing',
+      component: () => import('@/views/LandingView'),
+      meta: { layout: 'public', access: 'any' },
+    },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('@/views/DashboardView'),
+      meta: { layout: 'app', access: 'user', title: 'nav.dashboard' },
     },
     {
       path: '/login',
@@ -65,10 +71,10 @@ router.beforeEach(async (to) => {
   const { isAuthenticated } = useSession()
 
   if (to.meta.access === 'user' && !isAuthenticated.value) {
-    return { name: 'login', query: to.fullPath === '/' ? {} : { redirect: to.fullPath } }
+    return { name: 'login', query: to.name === 'dashboard' ? {} : { redirect: to.fullPath } }
   }
   if (to.meta.access === 'guest' && isAuthenticated.value) {
-    return { name: 'home' }
+    return { name: 'dashboard' }
   }
   return true
 })
@@ -78,7 +84,9 @@ router.afterEach((to) => {
   document.title = title ? `${title} · impact log` : 'impact log'
 })
 
-/** Безопасный redirect после входа: только внутренние пути */
+/** Безопасный redirect после входа: только внутренние пути, по умолчанию — дашборд */
 export function safeRedirect(value: unknown): string {
-  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/'
+  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//')
+    ? value
+    : '/dashboard'
 }

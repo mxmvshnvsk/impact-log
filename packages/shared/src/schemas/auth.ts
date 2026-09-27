@@ -62,9 +62,18 @@ export type RegisterStartResponse = z.infer<typeof registerStartResponseSchema>
 export const codeRequestSchema = z.object({ code: totpCodeSchema })
 export type CodeRequest = z.infer<typeof codeRequestSchema>
 
+/** remember — «Запомнить этот компьютер»: сессия на 30 дней и вход без кода с этого устройства */
 export const secondFactorRequestSchema = z.discriminatedUnion('method', [
-  z.object({ method: z.literal('totp'), code: totpCodeSchema }),
-  z.object({ method: z.literal('recovery'), code: recoveryCodeSchema }),
+  z.object({
+    method: z.literal('totp'),
+    code: totpCodeSchema,
+    remember: z.boolean().default(false),
+  }),
+  z.object({
+    method: z.literal('recovery'),
+    code: recoveryCodeSchema,
+    remember: z.boolean().default(false),
+  }),
 ])
 export type SecondFactorRequest = z.input<typeof secondFactorRequestSchema>
 
@@ -85,6 +94,11 @@ export const registerConfirmResponseSchema = z.object({
 })
 export type RegisterConfirmResponse = z.infer<typeof registerConfirmResponseSchema>
 
-export const loginResponseSchema = z.object({ next: z.literal('second-factor') })
+/** Вход: нужен второй фактор — или устройство доверенное, и вход уже выполнен */
+export const loginResponseSchema = z.discriminatedUnion('next', [
+  z.object({ next: z.literal('second-factor') }),
+  z.object({ next: z.literal('done'), user: userSchema }),
+])
+export type LoginResponse = z.infer<typeof loginResponseSchema>
 
 export const okResponseSchema = z.object({ ok: z.literal(true) })

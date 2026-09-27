@@ -6,15 +6,19 @@ import { generateToken, sha256Hex } from '../../lib/crypto'
 const MINUTE = 60_000
 const DAY = 24 * 60 * MINUTE
 
-/** Время жизни сессии каждого вида */
+/** Время жизни сессии каждого вида (полная — без «Запомнить этот компьютер») */
 export const SESSION_TTL: Record<SessionKind, number> = {
   enrollment: 30 * MINUTE,
   'second-factor': 5 * MINUTE,
-  full: 30 * DAY,
+  full: DAY,
 }
 
-/** Полная сессия продлевается, если до конца осталось меньше половины срока */
-const RENEW_THRESHOLD = SESSION_TTL.full / 2
+/** Полная сессия с «Запомнить этот компьютер» */
+export const PERSISTENT_SESSION_TTL = 30 * DAY
+
+function ttlOf(kind: SessionKind, persistent: boolean) {
+  return kind === 'full' && persistent ? PERSISTENT_SESSION_TTL : SESSION_TTL[kind]
+}
 
 /** Сколько неверных кодов можно ввести в рамках одной сессии, после — сессия удаляется */
 export const MAX_CODE_ATTEMPTS = 5
@@ -23,15 +27,21 @@ export type ActiveSession = {
   id: string
   kind: SessionKind
   attempts: number
+  persistent: boolean
   expiresAt: Date
   user: UserRow
 }
 
-export async function createSession(db: Executor, userId: string, kind: SessionKind) {
+export async function createSession(
+  db: Executor,
+  userId: string,
+  kind: SessionKind,
+  persistent = false,
+) {
   const token = generateToken()
-  const expiresAt = new Date(Date.now() + SESSION_TTL[kind])
-  await db.insert(sessions).values({ id: sha256Hex(token), userId, kind, expiresAt })
-  return { token, expiresAt }
+  const expiresAt = new Date(Date.now() + ttlOf(kind, persistent))
+  await db.insert(sessions).values({ id: sha256Hex(token), userId, kind, persistent, expiresAt })
+  return { token, expiresAt, persistent }
 }
 
 /** Находит сессию по токену из cookie. Истёкшую удаляет, полную — продлевает при необходимости */
@@ -49,9 +59,11 @@ export async function findSession(db: Executor, token: string): Promise<ActiveSe
     return null
   }
 
+  // Полная сессия продлевается при использовании, если прошло больше половины срока
   let expiresAt = row.session.expiresAt
-  if (row.session.kind === 'full' && expiresAt.getTime() - Date.now() < RENEW_THRESHOLD) {
-    expiresAt = new Date(Date.now() + SESSION_TTL.full)
+  const ttl = ttlOf(row.session.kind, row.session.persistent)
+  if (row.session.kind === 'full' && expiresAt.getTime() - Date.now() < ttl / 2) {
+    expiresAt = new Date(Date.now() + ttl)
     await db.update(sessions).set({ expiresAt }).where(eq(sessions.id, id))
   }
 
@@ -59,6 +71,7 @@ export async function findSession(db: Executor, token: string): Promise<ActiveSe
     id,
     kind: row.session.kind,
     attempts: row.session.attempts,
+    persistent: row.session.persistent,
     expiresAt,
     user: row.user,
   }

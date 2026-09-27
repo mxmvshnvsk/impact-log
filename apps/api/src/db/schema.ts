@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import {
   bigint,
+  boolean,
   index,
   integer,
   pgTable,
@@ -47,6 +48,8 @@ export const sessions = pgTable(
     kind: text('kind', { enum: ['enrollment', 'second-factor', 'full'] }).notNull(),
     /** Неудачные попытки ввода кода в рамках этой сессии */
     attempts: integer('attempts').notNull().default(0),
+    /** «Запомнить этот компьютер»: 30 дней и постоянная cookie; иначе — сутки и cookie до закрытия браузера */
+    persistent: boolean('persistent').notNull().default(false),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -66,6 +69,24 @@ export const recoveryCodes = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('recovery_codes_user_id_idx').on(table.userId)],
+)
+
+/**
+ * Доверенные устройства («Запомнить этот компьютер»): вход с них не требует кода 2FA.
+ * В браузере — случайный токен в cookie, здесь — только его хеш и срок. Никаких отпечатков, IP, названий устройств.
+ */
+export const trustedDevices = pgTable(
+  'trusted_devices',
+  {
+    /** SHA-256 от токена из cookie */
+    id: text('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('trusted_devices_user_id_idx').on(table.userId)],
 )
 
 export type UserRow = typeof users.$inferSelect

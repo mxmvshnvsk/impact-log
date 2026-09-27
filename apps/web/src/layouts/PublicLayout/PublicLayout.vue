@@ -2,13 +2,13 @@
   <div class="public-layout">
     <header class="public-layout__header">
       <div class="public-layout__header-inner l-container">
-        <RouterLink :to="isAuthenticated ? '/' : '/login'" class="public-layout__logo">
+        <RouterLink :to="{ name: 'landing' }" class="public-layout__logo">
           <UiLogo responsive />
         </RouterLink>
         <div class="public-layout__actions">
           <ThemeSwitcher />
           <LocaleSwitcher />
-          <UiButton v-if="isAuthenticated" size="sm" :to="{ name: 'home' }">
+          <UiButton v-if="isAuthenticated" size="sm" :to="{ name: 'dashboard' }">
             {{ t('nav.openApp') }}
           </UiButton>
           <template v-else>

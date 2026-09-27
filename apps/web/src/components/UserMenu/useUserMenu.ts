@@ -13,7 +13,7 @@ export function useUserMenu() {
 
   async function logout() {
     await session.logout()
-    await router.replace({ name: 'login' })
+    await router.replace({ name: 'landing' })
   }
 
   return { t, user: session.user, avatar, logout }

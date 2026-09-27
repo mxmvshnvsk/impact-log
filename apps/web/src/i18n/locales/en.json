@@ -5,13 +5,14 @@
   },
   "nav": {
     "label": "Sections",
-    "home": "Home",
     "entries": "Entries",
     "summaries": "Summaries",
     "principles": "Principles",
     "soon": "soon",
     "logout": "Sign out",
-    "openApp": "Open impact log"
+    "openApp": "Open dashboard",
+    "dashboard": "Dashboard",
+    "landing": "About"
   },
   "footer": {
     "label": "Links"
@@ -45,7 +46,9 @@
       "submit": "Verify",
       "useRecovery": "No access to the app?",
       "useTotp": "Use a code from the app",
-      "back": "Another account"
+      "back": "Another account",
+      "remember": "Remember this computer for 30 days",
+      "rememberHint": "We won’t ask for a 2FA code on this device. Don’t check this on shared computers."
     },
     "register": {
       "cta": "Sign up",
@@ -112,22 +115,6 @@
       "format": "A recovery code has 12 characters, e.g. abcd-efgh-jkmn"
     }
   },
-  "home": {
-    "eyebrow": "Alpha",
-    "greeting": "Hi, {login}!",
-    "lead": "This is where your impact log will live: notes on what you did and what it led to, plus summaries for your review.",
-    "stats": {
-      "label": "Statistics",
-      "total": "Total entries",
-      "streak": "Weekly streak",
-      "month": "This month"
-    },
-    "empty": {
-      "title": "Nothing here yet",
-      "text": "Entries arrive in the next update. Meanwhile, our little terminal is already on duty.",
-      "cta": "New entry"
-    }
-  },
   "principles": {
     "eyebrow": "Principles",
     "title": "Your data is yours",
@@ -179,7 +166,7 @@
         },
         "sessions": {
           "what": "Sessions",
-          "how": "A random token in a cookie with HttpOnly, Secure and SameSite=Strict flags. The database keeps only the token hash and expiry (up to 30 days)."
+          "how": "A random token in a cookie with HttpOnly, Secure and SameSite=Strict flags. The database keeps only the token hash and expiry: a day and until the browser closes, or 30 days if you chose “Remember this computer”."
         },
         "entries": {
           "what": "Your entries",
@@ -192,6 +179,10 @@
         "locale": {
           "what": "Interface language and theme",
           "how": "Stored only in your browser (localStorage) and never sent anywhere."
+        },
+        "trustedDevices": {
+          "what": "Trusted devices",
+          "how": "If you chose “Remember this computer”, a random token (cookie) is stored in your browser and only its hash and expiry (30 days) in our database. No 2FA code is asked on that device, the password always is. No browser fingerprints, IPs or device names. “Sign out everywhere” resets all trusted devices."
         }
       }
     },
@@ -269,9 +260,131 @@
     "REGISTRATION_CLOSED": "Sign-up is closed right now"
   },
   "theme": {
-    "label": "Theme: {mode}. Click to change",
-    "system": "system",
-    "light": "light",
-    "dark": "dark"
+    "toDark": "Switch to dark theme",
+    "toLight": "Switch to light theme"
+  },
+  "dashboard": {
+    "eyebrow": "Alpha",
+    "greeting": "Hi, {login}!",
+    "lead": "This is where your impact log will live: notes on what you did and what it led to, plus summaries for your review.",
+    "stats": {
+      "label": "Statistics",
+      "total": "Total entries",
+      "streak": "Weekly streak",
+      "month": "This month"
+    },
+    "empty": {
+      "title": "Nothing here yet",
+      "text": "Entries arrive in the next update. Meanwhile, our little terminal is already on duty.",
+      "cta": "New entry"
+    }
+  },
+  "landing": {
+    "hero": {
+      "eyebrow": "impact log · alpha",
+      "title": "Your impact — in facts, not memories",
+      "lead": "Jot down what you did and what it led to. When your performance review, promotion or résumé update comes, you’ll already have a summary of results and artifacts."
+    },
+    "cta": {
+      "start": "Start your impact log"
+    },
+    "examples": {
+      "first": {
+        "date": "March 12",
+        "project": "Platform",
+        "title": "Cut frontend build time from 6 to 2 minutes",
+        "impact": "−40 hours of CI waiting per month for the team",
+        "tags": "perf ci frontend"
+      },
+      "second": {
+        "date": "April 4",
+        "project": "Hiring",
+        "title": "Ran 6 technical interviews and refreshed the take-home task",
+        "impact": "2 strong candidates joined the team",
+        "tags": "hiring mentoring"
+      }
+    },
+    "pains": {
+      "eyebrow": "Sounds familiar?",
+      "title": "Before every review you have to remember everything again",
+      "items": {
+        "memory": {
+          "quote": "“What did I even do in February?”",
+          "text": "Six months later the details fade, and only last week makes it into your self-review."
+        },
+        "small": {
+          "quote": "“It was small, but it saved the day”",
+          "text": "Small but important wins — helping teammates, fixing processes — are the first to be forgotten."
+        },
+        "impact": {
+          "quote": "“I have a task list, but where’s the result?”",
+          "text": "It’s hard to show impact: not what you did, but what it changed for the team and the business."
+        }
+      }
+    },
+    "how": {
+      "eyebrow": "How it works",
+      "title": "Two minutes now — a ready summary later",
+      "steps": {
+        "write": {
+          "title": "Write it down",
+          "text": "Did something worthwhile? Briefly note what, why and the result. Markdown, links to PRs, docs and dashboards."
+        },
+        "organize": {
+          "title": "Organize",
+          "text": "Tags, projects and categories turn a stream of notes into a picture of where you make the most impact."
+        },
+        "summary": {
+          "title": "Get a summary",
+          "text": "For any period — for a review, promotion or résumé: key results and artifacts in one document."
+        }
+      }
+    },
+    "features": {
+      "eyebrow": "What’s inside",
+      "title": "Everything to keep track of your results",
+      "items": {
+        "entries": {
+          "title": "Quick entries",
+          "text": "A short Markdown note with a date, the result and links to artifacts."
+        },
+        "tags": {
+          "title": "Tags and projects",
+          "text": "Group entries by project, skill and team."
+        },
+        "search": {
+          "title": "Feed and search",
+          "text": "Filter by period, tags and projects, full-text search."
+        },
+        "summaries": {
+          "title": "Summaries and stats",
+          "text": "An activity dashboard and a period summary for your review."
+        },
+        "export": {
+          "title": "Export",
+          "text": "Export entries and summaries to Markdown — your data always stays with you."
+        },
+        "privacy": {
+          "title": "Privacy",
+          "text": "No email, no tracking, two-factor protection for everyone."
+        }
+      }
+    },
+    "privacy": {
+      "eyebrow": "Privacy",
+      "title": "Work notes deserve serious protection",
+      "text": "We store the bare minimum and explain honestly what exactly and how.",
+      "link": "How we store data",
+      "items": {
+        "noEmail": "Just a login and a password — no email, phone or name",
+        "twoFactor": "Mandatory two-factor protection",
+        "noTracking": "No analytics, trackers or ads",
+        "yours": "Your data is yours: export and deletion"
+      }
+    },
+    "final": {
+      "title": "Start your impact log today",
+      "text": "Six months from now, you’ll thank yourself."
+    }
   }
 }

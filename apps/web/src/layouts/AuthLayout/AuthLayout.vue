@@ -1,7 +1,7 @@
 <template>
   <div class="auth-layout">
     <header class="auth-layout__header l-container">
-      <RouterLink to="/login" class="auth-layout__logo"><UiLogo /></RouterLink>
+      <RouterLink :to="{ name: 'landing' }" class="auth-layout__logo"><UiLogo /></RouterLink>
       <div class="auth-layout__prefs">
         <ThemeSwitcher />
         <LocaleSwitcher />

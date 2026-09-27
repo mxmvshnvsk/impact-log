@@ -1,17 +1,15 @@
-import { Monitor, Moon, Sun } from 'lucide-vue-next'
+import { Moon, Sun } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from '@/composables/useTheme'
 
-const ICONS = { system: Monitor, light: Sun, dark: Moon } as const
-
-/** Кнопка-переключатель: как в системе → светлая → тёмная */
+/** Кнопка-переключатель светлой/тёмной темы. Иконка показывает, на какую тему переключит */
 export function useThemeSwitcher() {
   const { t } = useI18n()
-  const { preference, cycle } = useTheme()
+  const { theme, toggle } = useTheme()
 
-  const icon = computed(() => ICONS[preference.value])
-  const label = computed(() => t('theme.label', { mode: t(`theme.${preference.value}`) }))
+  const icon = computed(() => (theme.value === 'dark' ? Sun : Moon))
+  const label = computed(() => t(theme.value === 'dark' ? 'theme.toLight' : 'theme.toDark'))
 
-  return { label, icon, cycle }
+  return { label, icon, cycle: toggle }
 }

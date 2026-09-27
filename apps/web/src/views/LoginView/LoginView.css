@@ -31,3 +31,15 @@
 .login__link--muted {
   color: var(--color-text-secondary);
 }
+
+.login__remember {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.login__remember-hint {
+  padding-left: calc(22px + var(--space-3));
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

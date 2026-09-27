@@ -11,7 +11,7 @@ import {
 } from '@impact-log/shared'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
-import { requireSession, sessionOf } from '../../plugins/session'
+import { DEVICE_COOKIE, requireSession, sessionOf } from '../../plugins/session'
 import { type AuthService, toUserDto } from './auth.service'
 
 type Options = { auth: AuthService }
@@ -32,7 +32,7 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
     },
     async (request, reply) => {
       const { session, enrollment } = await auth.startRegistration(request.body, request.session)
-      reply.setSessionCookie(session.token, session.expiresAt)
+      reply.setSessionCookie(session)
       return enrollment
     },
   )
@@ -46,7 +46,7 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
     },
     async (request, reply) => {
       const result = await auth.confirmRegistration(sessionOf(request), request.body.code)
-      reply.setSessionCookie(result.session.token, result.session.expiresAt)
+      reply.setSessionCookie(result.session)
       return { user: toUserDto(result.user), recoveryCodes: result.recoveryCodes }
     },
   )
@@ -58,9 +58,11 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
       schema: { body: loginRequestSchema, response: { 200: loginResponseSchema } },
     },
     async (request, reply) => {
-      const session = await auth.login(request.body)
-      reply.setSessionCookie(session.token, session.expiresAt)
-      return { next: 'second-factor' } as const
+      const result = await auth.login(request.body, request.cookies[DEVICE_COOKIE])
+      reply.setSessionCookie(result.session)
+      return result.next === 'done'
+        ? { next: 'done' as const, user: toUserDto(result.user) }
+        : { next: 'second-factor' as const }
     },
   )
 
@@ -72,8 +74,12 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
       schema: { body: secondFactorRequestSchema, response: { 200: meResponseSchema } },
     },
     async (request, reply) => {
-      const { user, session } = await auth.verifySecondFactor(sessionOf(request), request.body)
-      reply.setSessionCookie(session.token, session.expiresAt)
+      const { user, session, device } = await auth.verifySecondFactor(
+        sessionOf(request),
+        request.body,
+      )
+      reply.setSessionCookie(session)
+      if (device) reply.setDeviceCookie(device)
       return { user: toUserDto(user) }
     },
   )

@@ -1,41 +1,41 @@
-.home {
+.dashboard {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
 }
 
-.home__header {
+.dashboard__header {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
 }
 
-.home__title {
+.dashboard__title {
   font-size: var(--text-3xl);
 }
 
-.home__lead {
+.dashboard__lead {
   color: var(--color-text-secondary);
 }
 
-.home__stats {
+.dashboard__stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-3);
 }
 
 @media (--tablet) {
-  .home__title {
+  .dashboard__title {
     font-size: var(--text-4xl);
   }
 
-  .home__stats {
+  .dashboard__stats {
     gap: var(--space-4);
   }
 }
 
-.home__stat {
+.dashboard__stat {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -44,7 +44,7 @@
 }
 
 @media (--tablet) {
-  .home__stat {
+  .dashboard__stat {
     display: grid;
     grid-template-columns: auto 1fr;
     align-items: center;
@@ -53,7 +53,7 @@
   }
 }
 
-.home__stat-icon {
+.dashboard__stat-icon {
   display: grid;
   place-items: center;
   width: 36px;
@@ -63,14 +63,14 @@
   color: var(--color-accent-strong);
 }
 
-.home__stat-label {
+.dashboard__stat-label {
   font-size: var(--text-xs);
   line-height: 1.3;
   font-weight: var(--weight-semibold);
   color: var(--color-text-secondary);
 }
 
-.home__stat-value {
+.dashboard__stat-value {
   grid-column: 1 / -1;
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
@@ -78,7 +78,7 @@
   color: var(--color-text-muted);
 }
 
-.home__empty {
+.dashboard__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -86,11 +86,11 @@
   text-align: center;
 }
 
-.home__mascot {
+.dashboard__mascot {
   width: 120px;
 }
 
-.home__empty-text {
+.dashboard__empty-text {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -98,16 +98,16 @@
   max-width: 460px;
 }
 
-.home__empty-title {
+.dashboard__empty-title {
   font-size: var(--text-2xl);
 }
 
-.home__empty-lead {
+.dashboard__empty-lead {
   margin-bottom: var(--space-2);
   color: var(--color-text-secondary);
 }
 
-.home__soon {
+.dashboard__soon {
   padding: 2px 8px;
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, currentcolor 18%, transparent);
@@ -115,14 +115,14 @@
 }
 
 @media (--tablet) {
-  .home__empty {
+  .dashboard__empty {
     flex-direction: row;
     justify-content: center;
     gap: var(--space-10);
     text-align: left;
   }
 
-  .home__empty-text {
+  .dashboard__empty-text {
     align-items: flex-start;
   }
 }

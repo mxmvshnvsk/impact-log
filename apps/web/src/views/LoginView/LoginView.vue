@@ -73,6 +73,10 @@
         @focus="mascot.focus('secret')"
         @blur="mascot.blur()"
       />
+      <div class="login__remember">
+        <UiCheckbox v-model="remember">{{ t('auth.secondFactor.remember') }}</UiCheckbox>
+        <p class="login__remember-hint">{{ t('auth.secondFactor.rememberHint') }}</p>
+      </div>
       <UiButton type="submit" size="lg" block :loading="verifying">
         {{ t('auth.secondFactor.submit') }}
       </UiButton>
@@ -98,6 +102,7 @@ import { ArrowLeft } from 'lucide-vue-next'
 import { AuthCard } from '@/components/AuthCard'
 import { UiAlert } from '@/ui/UiAlert'
 import { UiButton } from '@/ui/UiButton'
+import { UiCheckbox } from '@/ui/UiCheckbox'
 import { UiInput } from '@/ui/UiInput'
 import { UiOtpInput } from '@/ui/UiOtpInput'
 import { useLoginView } from './useLoginView'
@@ -112,6 +117,7 @@ const {
   submitCredentials,
   method,
   code,
+  remember,
   codeError,
   verifying,
   otpRef,
