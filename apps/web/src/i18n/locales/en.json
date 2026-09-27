@@ -11,8 +11,7 @@
     "soon": "soon",
     "logout": "Sign out",
     "openApp": "Open dashboard",
-    "dashboard": "Dashboard",
-    "landing": "About"
+    "dashboard": "Dashboard"
   },
   "footer": {
     "label": "Links"

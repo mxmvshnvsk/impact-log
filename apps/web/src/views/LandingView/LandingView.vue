@@ -7,19 +7,12 @@
         <h1 class="landing__title">{{ t('landing.hero.title') }}</h1>
         <p class="landing__lead">{{ t('landing.hero.lead') }}</p>
         <div class="landing__actions">
-          <template v-if="isAuthenticated">
-            <UiButton size="lg" :to="{ name: 'dashboard' }">
-              {{ t('nav.openApp') }}<ArrowRight :size="18" aria-hidden="true" />
-            </UiButton>
-          </template>
-          <template v-else>
-            <UiButton size="lg" :to="{ name: 'register' }">
-              {{ t('landing.cta.start') }}<ArrowRight :size="18" aria-hidden="true" />
-            </UiButton>
-            <UiButton size="lg" variant="secondary" :to="{ name: 'login' }">
-              {{ t('auth.login.title') }}
-            </UiButton>
-          </template>
+          <UiButton size="lg" :to="{ name: 'register' }">
+            {{ t('landing.cta.start') }}<ArrowRight :size="18" aria-hidden="true" />
+          </UiButton>
+          <UiButton size="lg" variant="secondary" :to="{ name: 'login' }">
+            {{ t('auth.login.title') }}
+          </UiButton>
         </div>
       </div>
       <div class="landing__hero-visual" aria-hidden="true">
@@ -102,10 +95,7 @@
     <section class="landing__final">
       <h2 class="landing__h2">{{ t('landing.final.title') }}</h2>
       <p class="landing__text">{{ t('landing.final.text') }}</p>
-      <UiButton v-if="isAuthenticated" size="lg" :to="{ name: 'dashboard' }">
-        {{ t('nav.openApp') }}<ArrowRight :size="18" aria-hidden="true" />
-      </UiButton>
-      <UiButton v-else size="lg" :to="{ name: 'register' }">
+      <UiButton size="lg" :to="{ name: 'register' }">
         {{ t('landing.cta.start') }}<ArrowRight :size="18" aria-hidden="true" />
       </UiButton>
     </section>
@@ -121,8 +111,7 @@ import { UiCard } from '@/ui/UiCard'
 import { UiEyebrow } from '@/ui/UiEyebrow'
 import { useLandingView } from './useLandingView'
 
-const { t, isAuthenticated, isMobile, mascot, examples, pains, steps, features, privacy } =
-  useLandingView()
+const { t, isMobile, mascot, examples, pains, steps, features, privacy } = useLandingView()
 </script>
 
 <style scoped src="./LandingView.css"></style>

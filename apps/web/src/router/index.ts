@@ -21,7 +21,8 @@ export const router = createRouter({
       path: '/',
       name: 'landing',
       component: () => import('@/views/LandingView'),
-      meta: { layout: 'public', access: 'any' },
+      // вошедших пользователей guard сразу отправляет в дашборд
+      meta: { layout: 'public', access: 'guest' },
     },
     {
       path: '/dashboard',

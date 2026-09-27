@@ -3,7 +3,6 @@ import { computed, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import { useMascot } from '@/composables/useMascot'
-import { useSession } from '@/composables/useSession'
 
 const PAINS = ['memory', 'small', 'impact'] as const
 const STEPS = ['write', 'organize', 'summary'] as const
@@ -19,7 +18,6 @@ const PRIVACY = ['noEmail', 'twoFactor', 'noTracking', 'yours'] as const
 
 export function useLandingView() {
   const { t } = useI18n()
-  const { isAuthenticated } = useSession()
   // На узком экране облачко с репликой не помещается рядом с маскотом
   const { isMobile } = useBreakpoint()
   // На посадочной маскот просто живёт: моргает, оглядывается, иногда засыпает
@@ -38,7 +36,6 @@ export function useLandingView() {
 
   return {
     t,
-    isAuthenticated,
     isMobile,
     mascot,
     examples,
