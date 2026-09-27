@@ -1,0 +1,99 @@
+/* Временная тема «терминал» для заглушки — заменим после выбора дизайна */
+:root {
+  --color-bg: #07090a;
+  --color-surface: #0d1110;
+  --color-text: #c9d4ce;
+  --color-muted: #5d6b64;
+  --color-border: #1c2421;
+  --color-accent: #3dff8f;
+  --color-ok: #3dff8f;
+  --color-warn: #ffb020;
+  --color-error: #ff4d5e;
+
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, "Liberation Mono",
+    monospace;
+
+  /* Сетка (ADR-0003) */
+  --layout-max-width: 1200px; /* каркас: шапка, сайдбар + контент, дашборды */
+  --content-max-width: 720px; /* колонка текста: записи, Markdown, выжимки */
+  --gutter: 16px; /* боковые отступы: 16 / 24 / 32 */
+
+  color-scheme: dark;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+@media (--tablet) {
+  :root {
+    --gutter: 24px;
+    font-size: 15px;
+  }
+}
+
+@media (--desktop) {
+  :root {
+    --gutter: 32px;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgb(61 255 143 / 0.07), transparent 60%),
+    linear-gradient(rgb(61 255 143 / 0.035) 1px, transparent 1px) 0 0 / 100% 32px,
+    linear-gradient(90deg, rgb(61 255 143 / 0.035) 1px, transparent 1px) 0 0 / 32px 100%,
+    var(--color-bg);
+}
+
+/* CRT-сканлайны поверх всего */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    rgb(0 0 0 / 0.18) 3px
+  );
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+:focus-visible {
+  outline: 1px dashed var(--color-accent);
+  outline-offset: 3px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

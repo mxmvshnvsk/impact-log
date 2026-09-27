@@ -1,0 +1,37 @@
+.api-status {
+  display: inline-block;
+}
+
+.api-status__cursor {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--color-muted);
+  animation: api-status-blink 1s steps(1, end) infinite;
+}
+
+.api-status--ok .api-status__cursor {
+  color: var(--color-ok);
+  text-shadow: 0 0 8px rgb(61 255 143 / 0.8);
+}
+
+.api-status--degraded .api-status__cursor {
+  color: var(--color-warn);
+  text-shadow: 0 0 8px rgb(255 176 32 / 0.8);
+}
+
+.api-status--error .api-status__cursor {
+  color: var(--color-error);
+  text-shadow: 0 0 8px rgb(255 77 94 / 0.8);
+}
+
+@keyframes api-status-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .api-status__cursor {
+    animation: none;
+  }
+}

@@ -1,0 +1,36 @@
+.locale-switcher {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.locale-switcher__button {
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  text-transform: lowercase;
+}
+
+.locale-switcher__button::before {
+  content: "\00a0";
+}
+
+.locale-switcher__button::after {
+  content: "\00a0";
+}
+
+.locale-switcher__button:hover {
+  color: var(--color-text);
+}
+
+.locale-switcher__button--active {
+  color: var(--color-accent);
+}
+
+.locale-switcher__button--active::before {
+  content: "[";
+}
+
+.locale-switcher__button--active::after {
+  content: "]";
+}

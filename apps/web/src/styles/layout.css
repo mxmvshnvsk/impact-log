@@ -1,0 +1,14 @@
+/* Общие layout-классы (ADR-0003) */
+
+/* Каркас страницы: по центру, не шире 1200px, с адаптивными боковыми отступами */
+.l-container {
+  width: 100%;
+  max-width: calc(var(--layout-max-width) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Колонка текста: комфортная длина строки для чтения */
+.l-content {
+  max-width: var(--content-max-width);
+}

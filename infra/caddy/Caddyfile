@@ -1,0 +1,58 @@
+# DOMAIN задаётся в .env (impact-log.com). Для локальной проверки образа: DOMAIN=localhost
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	# Логи доступа: IP усечены (IPv4 /24, IPv6 /48), чувствительные заголовки удалены — ADR-0001
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip ip_mask 24 48
+				request>client_ip ip_mask 24 48
+				request>headers>Cookie delete
+				request>headers>Authorization delete
+				resp_headers>Set-Cookie delete
+			}
+		}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	# Sourcemaps лежат в образе для отладки, но наружу не отдаются
+	@sourcemaps path *.map
+	handle @sourcemaps {
+		respond 404
+	}
+
+	handle {
+		root * /srv
+
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+
+		# index.html (в т.ч. отданный на любой путь SPA) — всегда перепроверять
+		@notAssets not path /assets/*
+		header @notAssets Cache-Control "no-cache"
+
+		# SPA: неизвестные пути отдаём index.html (vue-router, history mode)
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+www.{$DOMAIN:localhost} {
+	redir https://{$DOMAIN:localhost}{uri} permanent
+}

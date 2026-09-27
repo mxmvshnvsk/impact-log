@@ -1,0 +1,15 @@
+# Локальная разработка: только Postgres, доступен с localhost:5432
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: impact
+      POSTGRES_PASSWORD: impact
+      POSTGRES_DB: impact
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata-dev:/var/lib/postgresql/data
+
+volumes:
+  pgdata-dev: {}

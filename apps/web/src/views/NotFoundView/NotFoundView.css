@@ -1,0 +1,18 @@
+.not-found__line {
+  margin: 0 0 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.not-found__line--error {
+  color: var(--color-error);
+}
+
+.not-found__prompt {
+  margin-right: 1ch;
+  color: var(--color-accent);
+}
+
+.not-found__hint {
+  color: var(--color-muted);
+}

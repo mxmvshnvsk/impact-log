@@ -1,0 +1,38 @@
+{
+  "home": {
+    "eyebrow": "coming soon",
+    "title": "your impact log",
+    "subtitle": "Write down what you did and what it led to — and come to your review with facts, not a struggle to remember.",
+    "terminal": {
+      "connected": "Connected. Welcome to impact-log v0.1.0-alpha",
+      "collecting": "Collecting the retrospective of your achievements…",
+      "status": "Your impact log is coming soon."
+    }
+  },
+  "apiStatus": {
+    "label": "Server status",
+    "loading": "Checking…",
+    "ok": "Operational",
+    "degraded": "Running, but the database is unavailable",
+    "error": "Unavailable",
+    "version": "version {version}"
+  },
+  "notFound": {
+    "title": "no such file or directory",
+    "home": "go home"
+  },
+  "locale": {
+    "label": "Interface language",
+    "ru": "ru",
+    "en": "en"
+  },
+  "errors": {
+    "VALIDATION_ERROR": "Please check your input",
+    "NOT_FOUND": "Not found",
+    "UNAUTHORIZED": "Please sign in",
+    "RATE_LIMITED": "Too many attempts, please wait a bit",
+    "INTERNAL_ERROR": "Something went wrong on the server",
+    "NETWORK_ERROR": "Cannot reach the server",
+    "UNKNOWN_ERROR": "Unknown error"
+  }
+}

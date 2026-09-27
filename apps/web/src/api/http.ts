@@ -1,0 +1,49 @@
+import { apiErrorSchema, type ErrorCode } from '@impact-log/shared'
+import type { ZodType } from 'zod'
+
+/** Коды ошибок на клиенте: коды API + ошибки, которые возникают до/без ответа сервера */
+export type ClientErrorCode = ErrorCode | 'NETWORK_ERROR' | 'UNKNOWN_ERROR'
+
+export class ApiError extends Error {
+  readonly status: number
+  readonly code: ClientErrorCode
+
+  constructor(status: number, code: ClientErrorCode) {
+    super(code)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
+/**
+ * Запрос к API. Ответ проверяется zod-схемой — компоненты получают уже типизированные данные.
+ */
+export async function request<T>(
+  path: string,
+  schema: ZodType<T>,
+  init: RequestInit = {},
+): Promise<T> {
+  const headers = new Headers(init.headers)
+  headers.set('Accept', 'application/json')
+
+  let response: Response
+  try {
+    response = await fetch(`/api${path}`, { ...init, headers, credentials: 'same-origin' })
+  } catch {
+    throw new ApiError(0, 'NETWORK_ERROR')
+  }
+
+  const body: unknown = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    const parsed = apiErrorSchema.safeParse(body)
+    throw new ApiError(response.status, parsed.success ? parsed.data.error.code : 'UNKNOWN_ERROR')
+  }
+
+  const parsed = schema.safeParse(body)
+  if (!parsed.success) {
+    throw new ApiError(response.status, 'UNKNOWN_ERROR')
+  }
+  return parsed.data
+}
