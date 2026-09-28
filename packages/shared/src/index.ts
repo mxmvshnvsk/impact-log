@@ -1,4 +1,7 @@
+export * from './entitlements'
 export * from './errors'
 export * from './locales'
+export * from './schemas/account'
 export * from './schemas/auth'
 export * from './schemas/health'
+export * from './schemas/sync'

@@ -16,6 +16,13 @@ export const ERROR_CODES = [
   'INVALID_CODE',
   'SESSION_EXPIRED',
   'REGISTRATION_CLOSED',
+  'PAYLOAD_TOO_LARGE',
+  // устройства
+  'DEVICE_REVOKED',
+  // регион
+  'WRONG_REGION',
+  // синхронизация: заголовок X-Impact-Account не совпадает с пользователем сессии (409)
+  'ACCOUNT_MISMATCH',
 ] as const
 
 export const errorCodeSchema = z.enum(ERROR_CODES)
