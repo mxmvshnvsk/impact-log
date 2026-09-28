@@ -1,34 +1,57 @@
 import {
   codeRequestSchema,
-  credentialsSchema,
   loginRequestSchema,
   loginResponseSchema,
-  meResponseSchema,
+  logoutRequestSchema,
   okResponseSchema,
-  registerConfirmResponseSchema,
+  preloginRequestSchema,
+  preloginResponseSchema,
+  recoveryBeginRequestSchema,
+  recoveryBeginResponseSchema,
+  recoveryCompleteRequestSchema,
+  registerRequestSchema,
   registerStartResponseSchema,
-  secondFactorRequestSchema,
+  sessionResponseSchema,
 } from '@impact-log/shared'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
-import { z } from 'zod'
-import { DEVICE_COOKIE, requireSession, sessionOf } from '../../plugins/session'
-import { type AuthService, toUserDto } from './auth.service'
+import type { UserRow } from '../../db/schema'
+import { perLoginRateLimit, rateLimit } from '../../lib/rateLimit'
+import { DEVICE_COOKIE, fullSessionOf, requireSession, sessionOf } from '../../plugins/session'
+import type { AuthService } from './auth.service'
+import { toUserDto } from './user'
 
 type Options = { auth: AuthService }
 
-const MINUTE = 60_000
-
-/** Лимиты частоты по IP для чувствительных эндпоинтов */
-const limit = (max: number, minutes: number) => ({
-  rateLimit: { max, timeWindow: minutes * MINUTE },
-})
+/** sessionResponseSchema: deviceSecret — только если устройство создано этим запросом */
+function sessionBody(result: { user: UserRow; deviceId: string; deviceSecret?: string }) {
+  return {
+    user: toUserDto(result.user),
+    deviceId: result.deviceId,
+    deviceSecret: result.deviceSecret,
+  }
+}
 
 export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) => {
+  // Лимиты по логину (сверх лимитов по IP): перебор одного аккаунта с множества адресов
+  const preloginPerLogin = perLoginRateLimit(app, 20, 15)
+  const loginPerLogin = perLoginRateLimit(app, 10, 15)
+  const recoveryPerLogin = perLoginRateLimit(app, 5, 15)
+
+  app.post(
+    '/prelogin',
+    {
+      config: rateLimit(30, 5),
+      preHandler: preloginPerLogin,
+      schema: { body: preloginRequestSchema, response: { 200: preloginResponseSchema } },
+    },
+    async (request) => auth.prelogin(request.body.login),
+  )
+
   app.post(
     '/register',
     {
-      config: limit(5, 60),
-      schema: { body: credentialsSchema, response: { 200: registerStartResponseSchema } },
+      config: rateLimit(5, 60),
+      schema: { body: registerRequestSchema, response: { 200: registerStartResponseSchema } },
     },
     async (request, reply) => {
       const { session, enrollment } = await auth.startRegistration(request.body, request.session)
@@ -40,28 +63,30 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
   app.post(
     '/register/confirm',
     {
-      config: limit(15, 10),
+      config: rateLimit(15, 10),
       preHandler: requireSession('enrollment'),
-      schema: { body: codeRequestSchema, response: { 200: registerConfirmResponseSchema } },
+      schema: { body: codeRequestSchema, response: { 200: sessionResponseSchema } },
     },
     async (request, reply) => {
-      const result = await auth.confirmRegistration(sessionOf(request), request.body.code)
+      const result = await auth.confirmRegistration(sessionOf(request), request.body)
       reply.setSessionCookie(result.session)
-      return { user: toUserDto(result.user), recoveryCodes: result.recoveryCodes }
+      if (result.trust) reply.setDeviceCookie(result.trust)
+      return sessionBody(result)
     },
   )
 
   app.post(
     '/login',
     {
-      config: limit(10, 5),
+      config: rateLimit(10, 5),
+      preHandler: loginPerLogin,
       schema: { body: loginRequestSchema, response: { 200: loginResponseSchema } },
     },
     async (request, reply) => {
       const result = await auth.login(request.body, request.cookies[DEVICE_COOKIE])
       reply.setSessionCookie(result.session)
       return result.next === 'done'
-        ? { next: 'done' as const, user: toUserDto(result.user) }
+        ? { next: 'done' as const, user: toUserDto(result.user), deviceId: result.deviceId }
         : { next: 'second-factor' as const }
     },
   )
@@ -69,18 +94,43 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
   app.post(
     '/login/verify',
     {
-      config: limit(15, 5),
+      config: rateLimit(15, 5),
       preHandler: requireSession('second-factor'),
-      schema: { body: secondFactorRequestSchema, response: { 200: meResponseSchema } },
+      schema: { body: codeRequestSchema, response: { 200: sessionResponseSchema } },
     },
     async (request, reply) => {
-      const { user, session, device } = await auth.verifySecondFactor(
-        sessionOf(request),
-        request.body,
-      )
+      const result = await auth.verifySecondFactor(sessionOf(request), request.body)
+      reply.setSessionCookie(result.session)
+      if (result.trust) reply.setDeviceCookie(result.trust)
+      return sessionBody(result)
+    },
+  )
+
+  app.post(
+    '/recovery/begin',
+    {
+      config: rateLimit(5, 15),
+      preHandler: recoveryPerLogin,
+      schema: { body: recoveryBeginRequestSchema, response: { 200: recoveryBeginResponseSchema } },
+    },
+    async (request, reply) => {
+      const { session, recoveryEnvelope } = await auth.beginRecovery(request.body)
       reply.setSessionCookie(session)
-      if (device) reply.setDeviceCookie(device)
-      return { user: toUserDto(user) }
+      return { recoveryEnvelope }
+    },
+  )
+
+  app.post(
+    '/recovery/complete',
+    {
+      config: rateLimit(10, 15),
+      preHandler: requireSession('recovery'),
+      schema: { body: recoveryCompleteRequestSchema, response: { 200: sessionResponseSchema } },
+    },
+    async (request, reply) => {
+      const result = await auth.completeRecovery(sessionOf(request), request.body)
+      reply.setSessionCookie(result.session)
+      return sessionBody(result)
     },
   )
 
@@ -88,21 +138,24 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
     '/logout',
     {
       preHandler: requireSession('full'),
-      schema: {
-        body: z.object({ everywhere: z.boolean().optional() }).optional(),
-        response: { 200: okResponseSchema },
-      },
+      schema: { body: logoutRequestSchema, response: { 200: okResponseSchema } },
     },
     async (request, reply) => {
-      await auth.logout(sessionOf(request), request.body?.everywhere ?? false)
+      const everywhere = request.body?.everywhere ?? false
+      const forgetDevice = request.body?.forgetDevice ?? false
+      await auth.logout(sessionOf(request), { everywhere, forgetDevice })
       reply.clearSessionCookie()
+      if (everywhere || forgetDevice) reply.clearDeviceCookie()
       return { ok: true } as const
     },
   )
 
   app.get(
     '/me',
-    { preHandler: requireSession('full'), schema: { response: { 200: meResponseSchema } } },
-    async (request) => ({ user: toUserDto(sessionOf(request).user) }),
+    { preHandler: requireSession('full'), schema: { response: { 200: sessionResponseSchema } } },
+    async (request) => {
+      const session = fullSessionOf(request)
+      return { user: toUserDto(session.user), deviceId: session.deviceId }
+    },
   )
 }

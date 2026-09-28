@@ -15,6 +15,20 @@
       "when": 1790521879143,
       "tag": "0001_trusted_devices",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790623158016,
+      "tag": "0002_e2ee",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790633088850,
+      "tag": "0003_hardening",
+      "breakpoints": true
     }
   ]
 }

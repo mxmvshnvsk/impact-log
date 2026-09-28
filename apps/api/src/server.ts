@@ -2,7 +2,7 @@ import { buildApp } from './app'
 import { loadConfig } from './config'
 import { createDb } from './db/client'
 import { cleanupExpired } from './modules/auth/sessions'
-import { cleanupTrustedDevices } from './modules/auth/trustedDevices'
+import { cleanupDeviceTrust } from './modules/devices/devices'
 
 const HOUR = 60 * 60 * 1000
 
@@ -10,9 +10,9 @@ const config = loadConfig()
 const { sql, db, ping } = createDb(config.DATABASE_URL)
 const app = await buildApp({ config, db, ping })
 
-// Уборка истёкших сессий и брошенных регистраций
+// Уборка истёкших сессий, брошенных регистраций и истёкшего «доверия» устройств
 const cleanup = setInterval(() => {
-  Promise.all([cleanupExpired(db), cleanupTrustedDevices(db)]).catch((error) =>
+  Promise.all([cleanupExpired(db), cleanupDeviceTrust(db)]).catch((error) =>
     app.log.error(error, 'cleanup failed'),
   )
 }, HOUR)

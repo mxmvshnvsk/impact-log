@@ -3,11 +3,18 @@ import fp from 'fastify-plugin'
 import type { Database } from '../db/client'
 import type { SessionKind } from '../db/schema'
 import { AppError } from '../lib/errors'
-import { type ActiveSession, findSession } from '../modules/auth/sessions'
+import {
+  type ActiveSession,
+  type FullSession,
+  findSession,
+  type NewSession,
+} from '../modules/auth/sessions'
+import { type DeviceTrust, touchDevice } from '../modules/devices/devices'
 
 export const SESSION_COOKIE = 'il_session'
 /** Токен доверенного устройства («Запомнить этот компьютер») */
 export const DEVICE_COOKIE = 'il_device'
+const DEVICE_COOKIE_PATH = '/api/auth'
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -16,14 +23,14 @@ declare module 'fastify' {
   }
   interface FastifyReply {
     /** persistent=false — cookie живёт до закрытия браузера */
-    setSessionCookie(session: SessionCookie): FastifyReply
+    setSessionCookie(session: NewSession): FastifyReply
     clearSessionCookie(): FastifyReply
-    setDeviceCookie(device: { token: string; expiresAt: Date }): FastifyReply
+    setDeviceCookie(trust: DeviceTrust): FastifyReply
+    clearDeviceCookie(): FastifyReply
   }
 }
 
 type Options = { db: Database; secureCookie: boolean }
-type SessionCookie = { token: string; expiresAt: Date; persistent: boolean }
 
 /** Читает cookie сессии в каждом запросе и даёт хелперы для установки/сброса cookie */
 export const sessionPlugin = fp<Options>(async (app, { db, secureCookie }) => {
@@ -36,31 +43,36 @@ export const sessionPlugin = fp<Options>(async (app, { db, secureCookie }) => {
 
   app.decorateRequest('session', null)
 
-  app.decorateReply('setSessionCookie', function (this: FastifyReply, session: SessionCookie) {
+  app.decorateReply('setSessionCookie', function (this: FastifyReply, session: NewSession) {
     return this.setCookie(SESSION_COOKIE, session.token, {
       ...cookieOptions,
       ...(session.persistent ? { expires: session.expiresAt } : {}),
     })
   })
 
-  app.decorateReply(
-    'setDeviceCookie',
-    function (this: FastifyReply, device: { token: string; expiresAt: Date }) {
-      return this.setCookie(DEVICE_COOKIE, device.token, {
-        ...cookieOptions,
-        path: '/api/auth',
-        expires: device.expiresAt,
-      })
-    },
-  )
-
   app.decorateReply('clearSessionCookie', function (this: FastifyReply) {
     return this.clearCookie(SESSION_COOKIE, cookieOptions)
   })
 
+  app.decorateReply('setDeviceCookie', function (this: FastifyReply, trust: DeviceTrust) {
+    return this.setCookie(DEVICE_COOKIE, trust.token, {
+      ...cookieOptions,
+      path: DEVICE_COOKIE_PATH,
+      expires: trust.expiresAt,
+    })
+  })
+
+  app.decorateReply('clearDeviceCookie', function (this: FastifyReply) {
+    return this.clearCookie(DEVICE_COOKIE, { ...cookieOptions, path: DEVICE_COOKIE_PATH })
+  })
+
   app.addHook('onRequest', async (request) => {
     const token = request.cookies[SESSION_COOKIE]
-    request.session = token ? await findSession(db, token) : null
+    const session = token ? await findSession(db, token) : null
+    request.session = session
+    if (session?.kind === 'full' && session.deviceId) {
+      await touchDevice(db, session.deviceId, session.deviceLastSeenAt)
+    }
   })
 })
 
@@ -78,4 +90,11 @@ export function requireSession(kind: SessionKind) {
 export function sessionOf(request: FastifyRequest): ActiveSession {
   if (!request.session) throw new AppError('UNAUTHORIZED', 401)
   return request.session
+}
+
+/** Полная сессия с устройством (после requireSession('full')) */
+export function fullSessionOf(request: FastifyRequest): FullSession {
+  const session = request.session
+  if (session?.kind !== 'full' || !session.deviceId) throw new AppError('UNAUTHORIZED', 401)
+  return session as FullSession
 }

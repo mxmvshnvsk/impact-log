@@ -29,6 +29,12 @@ const envSchema = z.object({
   /** Secure-флаг cookie. По умолчанию включён в production */
   COOKIE_SECURE: z.enum(['true', 'false']).optional(),
   REGISTRATION_ENABLED: booleanFromString('true'),
+  /** Регион этого инстанса (ADR-0011): отдаётся клиентам в POST /api/region/resolve */
+  REGION: z.string().min(1).default('ru-1'),
+  /** Базовый URL API для клиентов этого региона: абсолютный URL или путь от origin */
+  PUBLIC_API_BASE_URL: z.string().min(1).default('/api'),
+  /** Запросов /api/sync/* в минуту на пользователя */
+  SYNC_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
 })
 
 type Env = z.infer<typeof envSchema>

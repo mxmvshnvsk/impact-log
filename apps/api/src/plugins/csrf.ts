@@ -5,16 +5,19 @@ const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 /**
  * Защита от CSRF в дополнение к SameSite=Strict cookie:
- * — изменяющие запросы принимаются только как application/json
- *   (HTML-форма с чужого сайта не может отправить JSON без CORS-preflight);
+ * — POST принимается только как application/json (HTML-форма с чужого сайта не может отправить
+ *   JSON без CORS-preflight). PUT/PATCH/DELETE браузер без preflight кросс-сайтово не отправит
+ *   вовсе, поэтому для них Content-Type не требуем (DELETE обычно без тела);
  * — если браузер прислал Origin, он должен совпадать с нашим хостом.
  */
 export const csrfPlugin = fp(async (app) => {
   app.addHook('onRequest', async (request) => {
     if (!UNSAFE_METHODS.has(request.method)) return
 
-    const contentType = request.headers['content-type'] ?? ''
-    if (!contentType.startsWith('application/json')) throw new AppError('FORBIDDEN', 403)
+    if (request.method === 'POST') {
+      const contentType = request.headers['content-type'] ?? ''
+      if (!contentType.startsWith('application/json')) throw new AppError('FORBIDDEN', 403)
+    }
 
     const origin = request.headers.origin
     if (origin) {
