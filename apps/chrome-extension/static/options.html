@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>impact log</title>
+    <link rel="icon" href="icons/icon-32.png" />
+    <link rel="stylesheet" href="styles/tokens.css" />
+    <link rel="stylesheet" href="styles/ui.css" />
+    <link rel="stylesheet" href="styles/options.css" />
+    <script type="module" src="options.js"></script>
+  </head>
+  <body>
+    <main class="options">
+      <header class="options__header">
+        <span class="logo">
+          <span class="logo__mark"><img src="icons/icon-32.png" alt="" width="20" height="20" /></span>
+          <span>impact log</span>
+        </span>
+        <h1 class="options__title" data-i18n="optionsTitle">Settings</h1>
+        <p class="options__lead" data-i18n="optionsLead">The extension only prepares drafts. Your entries are stored and encrypted in impact log.</p>
+      </header>
+
+      <form id="settings-form" class="card" novalidate>
+        <div class="field">
+          <label class="field__label" for="app-url" data-i18n="optionsAppUrl">Your impact log address</label>
+          <input
+            id="app-url"
+            name="appUrl"
+            class="input"
+            type="url"
+            inputmode="url"
+            autocomplete="url"
+            spellcheck="false"
+            placeholder="https://impact-log.com"
+            aria-describedby="app-url-hint app-url-error"
+          />
+          <p class="field__hint" id="app-url-hint" data-i18n="optionsAppUrlHint">Drafts open here. For local development: http://localhost:5173</p>
+          <p class="field__error" id="app-url-error" hidden></p>
+        </div>
+
+        <fieldset class="field">
+          <legend class="field__label" data-i18n="optionsDefaultScore">Default impact</legend>
+          <div class="segmented" aria-describedby="score-caption score-hint">
+            <label class="segmented__item"><input type="radio" name="score" value="1" /><span>1</span></label>
+            <label class="segmented__item"><input type="radio" name="score" value="2" /><span>2</span></label>
+            <label class="segmented__item"><input type="radio" name="score" value="3" /><span>3</span></label>
+            <label class="segmented__item"><input type="radio" name="score" value="4" /><span>4</span></label>
+            <label class="segmented__item"><input type="radio" name="score" value="5" /><span>5</span></label>
+          </div>
+          <p class="field__hint score__caption" id="score-caption" aria-live="polite"></p>
+          <p class="field__hint" id="score-hint" data-i18n="optionsDefaultScoreHint">Preselected in the popup and used for context-menu captures.</p>
+        </fieldset>
+
+        <div class="options__actions">
+          <button type="submit" class="button button--primary" data-i18n="optionsSave">Save</button>
+          <button type="button" class="button button--ghost" id="reset" data-i18n="optionsReset">Reset to defaults</button>
+          <span class="options__status" id="status" role="status" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <section class="card" aria-labelledby="privacy-title">
+        <h2 class="card__title" id="privacy-title" data-i18n="privacyTitle">Privacy</h2>
+        <p class="privacy__text" data-i18n="privacyNoNetwork">The extension makes no network requests and collects no statistics. Drafts reach impact log inside the link fragment (after #), which browsers never send to servers.</p>
+        <h3 class="privacy__subtitle" data-i18n="permissionsTitle">Permissions and why they are needed</h3>
+        <ul class="privacy-list">
+          <li data-i18n-permission="permActiveTab">activeTab — the title, address and selected text of the current tab, only after you click the extension or its menu item.</li>
+          <li data-i18n-permission="permScripting">scripting — read the selected text on that page at that moment. No scripts stay on pages.</li>
+          <li data-i18n-permission="permContextMenus">contextMenus — the “Save … to impact log” items in the right-click menu.</li>
+          <li data-i18n-permission="permStorage">storage — these settings (synced by Chrome) and an unsent popup draft (kept in memory until the browser is closed).</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

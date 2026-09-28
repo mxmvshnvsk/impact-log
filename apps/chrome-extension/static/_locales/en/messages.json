@@ -1,0 +1,210 @@
+{
+  "extName": {
+    "message": "impact log",
+    "description": "Product name, never translated"
+  },
+  "extDescription": {
+    "message": "Capture what you did and its impact from any page. Drafts open in your impact log — nothing is sent to a server."
+  },
+  "actionTitle": {
+    "message": "Capture to impact log"
+  },
+  "menuCapturePage": {
+    "message": "Save page to impact log"
+  },
+  "menuCaptureSelection": {
+    "message": "Save selection to impact log"
+  },
+  "menuCaptureLink": {
+    "message": "Save link to impact log"
+  },
+  "menuFailed": {
+    "message": "Couldn’t capture: $detail$",
+    "placeholders": {
+      "detail": {
+        "content": "$1",
+        "example": "draft too large"
+      }
+    }
+  },
+  "popupTitle": {
+    "message": "Capture to impact log"
+  },
+  "openSettings": {
+    "message": "Settings"
+  },
+  "fieldTitle": {
+    "message": "What did you do?"
+  },
+  "fieldTitlePlaceholder": {
+    "message": "Sped up the CI build"
+  },
+  "fieldLink": {
+    "message": "Link"
+  },
+  "fieldLinkHint": {
+    "message": "PR, issue, commit or doc — the type is detected automatically"
+  },
+  "fieldSelection": {
+    "message": "Selected text"
+  },
+  "selectionPlacement": {
+    "message": "Where to put the selected text"
+  },
+  "selectionAsQuote": {
+    "message": "As a quote"
+  },
+  "selectionToDescription": {
+    "message": "Into description"
+  },
+  "fieldDescription": {
+    "message": "Description"
+  },
+  "optional": {
+    "message": "optional"
+  },
+  "fieldScore": {
+    "message": "Impact"
+  },
+  "score1": {
+    "message": "Small win"
+  },
+  "score2": {
+    "message": "Helpful"
+  },
+  "score3": {
+    "message": "Noticeable result"
+  },
+  "score4": {
+    "message": "Major impact"
+  },
+  "score5": {
+    "message": "Key result of the year"
+  },
+  "fieldCategories": {
+    "message": "Categories"
+  },
+  "fieldLabels": {
+    "message": "Labels"
+  },
+  "hintCommaSeparated": {
+    "message": "Comma separated"
+  },
+  "submit": {
+    "message": "Open in impact log"
+  },
+  "privacyNote": {
+    "message": "The draft goes in the link, not via a server."
+  },
+  "kindPr": {
+    "message": "Pull request $ref$",
+    "placeholders": {
+      "ref": {
+        "content": "$1",
+        "example": "#42"
+      }
+    }
+  },
+  "kindIssue": {
+    "message": "Issue $ref$",
+    "placeholders": {
+      "ref": {
+        "content": "$1",
+        "example": "#42"
+      }
+    }
+  },
+  "kindCommit": {
+    "message": "Commit $ref$",
+    "placeholders": {
+      "ref": {
+        "content": "$1",
+        "example": "#42"
+      }
+    }
+  },
+  "kindDoc": {
+    "message": "Document"
+  },
+  "kindUrl": {
+    "message": "Link"
+  },
+  "kindInvalid": {
+    "message": "Invalid link"
+  },
+  "errorTitleRequired": {
+    "message": "Enter a title"
+  },
+  "errorLinkInvalid": {
+    "message": "Enter an http(s) link"
+  },
+  "errorTooLarge": {
+    "message": "Too long to fit in a link — shorten the description or the selected text."
+  },
+  "errorGeneric": {
+    "message": "Couldn’t open impact log: $detail$",
+    "placeholders": {
+      "detail": {
+        "content": "$1",
+        "example": "draft too large"
+      }
+    }
+  },
+  "optionsTitle": {
+    "message": "Settings"
+  },
+  "optionsLead": {
+    "message": "The extension only prepares drafts. Your entries are stored and encrypted in impact log."
+  },
+  "optionsAppUrl": {
+    "message": "Your impact log address"
+  },
+  "optionsAppUrlHint": {
+    "message": "Drafts open here. For local development: http://localhost:5173"
+  },
+  "optionsAppUrlInvalid": {
+    "message": "Use https://… (http:// only for localhost), without query, # or special characters in the address"
+  },
+  "optionsDefaultScore": {
+    "message": "Default impact"
+  },
+  "optionsDefaultScoreHint": {
+    "message": "Preselected in the popup and used for context-menu captures."
+  },
+  "optionsSave": {
+    "message": "Save"
+  },
+  "optionsSaved": {
+    "message": "Saved"
+  },
+  "optionsReset": {
+    "message": "Reset to defaults"
+  },
+  "privacyTitle": {
+    "message": "Privacy"
+  },
+  "privacyNoNetwork": {
+    "message": "The extension makes no network requests and collects no statistics. Drafts reach impact log inside the link fragment (after #), which browsers never send to servers."
+  },
+  "permissionsTitle": {
+    "message": "Permissions and why they are needed"
+  },
+  "permActiveTab": {
+    "message": "activeTab — the title, address and selected text of the current tab, only after you click the extension or its menu item."
+  },
+  "permScripting": {
+    "message": "scripting — read the selected text on that page at that moment. No scripts stay on pages."
+  },
+  "permContextMenus": {
+    "message": "contextMenus — the “Save … to impact log” items in the right-click menu."
+  },
+  "permStorage": {
+    "message": "storage — these settings (synced by Chrome) and an unsent popup draft (kept in memory until the browser is closed)."
+  },
+  "placeholderCategories": {
+    "message": "Performance, DX"
+  },
+  "placeholderLabels": {
+    "message": "ci, perf"
+  }
+}

@@ -1,0 +1,125 @@
+/*
+ * Токены дизайн-системы impact log — подмножество apps/web/src/styles/tokens.css (ADR-0004).
+ * В расширении тема берётся из prefers-color-scheme. Веб-шрифты не подключаем:
+ * Manrope / JetBrains Mono используются, только если установлены локально, иначе — системные.
+ */
+:root {
+  color-scheme: light;
+
+  --color-bg: #f4f6f5;
+  --color-surface: #ffffff;
+  --color-surface-muted: #eef1ef;
+  --color-surface-sunken: #e7ebe9;
+
+  --color-text: #0f1a15;
+  --color-text-secondary: #56605b;
+  --color-text-muted: #8a938e;
+  --color-on-primary: #ffffff;
+
+  --color-border: #e3e8e5;
+  --color-border-strong: #cfd6d2;
+
+  --color-primary: #0f1f18;
+  --color-primary-hover: #1d3429;
+  --color-logo: #0f1f18;
+  --color-accent: #22c77a;
+  --color-accent-strong: #129b5c;
+  --color-accent-soft: #e3f8ed;
+  --color-accent-glow: rgb(34 199 122 / 0.22);
+
+  --color-danger: #d93b45;
+  --color-danger-soft: #fdecee;
+  --color-info: #3b6fe0;
+  --color-info-soft: #e8effd;
+
+  --font-sans:
+    "Manrope Variable", "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono:
+    "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 26px;
+
+  --leading-tight: 1.15;
+  --leading-normal: 1.55;
+  --tracking-tight: -0.025em;
+
+  --weight-regular: 450;
+  --weight-medium: 550;
+  --weight-semibold: 650;
+  --weight-bold: 750;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --shadow-xs: 0 1px 2px rgb(15 26 21 / 0.05);
+  --shadow-sm: 0 1px 2px rgb(15 26 21 / 0.04), 0 4px 12px rgb(15 26 21 / 0.04);
+  --shadow-focus: 0 0 0 4px var(--color-accent-glow);
+  --shadow-focus-danger: 0 0 0 4px rgb(217 59 69 / 0.16);
+
+  --control-sm: 36px;
+  --control-md: 44px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --color-bg: #0c110f;
+    --color-surface: #141a17;
+    --color-surface-muted: #1b2420;
+    --color-surface-sunken: #232d28;
+
+    --color-text: #e7eeea;
+    --color-text-secondary: #a4afa9;
+    --color-text-muted: #6f7b75;
+    --color-on-primary: #0f1a15;
+
+    --color-border: #243029;
+    --color-border-strong: #33413a;
+
+    --color-primary: #e6f2eb;
+    --color-primary-hover: #ffffff;
+    --color-logo: #1b3326;
+
+    --color-accent: #2fd786;
+    --color-accent-strong: #45e39a;
+    --color-accent-soft: rgb(47 215 134 / 0.14);
+    --color-accent-glow: rgb(47 215 134 / 0.25);
+
+    --color-danger: #f26673;
+    --color-danger-soft: rgb(242 102 115 / 0.14);
+    --color-info: #86a8ff;
+    --color-info-soft: rgb(134 168 255 / 0.14);
+
+    --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.25);
+    --shadow-focus-danger: 0 0 0 4px rgb(242 102 115 / 0.22);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+  }
+}

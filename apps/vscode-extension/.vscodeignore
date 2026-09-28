@@ -1,0 +1,8 @@
+**
+!dist/extension.cjs
+!media/icon.png
+!l10n/**
+!package.json
+!package.nls.json
+!package.nls.*.json
+!README.md

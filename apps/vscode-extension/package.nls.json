@@ -1,0 +1,16 @@
+{
+  "extension.description": "Capture what you did and its impact from VS Code: selected code, the current file or the last commit. Drafts open in your impact log — nothing is sent to a server.",
+  "command.capture": "Capture impact",
+  "command.captureSelection": "Capture selection",
+  "command.captureCommit": "Capture last commit",
+  "config.appUrl": "Address of your impact log. Drafts open at `<address>/capture`. Only `https://` (or `http://localhost…` for development, e.g. `http://localhost:5173`). User setting only: workspaces can't override it.",
+  "config.appUrl.patternError": "Use https://… (http:// only for localhost)",
+  "config.defaultScore": "Impact preselected when capturing (1 — small win … 5 — key result of the year).",
+  "score.1": "Small win",
+  "score.2": "Helpful",
+  "score.3": "Noticeable result",
+  "score.4": "Major impact",
+  "score.5": "Key result of the year",
+  "capabilities.untrustedWorkspaces": "In Restricted Mode git is not used: no links to commits, branches and files.",
+  "capabilities.virtualWorkspaces": "In virtual workspaces git is not available: no links to commits, branches and files."
+}

@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "impact-log: build",
+      "type": "shell",
+      "command": "pnpm run build",
+      "problemMatcher": [],
+      "group": "build"
+    }
+  ]
+}

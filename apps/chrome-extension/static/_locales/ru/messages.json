@@ -1,0 +1,210 @@
+{
+  "extName": {
+    "message": "impact log",
+    "description": "Product name, never translated"
+  },
+  "extDescription": {
+    "message": "Записывайте, что сделали и какой был эффект, с любой страницы. Черновик открывается в вашем impact log — на сервер ничего не уходит."
+  },
+  "actionTitle": {
+    "message": "Записать в impact log"
+  },
+  "menuCapturePage": {
+    "message": "Сохранить страницу в impact log"
+  },
+  "menuCaptureSelection": {
+    "message": "Сохранить выделенное в impact log"
+  },
+  "menuCaptureLink": {
+    "message": "Сохранить ссылку в impact log"
+  },
+  "menuFailed": {
+    "message": "Не удалось сохранить: $detail$",
+    "placeholders": {
+      "detail": {
+        "content": "$1",
+        "example": "draft too large"
+      }
+    }
+  },
+  "popupTitle": {
+    "message": "Запись в impact log"
+  },
+  "openSettings": {
+    "message": "Настройки"
+  },
+  "fieldTitle": {
+    "message": "Что сделали?"
+  },
+  "fieldTitlePlaceholder": {
+    "message": "Ускорил сборку в CI"
+  },
+  "fieldLink": {
+    "message": "Ссылка"
+  },
+  "fieldLinkHint": {
+    "message": "PR, задача, коммит или документ — тип определится сам"
+  },
+  "fieldSelection": {
+    "message": "Выделенный текст"
+  },
+  "selectionPlacement": {
+    "message": "Куда добавить выделенный текст"
+  },
+  "selectionAsQuote": {
+    "message": "Цитатой"
+  },
+  "selectionToDescription": {
+    "message": "В описание"
+  },
+  "fieldDescription": {
+    "message": "Описание"
+  },
+  "optional": {
+    "message": "необязательно"
+  },
+  "fieldScore": {
+    "message": "Влияние"
+  },
+  "score1": {
+    "message": "Заметная мелочь"
+  },
+  "score2": {
+    "message": "Полезно"
+  },
+  "score3": {
+    "message": "Ощутимый результат"
+  },
+  "score4": {
+    "message": "Сильное влияние"
+  },
+  "score5": {
+    "message": "Ключевой результат года"
+  },
+  "fieldCategories": {
+    "message": "Категории"
+  },
+  "fieldLabels": {
+    "message": "Метки"
+  },
+  "hintCommaSeparated": {
+    "message": "Через запятую"
+  },
+  "submit": {
+    "message": "Открыть в impact log"
+  },
+  "privacyNote": {
+    "message": "Черновик идёт в ссылке, не через сервер."
+  },
+  "kindPr": {
+    "message": "Pull request $ref$",
+    "placeholders": {
+      "ref": {
+        "content": "$1",
+        "example": "#42"
+      }
+    }
+  },
+  "kindIssue": {
+    "message": "Задача $ref$",
+    "placeholders": {
+      "ref": {
+        "content": "$1",
+        "example": "#42"
+      }
+    }
+  },
+  "kindCommit": {
+    "message": "Коммит $ref$",
+    "placeholders": {
+      "ref": {
+        "content": "$1",
+        "example": "#42"
+      }
+    }
+  },
+  "kindDoc": {
+    "message": "Документ"
+  },
+  "kindUrl": {
+    "message": "Ссылка"
+  },
+  "kindInvalid": {
+    "message": "Неверная ссылка"
+  },
+  "errorTitleRequired": {
+    "message": "Введите заголовок"
+  },
+  "errorLinkInvalid": {
+    "message": "Нужна ссылка http(s)"
+  },
+  "errorTooLarge": {
+    "message": "Не помещается в ссылку — сократите описание или выделенный текст."
+  },
+  "errorGeneric": {
+    "message": "Не удалось открыть impact log: $detail$",
+    "placeholders": {
+      "detail": {
+        "content": "$1",
+        "example": "draft too large"
+      }
+    }
+  },
+  "optionsTitle": {
+    "message": "Настройки"
+  },
+  "optionsLead": {
+    "message": "Расширение только готовит черновики. Записи хранятся и шифруются в impact log."
+  },
+  "optionsAppUrl": {
+    "message": "Адрес вашего impact log"
+  },
+  "optionsAppUrlHint": {
+    "message": "Здесь открываются черновики. Для локальной разработки: http://localhost:5173"
+  },
+  "optionsAppUrlInvalid": {
+    "message": "Нужен https://… (http:// — только для localhost), без query, # и спецсимволов в адресе"
+  },
+  "optionsDefaultScore": {
+    "message": "Влияние по умолчанию"
+  },
+  "optionsDefaultScoreHint": {
+    "message": "Выбрано в окне расширения и используется при сохранении из контекстного меню."
+  },
+  "optionsSave": {
+    "message": "Сохранить"
+  },
+  "optionsSaved": {
+    "message": "Сохранено"
+  },
+  "optionsReset": {
+    "message": "Сбросить"
+  },
+  "privacyTitle": {
+    "message": "Приватность"
+  },
+  "privacyNoNetwork": {
+    "message": "Расширение не делает сетевых запросов и не собирает статистику. Черновик попадает в impact log во фрагменте ссылки (после #), который браузер никогда не отправляет на сервер."
+  },
+  "permissionsTitle": {
+    "message": "Разрешения и зачем они"
+  },
+  "permActiveTab": {
+    "message": "activeTab — заголовок, адрес и выделенный текст текущей вкладки, только после нажатия на расширение или пункт меню."
+  },
+  "permScripting": {
+    "message": "scripting — прочитать выделенный текст на этой странице в этот момент. Скрипты на страницах не остаются."
+  },
+  "permContextMenus": {
+    "message": "contextMenus — пункты «Сохранить … в impact log» в контекстном меню."
+  },
+  "permStorage": {
+    "message": "storage — эти настройки (синхронизирует Chrome) и неотправленный черновик окна расширения (в памяти до закрытия браузера)."
+  },
+  "placeholderCategories": {
+    "message": "Performance, DX"
+  },
+  "placeholderLabels": {
+    "message": "ci, perf"
+  }
+}

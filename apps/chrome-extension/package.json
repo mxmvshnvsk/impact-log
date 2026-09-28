@@ -1,0 +1,18 @@
+{
+  "name": "@impact-log/chrome-extension",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "impact log quick capture for Chrome (Manifest V3)",
+  "scripts": {
+    "build": "tsup && node scripts/copy-static.mjs",
+    "icons": "node scripts/icons.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@impact-log/core": "workspace:*",
+    "@types/chrome": "^0.1.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.0"
+  }
+}

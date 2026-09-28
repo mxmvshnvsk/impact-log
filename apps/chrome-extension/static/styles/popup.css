@@ -1,0 +1,110 @@
+/* Окно расширения: ширина ~360px, высота Chrome ограничивает 600px */
+body {
+  width: 360px;
+  background: var(--color-surface);
+}
+
+.popup__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--space-3) 10px var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.popup__form {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.popup__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.popup__selection {
+  max-height: 96px;
+}
+
+/* ---------- раскрывающееся описание ---------- */
+.disclosure {
+  display: grid;
+}
+
+.disclosure__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 2px 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 20px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure__summary::before {
+  content: "+";
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.disclosure[open] .disclosure__summary::before {
+  transform: rotate(45deg);
+}
+
+.disclosure__summary:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.disclosure textarea {
+  margin-top: 6px;
+}
+
+.popup__footer {
+  display: grid;
+  gap: 10px;
+  padding-top: var(--space-1);
+}
+
+.labels-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.labels-preview li {
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.popup__row .labels-preview {
+  grid-column: 2;
+  margin-top: -6px;
+}

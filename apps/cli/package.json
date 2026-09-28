@@ -1,0 +1,26 @@
+{
+  "name": "@impact-log/cli",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "impact log quick capture from the terminal: builds a draft and opens it in the web app",
+  "bin": {
+    "impact": "./dist/impact.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@impact-log/core": "workspace:*",
+    "@types/node": "^24.0.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.0"
+  }
+}

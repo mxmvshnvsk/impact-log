@@ -1,0 +1,115 @@
+{
+  "name": "impact-log-vscode",
+  "displayName": "impact log",
+  "description": "%extension.description%",
+  "publisher": "impact-log",
+  "private": true,
+  "version": "0.1.0",
+  "license": "UNLICENSED",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "impact",
+    "brag document",
+    "performance review",
+    "achievements",
+    "capture"
+  ],
+  "main": "./dist/extension.cjs",
+  "l10n": "./l10n",
+  "activationEvents": [],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "%capabilities.untrustedWorkspaces%"
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "%capabilities.virtualWorkspaces%"
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "impactLog.capture",
+        "title": "%command.capture%",
+        "category": "impact log"
+      },
+      {
+        "command": "impactLog.captureSelection",
+        "title": "%command.captureSelection%",
+        "category": "impact log"
+      },
+      {
+        "command": "impactLog.captureCommit",
+        "title": "%command.captureCommit%",
+        "category": "impact log"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "impactLog.captureSelection",
+          "when": "editorHasSelection",
+          "group": "9_impactLog@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "impactLog.captureSelection",
+          "when": "editorHasSelection"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "impact log",
+      "properties": {
+        "impactLog.appUrl": {
+          "type": "string",
+          "default": "https://impact-log.com",
+          "scope": "application",
+          "pattern": "^https?://",
+          "patternErrorMessage": "%config.appUrl.patternError%",
+          "markdownDescription": "%config.appUrl%"
+        },
+        "impactLog.defaultScore": {
+          "type": "integer",
+          "default": 3,
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "enumDescriptions": [
+            "%score.1%",
+            "%score.2%",
+            "%score.3%",
+            "%score.4%",
+            "%score.5%"
+          ],
+          "markdownDescription": "%config.defaultScore%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "smoke": "node scripts/smoke.cjs",
+    "vscode:prepublish": "tsup"
+  },
+  "devDependencies": {
+    "@impact-log/core": "workspace:*",
+    "@types/node": "^24.0.0",
+    "@types/vscode": "~1.90.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.0"
+  }
+}
