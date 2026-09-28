@@ -23,6 +23,7 @@
 | `--color-accent` | #22c77a | фокус, активное, иконки, прогресс |
 | `--color-accent-strong` | #129b5c | акцентный **текст** и ссылки (контраст ≥ 4.5) |
 | `--color-accent-soft` | #e3f8ed | фон активного/выбранного, подложки иконок |
+| `--color-surface-raised` | #ffffff / #2a3630 (тёмная) | «приподнятый» элемент поверх `--color-surface-muted` (выбранный сегмент `UiSegmented`) |
 | `--color-danger` / `warning` / `info` (+ `-soft`) | | статусы и их фоны |
 
 Правило: зелёный `--color-accent` не используем для текста на белом — только `--color-accent-strong`.
@@ -76,7 +77,12 @@
 |---|---|---|
 | `UiButton` | действия; ссылка, если передан `to` | `variant`: primary · secondary · ghost · danger; `size`: sm · md · lg; `block`, `loading` |
 | `UiIconButton` | действие-иконка | `label` (обязателен — aria + тултип), `variant`: ghost · solid, `active` |
-| `UiInput` | текстовое поле | `label`, `hint`, `error` (переведённый текст), `revealable`, `monospace` |
+| `UiInput` | текстовое поле | `label`, `hint`, `error` (переведённый текст), `revealable`, `monospace`; `type`: text · password · date · search · url · number; `id`, `hideLabel`, `spellcheck` (по умолчанию выкл. — логины, коды; для текста записей — вкл.), `min`/`max`, `enterkeyhint` |
+| `UiTextarea` | многострочное поле, визуально как `UiInput` | `label`, `hint`, `error`, `rows` (3), `maxlength`, `counter` (счётчик «n / max» у подписи), `autoresize` (растёт с текстом), `hideLabel`, `monospace`; expose `focus()` |
+| `UiSelect` | нативный `<select>` в стиле поля | `options: {value,label}[]`, `label`, `hint`, `size`: sm · md, `hideLabel` (первая опция тогда должна объяснять себя: «Все метки») |
+| `UiSegmented` | переключатель-«таблетка» из 2–6 вариантов | `options: {value,label,title?}[]`, `label` (aria-label группы), `size`: sm · md, `block`; `role=radiogroup`, стрелки ←/→, Home/End, горизонтальный скролл на узких экранах; `title` варианта — тултип и часть доступного имени |
+| `UiChip` | метка/категория/фильтр | `tone`: neutral · accent, `size`: sm · md, `removable` + `removeLabel` (кнопка ×, событие `remove`), `to` — чип-ссылка |
+| `UiDialog` | модальное подтверждение | нативный `<dialog>` + `showModal()`: `open`, `title`, `description`, `confirmLabel`, `cancelLabel`, `tone`: default · danger, `loading`, `confirmDisabled`; события `confirm`/`cancel` (Esc, клик по подложке); фокус — на «Отмене»; слот — доп. содержимое |
 | `UiOtpInput` | код из 6 цифр | одно реальное поле поверх ячеек: вставка, автоподстановка, `@complete` |
 | `UiCheckbox` | флажок с подписью | v-model: boolean |
 | `UiCard` | контейнер | `variant`: solid · muted · glass; `padding`: none · md · lg |
@@ -87,6 +93,40 @@
 
 Кнопки: одна primary на экран/форму. Разрушительные действия — `danger` + подтверждение.
 Кнопка с `loading` не меняет ширину (текст скрывается, спиннер по центру).
+Удаление записи подтверждается `UiDialog tone="danger"`, а сразу после — «Вернуть» в журнале (отмена лучше, чем
+второе подтверждение).
+
+### Компоненты записей (`src/components`)
+
+| Компонент | Назначение |
+|---|---|
+| `ScoreBadge` | оценка 1–5 «уровнем сигнала» из пяти столбиков + цифра; `showLabel` — с подписью шкалы; `aria-label` «Оценка 4 из 5: Сильное влияние». Сильные (4–5) — акцентные |
+| `ScoreInput` | выбор оценки: `UiSegmented` 1–5 (подпись шкалы — в тултипе и доступном имени), под ним — выбранная подпись и раскрывашка «Как оценивать?». `useScoreOptions()` — варианты для компактного `UiSegmented` |
+| `MarkdownView` | Markdown записи → HTML: `marked` + `DOMPurify` (`utils/markdown.ts`). Ссылки — `target=_blank rel="noopener noreferrer"`; картинки по внешним URL не загружаются, а становятся ссылками; `style`, формы, iframe, svg вырезаются. `headingOffset` (2: «#» → h3), `compact` |
+| `ChipsInput` | ввод категорий/меток: Enter или запятая — добавить, Backspace в пустом поле — убрать последнюю, вставка «a, b, c» — всё сразу; подсказки из словаря (`vocabulary` ядра) — combobox со стрелками. `kind="labels"` нормализует `normalizeLabels` и показывает `#`, `categories` — `normalizeCategories` |
+| `MetricsEditor` | строки «что измеряли · было → стало · ед.» с живой дельтой (`metricDelta`, %), до 10 |
+| `EvidenceEditor` | артефакты: вставили ссылку — тип (PR/задача/коммит/документ) определяется `evidenceFromUrl` сразу; текст без ссылки — заметка; у каждого — необязательный заголовок |
+| `EvidenceIcon` | иконка по `evidence.kind` |
+| `ImpactForm` | форма записи целиком (создание, редактирование, дублирование, захват); сохраняет родитель через prop `save` |
+| `ImpactCard` | карточка ленты: дата, `ScoreBadge`, заголовок, 1–2 метрики, чипы, иконки артефактов; `conflict` — метка «Конфликт версий» (id — `useSync().conflictIds`). Вся карточка — «растянутая» ссылка заголовка, внутри нет других интерактивов |
+| `ImpactFeed` | лента по месяцам (заголовки месяцев липкие); дорисовывает по 40 карточек при прокрутке |
+| `ImpactQuickAdd` | быстрый ввод: строка + оценка + Enter → запись с сегодняшней датой; «Подробнее» — в полную форму с текстом |
+| `ImpactStats` | всего · за месяц · недель подряд (`weeklyStreak`) · доля сильных |
+| `ImpactFilters` | поиск + период/оценка/категория/метка; состояние — в query URL (`utils/journalFilters.ts`), на mobile фильтры за кнопкой |
+| `ImpactMissing` | «запись не найдена» с маскотом |
+
+Записи экраны берут только из `useImpacts()` (`list` — тот же список без DeepReadonly-типов, для функций ядра).
+Подписи шкалы — `impacts.score.1…5`, одинаковые с клиентами захвата (Chrome, CLI, VS Code).
+
+### Горячие клавиши
+Одиночные клавиши работают вне полей ввода и открытых диалогов, по физической клавише (и в русской раскладке).
+
+| Где | Клавиша | Действие |
+|---|---|---|
+| Журнал | `N` | новая запись |
+| Журнал | `/` | поиск |
+| Запись | `E` · `←` `→` | редактировать · соседние записи |
+| Форма записи | `⌘/Ctrl + Enter` · `Esc` | сохранить · отмена (с подтверждением, если есть изменения) |
 
 ## 5. Формы
 
@@ -107,6 +147,12 @@
 
 **Коды 2FA**: `UiOtpInput`, автоотправка при вводе 6-й цифры; при неверном коде — поле очищается,
 фокус возвращается, маскот огорчается.
+
+**Длинные формы** (запись `ImpactForm`): те же правила валидации, но
+- Enter в однострочном поле **не** отправляет форму (легко отправить недописанное) — только кнопка или `⌘/Ctrl+Enter`;
+- панель действий липкая (над нижней навигацией на mobile), подсказка про `⌘/Ctrl+Enter` — на desktop;
+- уход со страницы с несохранёнными изменениями (Esc, «Отмена», навигация) — через `UiDialog`; закрытие вкладки — `beforeunload`;
+- ошибки вложенных полей — по «пути» (`metrics.0.value`), сообщения ядра (`impact.titleRequired`) → `validation.impact.*`.
 
 ## 6. Маскот
 
