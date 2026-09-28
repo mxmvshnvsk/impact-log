@@ -1,0 +1,68 @@
+/* Вкладки-ссылки: подчёркнутая линия на всю ширину, на узких экранах — горизонтальная прокрутка */
+.ui-tabs {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ui-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ui-tabs__list {
+  display: flex;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-tabs__item {
+  flex: none;
+}
+
+.ui-tabs__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-md);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.ui-tabs__link::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.ui-tabs__link:hover {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-tabs__link:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.ui-tabs__link--active {
+  color: var(--color-text);
+}
+
+.ui-tabs__link--active::after {
+  transform: scaleX(1);
+}

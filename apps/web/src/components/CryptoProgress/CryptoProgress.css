@@ -1,0 +1,59 @@
+.crypto-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.crypto-progress__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.crypto-progress__spinner {
+  flex: none;
+  color: var(--color-accent-strong);
+}
+
+.crypto-progress__text {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.crypto-progress__track {
+  position: relative;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+}
+
+.crypto-progress__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  animation: crypto-progress 1.2s var(--ease-out) infinite;
+}
+
+@keyframes crypto-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crypto-progress__bar {
+    width: 100%;
+    animation: none;
+    opacity: 0.5;
+  }
+}

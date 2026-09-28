@@ -1,0 +1,24 @@
+/* Общие стили форм безопасности (смена пароля, Recovery Key, 2FA, удаление аккаунта) */
+.security-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.security-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.security-form__muted {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+.security-form__hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

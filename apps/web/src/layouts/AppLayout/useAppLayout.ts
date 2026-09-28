@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { NAV_ITEMS } from './navigation'
@@ -12,11 +12,18 @@ export function useAppLayout() {
       ...item,
       label: item.to ? t(`nav.${item.key}`) : `${t(`nav.${item.key}`)} — ${t('nav.soon')}`,
       shortLabel: t(`nav.${item.key}`),
-      active: item.to !== undefined && route.name === (item.to as { name: string }).name,
+      active: item.match.includes(String(route.name)),
     })),
   )
 
   const title = computed(() => (route.meta.title ? t(route.meta.title) : ''))
 
-  return { t, items, title }
+  /** «Перейти к содержимому» для клавиатуры: мимо сайдбара и шапки — сразу в main (без смены URL) */
+  const mainRef = ref<HTMLElement | null>(null)
+  function skipToContent() {
+    mainRef.value?.focus()
+    mainRef.value?.scrollIntoView({ block: 'start' })
+  }
+
+  return { t, items, title, mainRef, skipToContent }
 }

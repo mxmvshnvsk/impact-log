@@ -1,0 +1,144 @@
+{
+  "settings": {
+    "title": "Settings",
+    "tabsLabel": "Settings sections",
+    "tabs": {
+      "account": "Account & sync",
+      "data": "Data"
+    }
+  },
+  "local": {
+    "badge": "Local",
+    "title": "Sync is off",
+    "text": "Your entries live only on this device — encrypted, in the browser’s storage. Turn on sync to use impact log on several devices and not lose your entries along with the browser.",
+    "points": {
+      "e2ee": "End-to-end encryption: the server sees only ciphertext",
+      "noEmail": "Just a username and password — no email, no phone",
+      "keep": "All entries from this device move into the account"
+    },
+    "enable": "Turn on sync",
+    "signIn": "Sign in to an existing account"
+  },
+  "signedOut": {
+    "title": "Sign in again",
+    "text": "Your server session has ended: it expired, you signed out everywhere, or this device was revoked. Entries on this device are safe — sync resumes after you sign in.",
+    "action": "Sign in again"
+  },
+  "profile": {
+    "title": "Account",
+    "login": "Username",
+    "accountId": "Account ID",
+    "accountIdHint": "An opaque identifier: it reveals neither your username nor your region and stays the same if your data moves. Use it to refer to your account without sharing your username.",
+    "copyId": "Copy Account ID",
+    "plan": "Plan",
+    "plans": {
+      "PILOT": "Pilot",
+      "FREE": "Free",
+      "PRO": "Pro"
+    },
+    "impacts": "Entries on the server",
+    "devices": "Devices",
+    "unlimited": "{used} · unlimited",
+    "of": "{used} of {max}",
+    "storage": "Server storage",
+    "storageMeters": {
+      "bytes": "Size",
+      "objects": "Objects"
+    }
+  },
+  "devices": {
+    "title": "Devices",
+    "lead": "Every browser you sign in from is a separate device. Device names are encrypted with your key: the server can’t see them.",
+    "current": "This device",
+    "trusted": "Remembered: sign-in without a 2FA code",
+    "lastSeen": "Active: {date}",
+    "added": "Added {date}",
+    "unnamed": "Unnamed device",
+    "undecryptable": "Couldn’t decrypt the name",
+    "rename": "Rename",
+    "renameLabel": "Name of this device",
+    "save": "Save",
+    "cancel": "Cancel",
+    "revoke": "Revoke",
+    "revokeLabel": "Revoke device “{name}”",
+    "revokeTitle": "Revoke “{name}”?",
+    "revokeText": "The device loses access to the server: sync stops there and its remembered sign-in is reset. Entries already downloaded to it stay there — they can only be wiped on that device itself.",
+    "revokeConfirm": "Revoke device",
+    "revoked": "Device revoked.",
+    "renamed": "Name saved.",
+    "loading": "Loading devices…",
+    "retry": "Retry",
+    "empty": "No other devices.",
+    "defaultName": "Browser"
+  },
+  "security": {
+    "title": "Security",
+    "cancel": "Cancel",
+    "password": {
+      "title": "Password",
+      "text": "Your password encrypts the key to your data and never goes to the server. After a change, other devices will ask you to sign in again.",
+      "action": "Change password",
+      "submit": "Change password",
+      "done": "Password changed. Other sessions were ended."
+    },
+    "recoveryKey": {
+      "title": "Recovery Key",
+      "text": "Restores access if you forget your password. A new key replaces the old one immediately.",
+      "action": "Reissue",
+      "confirmPassword": "Confirm with your current password",
+      "submit": "Save the new key",
+      "done": "The new Recovery Key is active, the old one no longer works."
+    },
+    "totp": {
+      "title": "Two-factor protection",
+      "text": "Codes from an authenticator app. Reissue it if you changed phones or doubt the old one is safe.",
+      "action": "Reissue 2FA",
+      "start": "Continue",
+      "currentCode": "Current code from the app",
+      "lostPhone": "No access to your authenticator app? Recover access with your Recovery Key — after that, 2FA can be reissued without a code.",
+      "done": "2FA reissued. Other sessions were ended."
+    }
+  },
+  "session": {
+    "title": "Sign out",
+    "text": "Signing out disconnects this device from the account. Choose what to do with the entries in this browser.",
+    "logout": "Sign out",
+    "keep": "Sign out, keep entries",
+    "keepHint": "The device becomes local: entries stay here, sync stops.",
+    "wipe": "Sign out and wipe entries",
+    "wipeHint": "Entries are removed from this browser. They stay on the server and your other devices.",
+    "dialogTitle": "Sign out of “{login}”?",
+    "wipeOption": "Also wipe entries from this device",
+    "pending": "Not yet sent to the server: {count}. Wiping will lose these changes.",
+    "everywhere": "Sign out everywhere",
+    "everywhereHint": "Ends all sessions and resets remembered computers. You’ll need to sign in again everywhere, including here.",
+    "everywhereTitle": "Sign out everywhere?",
+    "everywhereText": "All sessions will be ended and remembered computers reset. Entries stay on your devices, sync resumes after you sign in.",
+    "everywhereConfirm": "Sign out everywhere",
+    "everywhereDone": "All sessions ended. Sign in again to continue syncing."
+  },
+  "delete": {
+    "title": "Delete account",
+    "text": "The account and all encrypted data on the server are deleted immediately and permanently — no trash bin. Entries on this device stay unless you wipe them separately.",
+    "action": "Delete account",
+    "dialogTitle": "Delete account “{login}”?",
+    "dialogText": "Confirm with your password and a code from the app. This can’t be undone.",
+    "submit": "Delete forever",
+    "doneTitle": "Account deleted",
+    "doneText": "Server data is gone. Your entries remain on this device as a local vault — keep them or wipe them.",
+    "keep": "Keep entries",
+    "wipe": "Wipe data from device"
+  },
+  "menu": {
+    "label": "Account menu",
+    "local": "Local",
+    "localHint": "Entries only on this device",
+    "signedOutHint": "Sign in again",
+    "settings": "Settings",
+    "syncNow": "Sync now",
+    "logout": "Sign out",
+    "signInAgain": "Sign in again",
+    "enableSync": "Turn on sync",
+    "signIn": "Sign in to an account"
+  }
+}

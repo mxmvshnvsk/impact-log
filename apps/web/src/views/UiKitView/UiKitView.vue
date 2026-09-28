@@ -46,6 +46,58 @@
       </div>
     </section>
 
+    <section class="ui-kit__section ui-kit__form">
+      <h2>Textarea · Select</h2>
+      <UiTextarea v-model="longText" label="Description" hint="Markdown" :maxlength="300" counter autoresize />
+      <UiTextarea v-model="longText" label="With error" error="Too long" :rows="2" />
+      <UiSelect v-model="period" label="Period" :options="periodOptions" hint="Native select" />
+    </section>
+
+    <section class="ui-kit__section">
+      <h2>Segmented · Chips</h2>
+      <div class="ui-kit__stack">
+        <UiSegmented v-model="segment" label="Mode" :options="segmentOptions" />
+        <UiSegmented :model-value="score" label="Score" size="sm" :options="scoreOptions" @update:model-value="score = Number($event)" />
+        <div class="ui-kit__row">
+          <UiChip>neutral</UiChip>
+          <UiChip tone="accent">accent</UiChip>
+          <UiChip removable remove-label="Remove perf">#perf</UiChip>
+          <UiChip tone="accent" size="sm" :to="{ name: 'ui-kit' }">link</UiChip>
+        </div>
+        <ChipsInput v-model="chips" label="Labels" :suggestions="['perf', 'ci', 'frontend', 'hiring']" hint="Enter or comma" />
+      </div>
+    </section>
+
+    <section class="ui-kit__section">
+      <h2>Score</h2>
+      <div class="ui-kit__row">
+        <ScoreBadge v-for="n in 5" :key="n" :score="n" />
+        <ScoreBadge :score="4" show-label />
+      </div>
+      <div class="ui-kit__stack">
+        <ScoreInput v-model="score" label="Impact" />
+      </div>
+    </section>
+
+    <section class="ui-kit__section">
+      <h2>Markdown · Dialog</h2>
+      <UiCard class="ui-kit__markdown"><MarkdownView :source="markdown" /></UiCard>
+      <div class="ui-kit__row">
+        <UiButton variant="secondary" @click="dialog = 'default'">Open dialog</UiButton>
+        <UiButton variant="danger" @click="dialog = 'danger'">Open danger dialog</UiButton>
+      </div>
+      <UiDialog
+        :open="dialog !== null"
+        title="Delete this entry?"
+        description="You can bring it back right after deleting."
+        confirm-label="Delete"
+        cancel-label="Cancel"
+        :tone="dialog === 'danger' ? 'danger' : 'default'"
+        @confirm="dialog = null"
+        @cancel="dialog = null"
+      />
+    </section>
+
     <section class="ui-kit__section">
       <h2>Mascot</h2>
       <div class="ui-kit__mascots">
@@ -60,17 +112,28 @@
 
 <script setup lang="ts">
 import { AppMascot } from '@/components/AppMascot'
+import { ChipsInput } from '@/components/ChipsInput'
+import { MarkdownView } from '@/components/MarkdownView'
+import { ScoreBadge } from '@/components/ScoreBadge'
+import { ScoreInput } from '@/components/ScoreInput'
 import { UiAlert } from '@/ui/UiAlert'
 import { UiButton } from '@/ui/UiButton'
 import { UiCard } from '@/ui/UiCard'
 import { UiCheckbox } from '@/ui/UiCheckbox'
+import { UiChip } from '@/ui/UiChip'
+import { UiDialog } from '@/ui/UiDialog'
 import { UiEyebrow } from '@/ui/UiEyebrow'
 import { UiInput } from '@/ui/UiInput'
 import { UiOtpInput } from '@/ui/UiOtpInput'
 import { UiProgress } from '@/ui/UiProgress'
+import { UiSegmented } from '@/ui/UiSegmented'
+import { UiSelect } from '@/ui/UiSelect'
+import { UiTextarea } from '@/ui/UiTextarea'
 import { useUiKitView } from './useUiKitView'
 
-const { text, secret, otp, checked, moods } = useUiKitView()
+const kit = useUiKitView()
+const { text, secret, otp, checked, moods, longText, period, periodOptions } = kit
+const { segment, segmentOptions, score, scoreOptions, chips, markdown, dialog } = kit
 </script>
 
 <style scoped src="./UiKitView.css"></style>

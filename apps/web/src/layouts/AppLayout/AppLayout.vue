@@ -1,5 +1,6 @@
 <template>
   <div class="app-layout">
+    <a class="app-layout__skip" href="#main-content" @click.prevent="skipToContent">{{ t('nav.skip') }}</a>
     <aside class="app-layout__sidebar">
       <RouterLink :to="{ name: 'dashboard' }" class="app-layout__logo">
         <UiLogo compact />
@@ -28,12 +29,13 @@
           <div class="app-layout__actions">
             <ThemeSwitcher />
             <LocaleSwitcher />
-            <UserMenu />
+            <SyncIndicator />
+            <AccountMenu />
           </div>
         </div>
       </header>
 
-      <main class="app-layout__content l-container">
+      <main id="main-content" ref="mainRef" class="app-layout__content l-container" tabindex="-1">
         <slot />
       </main>
 
@@ -60,15 +62,16 @@
 
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import { AccountMenu } from '@/components/AccountMenu'
 import { AppFooter } from '@/components/AppFooter'
 import { LocaleSwitcher } from '@/components/LocaleSwitcher'
+import { SyncIndicator } from '@/components/SyncIndicator'
 import { ThemeSwitcher } from '@/components/ThemeSwitcher'
-import { UserMenu } from '@/components/UserMenu'
 import { UiIconButton } from '@/ui/UiIconButton'
 import { UiLogo } from '@/ui/UiLogo'
 import { useAppLayout } from './useAppLayout'
 
-const { t, items, title } = useAppLayout()
+const { t, items, title, mainRef, skipToContent } = useAppLayout()
 </script>
 
 <style scoped src="./AppLayout.css"></style>

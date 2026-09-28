@@ -1,0 +1,127 @@
+{
+  "score": {
+    "1": "Small win",
+    "2": "Helpful",
+    "3": "Noticeable result",
+    "4": "Major impact",
+    "5": "Key result of the year"
+  },
+  "scoreBadge": "Score {score} of {max}: {label}",
+  "scoreGuide": {
+    "title": "How to score?",
+    "lead": "Score the effect, not the effort. When in doubt, go lower — strong entries should stand out.",
+    "items": {
+      "1": "A small favour, a minor fix, a useful detail — nice to remember.",
+      "2": "Saved time for you or the team, removed a noticeable annoyance.",
+      "3": "An outcome your team, users or partner teams noticed.",
+      "4": "Impact on several teams, product metrics, money or deadlines.",
+      "5": "The first thing you will mention at a review or in a CV."
+    }
+  },
+  "chips": {
+    "remove": "Remove {value}",
+    "full": "Up to {max}"
+  },
+  "card": {
+    "evidence": "{n} artifact | {n} artifacts",
+    "conflict": "Version conflict"
+  },
+  "form": {
+    "title": "What you did",
+    "titlePlaceholder": "Cut frontend build time from 6 to 2 minutes",
+    "titleHint": "One sentence: the action and the outcome",
+    "date": "When",
+    "score": "Impact",
+    "description": "Description",
+    "descriptionMode": "Description mode",
+    "write": "Write",
+    "preview": "Preview",
+    "descriptionPlaceholder": "Context: what was wrong. What you did. What changed and for whom.",
+    "descriptionHint": "Markdown: **bold**, lists, `code`, links",
+    "previewEmpty": "No description yet.",
+    "organize": "Categories and labels",
+    "categories": "Categories",
+    "labels": "Labels",
+    "categoriesPlaceholder": "Platform, Hiring…",
+    "labelsPlaceholder": "perf, ci…",
+    "chipsHint": "Enter or comma to add",
+    "metrics": "Outcome in numbers",
+    "metricsLead": "Optional, but numbers convince better than words.",
+    "evidence": "Artifacts",
+    "evidenceLead": "Links to PRs, issues, commits and docs — where the result can be seen.",
+    "shortcutSave": "to save",
+    "errors": {
+      "quota": "Plan limit reached: {limit} entries. Delete old entries or change your plan.",
+      "saveFailed": "Could not save the entry. Try again — your input is still here."
+    },
+    "discard": {
+      "title": "Leave without saving?",
+      "text": "Changes to this entry will be lost.",
+      "confirm": "Discard",
+      "cancel": "Keep editing"
+    }
+  },
+  "metrics": {
+    "empty": "For example: “build time 6 → 2 min”, “conversion 3.1 → 3.4%”.",
+    "label": "What you measured",
+    "labelPlaceholder": "Build time",
+    "baseline": "Before",
+    "value": "After",
+    "unit": "Unit",
+    "unitPlaceholder": "min",
+    "remove": "Remove metric {n}",
+    "delta": "Change: {value}",
+    "add": "Add a metric"
+  },
+  "evidence": {
+    "hint": "A PR, issue, commit or doc — the type is detected automatically. No link — saved as a note.",
+    "willAdd": "Will be added as: {kind}",
+    "kinds": {
+      "url": "Link",
+      "pr": "Pull request",
+      "issue": "Issue",
+      "commit": "Commit",
+      "branch": "Branch",
+      "doc": "Document",
+      "text": "Note"
+    },
+    "note": "Note text",
+    "titleLabel": "Title of artifact {n}",
+    "titlePlaceholder": "Title (optional)",
+    "remove": "Remove artifact {n}",
+    "addLabel": "Link or note",
+    "placeholder": "https://github.com/…/pull/42",
+    "add": "Add"
+  },
+  "edit": {
+    "newTitle": "New entry",
+    "duplicateTitle": "Copy of an entry",
+    "editTitle": "Edit entry",
+    "backToImpact": "Back to entry",
+    "backToJournal": "Journal",
+    "create": "Save entry"
+  },
+  "delete": {
+    "title": "Delete this entry?",
+    "text": "The entry will be removed from this device (and from sync, if it is on). You can bring it back right after deleting.",
+    "confirm": "Delete"
+  },
+  "missing": {
+    "title": "Entry not found",
+    "text": "It may have been deleted — here or on another device.",
+    "back": "To the journal"
+  },
+  "view": {
+    "navLabel": "Entry navigation",
+    "back": "Journal",
+    "newer": "Newer entry",
+    "older": "Older entry",
+    "duplicate": "Duplicate",
+    "created": "Created {date}",
+    "updated": "Edited {date}",
+    "shortcuts": "E — edit · ← → — neighbouring entries",
+    "conflictTitle": "Version conflict",
+    "conflictText": "This entry was changed differently on two devices (or deleted on one of them). You’re seeing this device’s version; the other one is saved too — choose which to keep.",
+    "conflictAction": "Choose a version"
+  }
+}

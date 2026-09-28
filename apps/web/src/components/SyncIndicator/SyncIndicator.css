@@ -1,0 +1,54 @@
+.sync-indicator {
+  position: relative;
+}
+
+.sync-indicator--ok {
+  color: var(--color-accent-strong);
+}
+
+.sync-indicator--busy,
+.sync-indicator--muted {
+  color: var(--color-text-secondary);
+}
+
+.sync-indicator--warning {
+  color: var(--color-warning-text);
+}
+
+.sync-indicator--danger {
+  color: var(--color-danger);
+}
+
+.sync-indicator__icon--spin {
+  animation: sync-indicator-spin 1s linear infinite;
+}
+
+.sync-indicator__badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-warning-text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+@keyframes sync-indicator-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sync-indicator__icon--spin {
+    animation: none;
+  }
+}

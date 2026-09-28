@@ -1,0 +1,36 @@
+{
+  "untitled": "Untitled",
+  "eyebrow": "Quick capture",
+  "from": "from {source}",
+  "fromWeb": "from the web app",
+  "title": "Review and save",
+  "lead": "This draft is not saved yet: adjust what you need and press “Save”. It is encrypted right here, on your device.",
+  "save": "Save",
+  "toJournal": "To the journal",
+  "toLanding": "To the home page",
+  "invalid": {
+    "title": "Cannot read the draft",
+    "text": "The link is damaged or cut off. Send the entry again from the extension, CLI or VS Code."
+  },
+  "empty": {
+    "title": "No draft here",
+    "text": "Entries from the Chrome extension, CLI and VS Code land here. Start there — or create an entry by hand."
+  },
+  "onboarding": {
+    "title": "Let’s save this to your impact log",
+    "lead": "To save the entry you need a vault on this device. No sign-up required.",
+    "preview": "Draft",
+    "evidence": "{n} artifact | {n} artifacts",
+    "metrics": "{n} metric | {n} metrics",
+    "local": "Works without sign-up: the vault is created right in your browser",
+    "encrypted": "Entries are encrypted on your device — nobody else can read them",
+    "sync": "You can turn on sync between devices later",
+    "keep": "The draft won’t be lost: after creating a vault or signing in you’ll come back to it."
+  },
+  "duplicate": {
+    "title": "Already saved",
+    "text": "The draft from this link is already in your journal. Open the entry or save the draft again as a new one.",
+    "open": "Open entry",
+    "again": "Save again"
+  }
+}

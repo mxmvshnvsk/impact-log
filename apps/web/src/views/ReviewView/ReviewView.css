@@ -1,0 +1,80 @@
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.review__header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.review__title {
+  font-size: var(--text-3xl);
+}
+
+.review__lead {
+  color: var(--color-text-secondary);
+}
+
+@media (--tablet) {
+  .review {
+    gap: var(--space-8);
+  }
+
+  .review__title {
+    font-size: var(--text-4xl);
+  }
+}
+
+.review__loading {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  color: var(--color-text-muted);
+}
+
+.review__layout {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (--desktop) {
+  .review__layout {
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: var(--space-6);
+  }
+}
+
+.review__settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+/* На десктопе настройки остаются под рукой, пока листается предпросмотр */
+@media (--desktop) {
+  .review__settings {
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-4));
+    max-height: calc(100dvh - var(--header-height) - var(--space-8));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+.review__h2 {
+  font-size: var(--text-lg);
+}
+
+.review__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  max-width: calc(var(--content-max-width) + 2 * var(--space-8));
+}

@@ -1,0 +1,133 @@
+.chips-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.chips-input__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.chips-input__control {
+  position: relative;
+}
+
+.chips-input__box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--control-md);
+  padding: 7px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: text;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.chips-input__box:hover {
+  border-color: var(--color-border-strong);
+}
+
+.chips-input__box:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.chips-input--error .chips-input__box {
+  border-color: var(--color-danger);
+}
+
+.chips-input--error .chips-input__box:focus-within {
+  box-shadow: var(--shadow-focus-danger);
+}
+
+.chips-input__chips {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* длинная метка (до 40 символов) не распирает поле на узком экране — чип сжимается и обрезается */
+.chips-input__chips > li {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.chips-input__field {
+  flex: 1 1 8ch;
+  min-width: 8ch;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  font-size: var(--text-md);
+}
+
+.chips-input__field:focus {
+  outline: none;
+}
+
+.chips-input__field::placeholder {
+  color: var(--color-text-muted);
+}
+
+.chips-input__field:disabled {
+  cursor: not-allowed;
+}
+
+.chips-input__list {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  left: 0;
+  z-index: var(--z-popover);
+  max-height: 264px;
+  margin: 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  list-style: none;
+}
+
+.chips-input__option {
+  padding: var(--space-2) var(--space-3);
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chips-input__option:hover,
+.chips-input__option--active {
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.chips-input__hint,
+.chips-input__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.chips-input__hint {
+  color: var(--color-text-muted);
+}
+
+.chips-input__error {
+  color: var(--color-danger);
+}

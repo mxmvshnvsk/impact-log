@@ -1,0 +1,115 @@
+.evidence-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.evidence-editor__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evidence-editor__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.evidence-editor__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-accent-strong);
+}
+
+.evidence-editor__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.evidence-editor__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-2);
+  min-height: 36px;
+  padding-top: 8px;
+  font-size: var(--text-sm);
+}
+
+.evidence-editor__kind {
+  font-weight: var(--weight-semibold);
+}
+
+.evidence-editor__ref {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.evidence-editor__url {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evidence-editor__title {
+  width: 100%;
+  height: var(--control-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.evidence-editor__title::placeholder {
+  color: var(--color-text-muted);
+}
+
+.evidence-editor__title:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.evidence-editor__error {
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+.evidence-editor__add {
+  display: grid;
+  gap: var(--space-2);
+}
+
+@media (--tablet) {
+  .evidence-editor__add {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  /* кнопка — на уровне поля, под подписью */
+  .evidence-editor__add-button {
+    margin-top: calc(var(--text-sm) * 1.55 + var(--space-2));
+  }
+}

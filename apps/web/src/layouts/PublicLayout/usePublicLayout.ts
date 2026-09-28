@@ -1,8 +1,8 @@
 import { useI18n } from 'vue-i18n'
-import { useSession } from '@/composables/useSession'
+import { useVault } from '@/composables/useVault'
 
 export function usePublicLayout() {
   const { t } = useI18n()
-  const { isAuthenticated } = useSession()
+  const { hasVault: isAuthenticated } = useVault()
   return { t, isAuthenticated }
 }

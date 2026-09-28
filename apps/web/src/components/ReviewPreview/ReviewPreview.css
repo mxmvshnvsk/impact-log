@@ -1,0 +1,38 @@
+.review-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.review-preview__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.review-preview__title {
+  font-size: var(--text-lg);
+}
+
+.review-preview__body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.review-preview__source {
+  margin: 0;
+  padding: var(--space-4);
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

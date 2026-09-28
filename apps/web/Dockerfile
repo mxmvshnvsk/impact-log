@@ -6,8 +6,10 @@ WORKDIR /repo
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
+COPY packages/core/package.json packages/core/
 RUN pnpm install --frozen-lockfile --filter "@impact-log/web..."
 COPY packages/shared packages/shared
+COPY packages/core packages/core
 COPY apps/web apps/web
 RUN pnpm --filter @impact-log/web build
 

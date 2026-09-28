@@ -44,3 +44,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-sm);
 }
+
+.ui-kit__markdown {
+  max-width: var(--content-max-width);
+}

@@ -1,9 +1,14 @@
 import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
+import { pwaServiceWorker } from './src/pwa/swBuildPlugin'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    // Офлайн-оболочка: /sw.js со списком всех файлов сборки (только build, docs/pwa.md)
+    pwaServiceWorker({ source: fileURLToPath(new URL('./src/pwa/sw.ts', import.meta.url)) }),
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

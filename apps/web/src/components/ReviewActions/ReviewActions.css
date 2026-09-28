@@ -1,0 +1,48 @@
+.review-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.review-actions__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.review-actions__buttons > * {
+  flex: 1 1 auto;
+}
+
+@media (--tablet) {
+  .review-actions__buttons > * {
+    flex: 0 0 auto;
+  }
+}
+
+.review-actions__ai {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.review-actions__ai-button {
+  margin-left: calc(-1 * var(--space-4));
+}
+
+.review-actions__note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.review-actions__note svg {
+  flex: none;
+  margin-top: 2px;
+}

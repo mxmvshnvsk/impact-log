@@ -175,3 +175,33 @@
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
+
+@media (--desktop) {
+  .principles__grid--two {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.principles__section-lead--flat {
+  margin-top: 0;
+}
+
+.principles__row-what--mono {
+  font-family: var(--font-mono);
+}
+
+.principles__chip--safe svg {
+  color: var(--color-accent-strong);
+}
+
+.principles__callout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: var(--content-max-width);
+}
+
+.principles__callout .principles__h3 {
+  font-size: var(--text-xl);
+}

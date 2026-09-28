@@ -3,7 +3,7 @@
     class="ui-input"
     :class="{ 'ui-input--error': error, 'ui-input--disabled': disabled, 'ui-input--mono': monospace }"
   >
-    <label v-if="label" class="ui-input__label" :for="id">{{ label }}</label>
+    <label v-if="label" class="ui-input__label" :class="{ 'sr-only': hideLabel }" :for="id">{{ label }}</label>
     <div class="ui-input__control">
       <input
         :id="id"
@@ -18,10 +18,13 @@
         :maxlength="maxlength"
         :disabled="disabled"
         :autofocus="autofocus"
+        :min="min"
+        :max="max"
+        :enterkeyhint="enterkeyhint"
         :aria-invalid="error ? true : undefined"
         :aria-describedby="describedBy"
-        spellcheck="false"
-        autocapitalize="off"
+        :spellcheck="spellcheck ? 'true' : 'false'"
+        :autocapitalize="spellcheck ? undefined : 'off'"
         @input="onInput"
         @focus="emit('focus')"
         @blur="emit('blur')"

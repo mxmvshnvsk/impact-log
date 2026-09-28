@@ -1,109 +1,138 @@
 <template>
   <AuthCard :mascot="mascot" :eyebrow="eyebrow" :title="title" :subtitle="subtitle">
-    <UiProgress class="register__progress" :value="stepIndex + 1" :max="3" :label="eyebrow" />
-
-    <!-- шаг 1: логин и пароль -->
-    <form v-if="step === 'credentials'" class="register__form" novalidate @submit.prevent="submitCredentials">
-      <UiInput
-        v-model="form.values.login"
-        name="username"
-        autocomplete="username"
-        :label="t('auth.fields.login')"
-        :hint="t('auth.register.loginHint')"
-        :error="form.fieldError('login')"
-        :maxlength="32"
-        autofocus
-        @focus="mascot.focus('login')"
-        @blur="onBlur('login')"
-      />
-      <UiInput
-        v-model="form.values.password"
-        type="password"
-        name="new-password"
-        autocomplete="new-password"
-        revealable
-        :label="t('auth.fields.password')"
-        :hint="t('auth.register.passwordHint')"
-        :error="form.fieldError('password')"
-        @focus="mascot.focus('password')"
-        @blur="onBlur('password')"
-        @reveal="mascot.reveal"
-      />
-      <UiInput
-        v-model="form.values.passwordConfirm"
-        type="password"
-        name="new-password-confirm"
-        autocomplete="new-password"
-        revealable
-        :label="t('auth.fields.passwordConfirm')"
-        :error="form.fieldError('passwordConfirm')"
-        @focus="mascot.focus('password')"
-        @blur="onBlur('passwordConfirm')"
-        @reveal="mascot.reveal"
-      />
-      <UiAlert v-if="form.formError" tone="danger">{{ t(`errors.${form.formError}`) }}</UiAlert>
-      <UiButton type="submit" size="lg" block :loading="form.submitting">
-        {{ t('auth.register.next') }}<ArrowRight :size="18" aria-hidden="true" />
-      </UiButton>
-    </form>
-
-    <!-- шаг 2: подключение приложения-аутентификатора -->
-    <form v-else-if="step === 'totp'" class="register__form" novalidate @submit.prevent="submitCode">
-      <ol class="register__steps">
-        <li>{{ t('auth.totp.step1') }}</li>
-        <li>{{ t('auth.totp.step2') }}</li>
-      </ol>
-      <div class="register__qr">
-        <img v-if="qrDataUrl" :src="qrDataUrl" :alt="t('auth.totp.qrAlt')" width="184" height="184" />
-      </div>
-      <div class="register__secret">
-        <span class="register__secret-label">{{ t('auth.totp.manual') }}</span>
-        <code class="register__secret-value">{{ enrollment?.secret }}</code>
-        <UiButton size="sm" variant="secondary" @click="copySecret">
-          <Check v-if="secretCopied" :size="16" aria-hidden="true" />
-          <Copy v-else :size="16" aria-hidden="true" />
-          {{ secretCopied ? t('common.copied') : t('common.copy') }}
-        </UiButton>
-      </div>
-      <UiOtpInput
-        ref="otpRef"
-        v-model="code"
-        :label="t('auth.totp.codeLabel')"
-        :error="codeError"
-        @focus="mascot.focus('secret')"
-        @blur="mascot.blur()"
-        @complete="submitCode"
-      />
-      <UiButton type="submit" size="lg" block :loading="confirming">
-        {{ t('auth.totp.submit') }}
-      </UiButton>
-    </form>
-
-    <!-- шаг 3: резервные коды -->
-    <div v-else class="register__form">
-      <UiAlert tone="warning">{{ t('auth.recovery.warning') }}</UiAlert>
-      <ul class="register__codes">
-        <li v-for="item in recoveryCodes" :key="item"><code>{{ item }}</code></li>
-      </ul>
-      <div class="register__codes-actions">
-        <UiButton size="sm" variant="secondary" @click="copyCodes">
-          <Check v-if="codesCopied" :size="16" aria-hidden="true" />
-          <Copy v-else :size="16" aria-hidden="true" />
-          {{ codesCopied ? t('common.copied') : t('auth.recovery.copy') }}
-        </UiButton>
-        <UiButton size="sm" variant="secondary" @click="downloadCodes">
-          <Download :size="16" aria-hidden="true" />{{ t('auth.recovery.download') }}
-        </UiButton>
-      </div>
-      <UiCheckbox v-model="codesSaved">{{ t('auth.recovery.confirm') }}</UiCheckbox>
-      <UiButton size="lg" block :disabled="!codesSaved" @click="finish">
-        {{ t('auth.recovery.finish') }}<ArrowRight :size="18" aria-hidden="true" />
+    <!-- хранилище уже привязано к аккаунту -->
+    <div v-if="alreadyLinked" class="register__form">
+      <UiAlert tone="success">{{ t('auth.register.alreadyText', { login: account?.login }) }}</UiAlert>
+      <UiButton size="lg" block :to="{ name: 'dashboard' }">{{ t('auth.login.toJournal') }}</UiButton>
+      <UiButton size="lg" variant="secondary" block :to="{ name: 'settings-account' }">
+        {{ t('auth.login.toSettings') }}
       </UiButton>
     </div>
 
-    <template v-if="step === 'credentials'" #footer>
+    <template v-else>
+      <UiProgress
+        class="register__progress"
+        :value="stepIndex + 1"
+        :max="steps.length"
+        :label="eyebrow"
+      />
+
+      <!-- шаг 1: логин и пароль -->
+      <form
+        v-if="step === 'credentials'"
+        class="register__form"
+        novalidate
+        @submit.prevent="submitCredentials"
+      >
+        <UiInput
+          v-model="form.values.login"
+          name="username"
+          autocomplete="username"
+          :label="t('auth.fields.login')"
+          :hint="t('auth.register.loginHint')"
+          :error="form.fieldError('login')"
+          :maxlength="32"
+          :disabled="busy"
+          autofocus
+          @focus="mascot.focus('login')"
+          @blur="onBlur('login')"
+        />
+        <template v-if="!passwordReady">
+          <UiInput
+            v-model="form.values.password"
+            type="password"
+            name="new-password"
+            autocomplete="new-password"
+            revealable
+            :label="t('auth.fields.password')"
+            :hint="t('auth.register.passwordHint')"
+            :error="form.fieldError('password')"
+            :disabled="busy"
+            @focus="mascot.focus('password')"
+            @blur="onBlur('password')"
+            @reveal="mascot.reveal"
+          />
+          <UiInput
+            v-model="form.values.passwordConfirm"
+            type="password"
+            name="new-password-confirm"
+            autocomplete="new-password"
+            revealable
+            :label="t('auth.fields.passwordConfirm')"
+            :error="form.fieldError('passwordConfirm')"
+            :disabled="busy"
+            @focus="mascot.focus('password')"
+            @blur="onBlur('passwordConfirm')"
+            @reveal="mascot.reveal"
+          />
+        </template>
+        <div v-else class="register__password-ready">
+          <span><Check :size="16" aria-hidden="true" />{{ t('auth.register.passwordSet') }}</span>
+          <button type="button" class="register__link" @click="resetPassword">
+            {{ t('auth.register.passwordChange') }}
+          </button>
+        </div>
+        <UiAlert tone="info">{{ t('auth.register.passwordNote') }}</UiAlert>
+        <UiAlert v-if="localCount > 0" tone="info">
+          {{ t('auth.register.localRecords', { count: localCount }) }}
+        </UiAlert>
+        <CryptoProgress v-if="busy" :stage="stage" />
+        <UiAlert v-if="error" tone="danger">{{ t(error) }}</UiAlert>
+        <UiButton type="submit" size="lg" block :loading="busy">
+          {{ t('auth.register.next') }}<ArrowRight :size="18" aria-hidden="true" />
+        </UiButton>
+      </form>
+
+      <!-- шаг 2: Recovery Kit -->
+      <form v-else-if="step === 'kit' && prepared" class="register__form" novalidate @submit.prevent="submitKit">
+        <RecoveryKit ref="kitRef" :recovery-key="prepared.recovery.recoveryKey" :login="login" />
+        <CryptoProgress v-if="busy" :stage="stage" />
+        <UiAlert v-if="error" tone="danger">{{ t(error) }}</UiAlert>
+        <div class="register__actions">
+          <UiButton variant="secondary" size="lg" :disabled="busy" @click="back">
+            <ArrowLeft :size="18" aria-hidden="true" />{{ t('auth.register.back') }}
+          </UiButton>
+          <UiButton type="submit" size="lg" class="register__submit" :loading="busy">
+            {{ t('auth.register.submit') }}
+          </UiButton>
+        </div>
+      </form>
+
+      <!-- шаг 3: 2FA -->
+      <TotpEnroll
+        v-else-if="step === 'totp' && enrollment"
+        ref="totpRef"
+        v-model:code="code"
+        v-model:remember="remember"
+        :enrollment="enrollment"
+        :submitting="busy"
+        :error="codeError"
+        show-remember
+        @submit="submitCode"
+        @focus="mascot.focus('secret')"
+        @blur="mascot.blur()"
+      >
+        <CryptoProgress v-if="busy && stage" :stage="stage" />
+        <UiAlert v-if="error" tone="danger">{{ t(error) }}</UiAlert>
+      </TotpEnroll>
+
+      <!-- шаг 4: готово -->
+      <div v-else-if="step === 'done'" class="register__form">
+        <ul class="register__done">
+          <li v-for="item in doneItems" :key="item.key">
+            <component :is="item.icon" :size="18" aria-hidden="true" />
+            <span>{{ t(`auth.register.doneItems.${item.key}`) }}</span>
+          </li>
+        </ul>
+        <UiButton size="lg" block :to="{ name: 'dashboard' }">
+          {{ t('auth.register.finish') }}<ArrowRight :size="18" aria-hidden="true" />
+        </UiButton>
+      </div>
+    </template>
+
+    <template v-if="step === 'credentials' && !alreadyLinked" #footer>
       {{ t('auth.register.haveAccount') }}
-      <RouterLink :to="{ name: 'login' }">{{ t('auth.login.title') }}</RouterLink>
+      <RouterLink :to="{ name: 'login' }">{{ t('auth.register.signIn') }}</RouterLink>
       ·
       <RouterLink :to="{ name: 'principles' }">{{ t('auth.register.howWeStore') }}</RouterLink>
     </template>
@@ -111,19 +140,23 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowRight, Check, Copy, Download } from 'lucide-vue-next'
+import { ArrowLeft, ArrowRight, Check } from 'lucide-vue-next'
 import { AuthCard } from '@/components/AuthCard'
+import { CryptoProgress } from '@/components/CryptoProgress'
+import { RecoveryKit } from '@/components/RecoveryKit'
+import { TotpEnroll } from '@/components/TotpEnroll'
 import { UiAlert } from '@/ui/UiAlert'
 import { UiButton } from '@/ui/UiButton'
-import { UiCheckbox } from '@/ui/UiCheckbox'
 import { UiInput } from '@/ui/UiInput'
-import { UiOtpInput } from '@/ui/UiOtpInput'
 import { UiProgress } from '@/ui/UiProgress'
 import { useRegisterView } from './useRegisterView'
 
 const {
   t,
   mascot,
+  account,
+  alreadyLinked,
+  steps,
   step,
   stepIndex,
   eyebrow,
@@ -131,22 +164,25 @@ const {
   subtitle,
   form,
   onBlur,
+  passwordReady,
+  resetPassword,
+  localCount,
+  busy,
+  stage,
+  error,
   submitCredentials,
+  prepared,
+  login,
+  kitRef,
+  back,
+  submitKit,
   enrollment,
-  qrDataUrl,
-  secretCopied,
-  copySecret,
   code,
+  remember,
   codeError,
-  confirming,
-  otpRef,
+  totpRef,
   submitCode,
-  recoveryCodes,
-  codesCopied,
-  codesSaved,
-  copyCodes,
-  downloadCodes,
-  finish,
+  doneItems,
 } = useRegisterView()
 </script>
 

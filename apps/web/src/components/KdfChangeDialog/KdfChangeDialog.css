@@ -1,0 +1,15 @@
+.kdf-change {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.kdf-change__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}

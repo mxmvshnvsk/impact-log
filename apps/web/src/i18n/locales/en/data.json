@@ -1,0 +1,86 @@
+{
+  "storage": {
+    "title": "Where your data lives",
+    "text": "Entries are stored in this browser’s IndexedDB and encrypted with a key that never leaves the device. Clearing site data in the browser deletes them — so export from time to time.",
+    "facts": "{entries} · storage created {date}",
+    "principles": "More in “Principles”"
+  },
+  "export": {
+    "title": "Export",
+    "lead": "Files are built right in the browser and downloaded to this device. Export is always available, on any plan.",
+    "empty": "Nothing to export yet — there are no entries.",
+    "warning": "Export files are not encrypted. Keep them where you keep other personal documents and delete copies you no longer need.",
+    "started": "File is ready, download started",
+    "markdownTitle": "My impact log: all entries",
+    "formats": {
+      "json": {
+        "title": "JSON — full copy",
+        "text": "Every field of every entry. For backups and moving to another device.",
+        "action": "Download .json"
+      },
+      "csv": {
+        "title": "CSV — spreadsheet",
+        "text": "For Excel, Google Sheets and your own calculations.",
+        "action": "Download .csv"
+      },
+      "md": {
+        "title": "Markdown — readable archive",
+        "text": "All entries by month with a summary — easy to read and keep in your notes.",
+        "action": "Download .md"
+      }
+    }
+  },
+  "import": {
+    "title": "Import",
+    "lead": "Upload an impact log JSON export — say, from another device or a backup. Entries will be encrypted and added to the current ones.",
+    "choose": "Choose a .json file",
+    "found": "Ready to import: {entries}.",
+    "invalid": "{entries} failed validation and will be skipped.",
+    "mergeHint": "New entries are added. An existing entry is updated only if the file has a newer version. Import never deletes anything.",
+    "confirm": "Import",
+    "cancel": "Cancel",
+    "result": "Done: {added} added, {updated} updated, {skipped} unchanged.",
+    "warning": "The file you import from is stored on your side unencrypted. Delete it if you no longer need it.",
+    "errors": {
+      "invalid": "This doesn’t look like an impact log JSON export. Choose a file downloaded in the “Export” section.",
+      "tooLarge": "The file is too large for an impact log export (over 25 MB).",
+      "empty": "The file has no valid entries.",
+      "failed": "Couldn’t save the entries. Please try again."
+    }
+  },
+  "danger": {
+    "title": "Danger zone",
+    "text": "Erase all entries and encryption keys from this device. You’ll only be able to restore them from a JSON export.",
+    "textSynced": "Erase all entries and encryption keys from this device. They will download from the server again when you sign in to your account.",
+    "account": "This browser is connected to sync: the encrypted copy of your entries on the server will remain. To delete the account and server data, go to",
+    "accountLink": "Settings → Account.",
+    "accountShort": "The encrypted copy on the sync server will remain.",
+    "action": "Erase data on this device",
+    "dialogTitle": "Erase data on this device?",
+    "dialogText": "This deletes {entries} and this browser’s encryption keys. It can’t be undone.",
+    "backup": "Download a JSON copy first",
+    "word": "erase",
+    "typeLabel": "To confirm, type “{word}”",
+    "confirm": "Erase forever",
+    "cancel": "Cancel",
+    "failed": "Couldn’t erase the data. Reload the page and try again."
+  },
+  "quarantine": {
+    "title": "Quarantine",
+    "facts": "{objects} · since {date}",
+    "lead": "These objects couldn’t be decrypted when the vault key changed (when you signed in or created an account) — for example, because of data corruption or a different key. They are kept only on this device, don’t appear in the journal and aren’t synced.",
+    "keep": "We keep them in case the data can be recovered. You can download them as they are — encrypted, as JSON — or delete them.",
+    "download": "Download as is (.json)",
+    "delete": "Delete",
+    "dialogTitle": "Delete quarantined objects?",
+    "dialogText": "{objects} will be deleted from this device. This can’t be undone — if they might be useful, download the file first.",
+    "confirm": "Delete",
+    "cancel": "Cancel",
+    "deleted": "Quarantine cleared: the objects were deleted from this device.",
+    "failed": "Couldn’t delete them. Reload the page and try again.",
+    "units": {
+      "one": "{n} object",
+      "other": "{n} objects"
+    }
+  }
+}

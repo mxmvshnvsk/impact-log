@@ -1,0 +1,162 @@
+.impact-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.impact-form__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.impact-form__h2 {
+  font-size: var(--text-lg);
+}
+
+.impact-form__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.impact-form__intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.impact-form__muted {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* счётчик длины заголовка — справа на уровне подписи */
+.impact-form__counted {
+  position: relative;
+}
+
+.impact-form__counter {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.impact-form__counter--near {
+  color: var(--color-warning-text);
+}
+
+.impact-form__meta {
+  display: grid;
+  gap: var(--space-5);
+}
+
+@media (--tablet) {
+  .impact-form__meta {
+    grid-template-columns: 200px minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.impact-form__columns {
+  display: grid;
+  gap: var(--space-5);
+}
+
+@media (--tablet) {
+  .impact-form__columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.impact-form__preview {
+  min-height: 148px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+
+/* липкая панель действий: над нижней навигацией на mobile, у края окна на tablet+ */
+.impact-form__footer {
+  position: sticky;
+  bottom: calc(var(--tabbar-height) + var(--space-2));
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-glass);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(20px) saturate(1.4);
+}
+
+@media (--tablet) {
+  .impact-form__footer {
+    bottom: var(--space-4);
+  }
+}
+
+.impact-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.impact-form__actions .impact-form__delete {
+  margin-right: auto;
+  color: var(--color-danger);
+}
+
+/*
+ * На mobile в липкой панели три кнопки не помещаются в строку — «Удалить» остаётся иконкой
+ * (подпись скрыта визуально, но остаётся доступным именем кнопки)
+ */
+.impact-form__delete-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (--tablet) {
+  .impact-form__delete-text {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+}
+
+.impact-form__shortcut {
+  display: none;
+  margin-right: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.impact-form__shortcut kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  font-size: var(--text-xs);
+}
+
+@media (--desktop) {
+  .impact-form__shortcut {
+    display: inline;
+  }
+}

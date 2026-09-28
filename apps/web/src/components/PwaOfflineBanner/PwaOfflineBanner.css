@@ -1,0 +1,49 @@
+/*
+ * Плашка «нет сети» — в потоке над каркасом страницы: ничего не перекрывает и уезжает при прокрутке.
+ * На tablet+ поля шире — мимо фиксированного сайдбара приложения.
+ */
+.pwa-offline {
+  display: flex;
+  justify-content: center;
+  padding-inline: var(--gutter);
+}
+
+@media (--tablet) {
+  .pwa-offline {
+    padding-inline: calc(var(--sidebar-width) + var(--space-8));
+  }
+}
+
+.pwa-offline__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  text-wrap: balance;
+}
+
+.pwa-offline__icon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.pwa-offline-enter-active,
+.pwa-offline-leave-active {
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out);
+}
+
+.pwa-offline-enter-from,
+.pwa-offline-leave-to {
+  opacity: 0;
+  transform: translateY(calc(-1 * var(--space-1)));
+}

@@ -1,0 +1,40 @@
+.review-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.review-settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.review-settings__label {
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.review-settings__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  /* подписи разной длины переносятся по-разному — поля выравниваем по низу */
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.review-settings__fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.review-settings__fieldset .review-settings__label {
+  margin-bottom: var(--space-1);
+}

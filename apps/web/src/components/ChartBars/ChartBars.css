@@ -1,0 +1,56 @@
+.chart-bars {
+  --chart-bar: var(--color-accent-strong);
+  --chart-bar-muted: var(--color-text-muted);
+  --chart-baseline: var(--color-border-strong);
+
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.chart-bars:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+.chart-bars__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-bars__label {
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  fill: var(--color-text);
+}
+
+.chart-bars__track {
+  stroke: var(--chart-baseline);
+  stroke-width: 2;
+}
+
+.chart-bars__bar {
+  fill: var(--chart-bar);
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.chart-bars__bar--muted {
+  fill: var(--chart-bar-muted);
+}
+
+.chart-bars--has-active .chart-bars__bar:not(.chart-bars__bar--active) {
+  opacity: 0.4;
+}
+
+.chart-bars__value {
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  fill: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-bars__hit {
+  fill: transparent;
+}

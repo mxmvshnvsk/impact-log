@@ -7,13 +7,20 @@
         <h1 class="landing__title">{{ t('landing.hero.title') }}</h1>
         <p class="landing__lead">{{ t('landing.hero.lead') }}</p>
         <div class="landing__actions">
-          <UiButton size="lg" :to="{ name: 'register' }">
+          <UiButton size="lg" :loading="starting" :disabled="unavailable" @click="start">
             {{ t('landing.cta.start') }}<ArrowRight :size="18" aria-hidden="true" />
           </UiButton>
           <UiButton size="lg" variant="secondary" :to="{ name: 'login' }">
-            {{ t('auth.login.title') }}
+            {{ t('landing.cta.login') }}
           </UiButton>
         </div>
+        <UiAlert v-if="startError || unavailable" class="landing__alert" tone="danger">
+          {{ t('landing.cta.unavailable') }}
+        </UiAlert>
+        <ul class="landing__notes">
+          <li><Check :size="16" aria-hidden="true" />{{ t('landing.cta.noteLocal') }}</li>
+          <li><Check :size="16" aria-hidden="true" />{{ t('landing.cta.noteLogin') }}</li>
+        </ul>
       </div>
       <div class="landing__hero-visual" aria-hidden="true">
         <AppMascot
@@ -95,7 +102,7 @@
     <section class="landing__final">
       <h2 class="landing__h2">{{ t('landing.final.title') }}</h2>
       <p class="landing__text">{{ t('landing.final.text') }}</p>
-      <UiButton size="lg" :to="{ name: 'register' }">
+      <UiButton size="lg" :loading="starting" :disabled="unavailable" @click="start">
         {{ t('landing.cta.start') }}<ArrowRight :size="18" aria-hidden="true" />
       </UiButton>
     </section>
@@ -106,12 +113,15 @@
 import { ArrowRight, Check } from 'lucide-vue-next'
 import { AppMascot } from '@/components/AppMascot'
 import { EntryPreview } from '@/components/EntryPreview'
+import { UiAlert } from '@/ui/UiAlert'
 import { UiButton } from '@/ui/UiButton'
 import { UiCard } from '@/ui/UiCard'
 import { UiEyebrow } from '@/ui/UiEyebrow'
 import { useLandingView } from './useLandingView'
 
-const { t, isMobile, mascot, examples, pains, steps, features, privacy } = useLandingView()
+const l = useLandingView()
+const { t, isMobile, mascot, examples, pains, steps, features, privacy } = l
+const { starting, startError, unavailable, start } = l
 </script>
 
 <style scoped src="./LandingView.css"></style>

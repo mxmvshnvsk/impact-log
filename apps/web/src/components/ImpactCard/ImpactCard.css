@@ -1,0 +1,172 @@
+/* Карточка ленты: вся кликабельна через «растянутую» ссылку заголовка (внутри нет других интерактивов) */
+.impact-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.impact-card:hover {
+  border-color: var(--color-border-strong);
+  transform: translateY(-1px);
+}
+
+.impact-card:has(.impact-card__link:focus-visible) {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.impact-card--high::before {
+  content: "";
+  position: absolute;
+  top: var(--space-4);
+  bottom: var(--space-4);
+  left: -1px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-accent);
+}
+
+.impact-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.impact-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+  margin: 0;
+}
+
+/* Конфликт версий синхронизации: заметная, но спокойная метка (разрешение — в настройках аккаунта) */
+.impact-card__conflict {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-warning-soft);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-warning-text);
+  white-space: nowrap;
+}
+
+.impact-card--conflict {
+  border-color: color-mix(in srgb, var(--color-warning) 45%, var(--color-border));
+}
+
+.impact-card__date {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.impact-card__title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.impact-card__link {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.impact-card__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.impact-card__link:hover {
+  text-decoration: none;
+}
+
+.impact-card__link:focus-visible {
+  outline: none;
+}
+
+.impact-card__metrics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.impact-card__metric {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.impact-card__metric svg {
+  flex: none;
+  color: var(--color-accent-strong);
+}
+
+.impact-card__metric-value {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.impact-card__metric-delta {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent-strong);
+}
+
+.impact-card__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.impact-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.impact-card__evidence {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+}

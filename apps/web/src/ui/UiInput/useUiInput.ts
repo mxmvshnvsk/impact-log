@@ -4,10 +4,14 @@ import { useI18n } from 'vue-i18n'
 export type UiInputProps = {
   modelValue: string
   label?: string
+  /** Свой id поля (по умолчанию генерируется) */
+  id?: string
+  /** Подпись только для скринридеров */
+  hideLabel?: boolean
   name?: string
-  type?: 'text' | 'password'
+  type?: 'text' | 'password' | 'date' | 'search' | 'url' | 'number'
   autocomplete?: string
-  inputmode?: 'text' | 'numeric' | 'email'
+  inputmode?: 'text' | 'numeric' | 'decimal' | 'email' | 'search' | 'url'
   placeholder?: string
   hint?: string
   /** Уже переведённый текст ошибки */
@@ -19,6 +23,12 @@ export type UiInputProps = {
   revealable?: boolean
   /** Моноширинный шрифт — для кодов и ключей */
   monospace?: boolean
+  /** Проверка орфографии (по умолчанию выключена: логины, коды) */
+  spellcheck?: boolean
+  /** Границы для type="date" (YYYY-MM-DD) */
+  min?: string
+  max?: string
+  enterkeyhint?: 'enter' | 'done' | 'go' | 'next' | 'search' | 'send'
 }
 
 export type UiInputEmits = {
@@ -33,14 +43,18 @@ type Emit = <K extends keyof UiInputEmits>(event: K, ...args: UiInputEmits[K]) =
 
 export function useUiInput(props: UiInputProps, emit: Emit) {
   const { t } = useI18n()
-  const id = useId()
+  const generatedId = useId()
+  const id = computed(() => props.id ?? generatedId)
   const inputRef = ref<HTMLInputElement | null>(null)
   const revealed = ref(false)
 
-  const inputType = computed(() =>
-    props.type === 'password' && !revealed.value ? 'password' : 'text',
+  const inputType = computed(() => {
+    if (props.type === 'password') return revealed.value ? 'text' : 'password'
+    return props.type ?? 'text'
+  })
+  const describedBy = computed(() =>
+    props.error || props.hint ? `${id.value}-message` : undefined,
   )
-  const describedBy = computed(() => (props.error || props.hint ? `${id}-message` : undefined))
 
   function onInput(event: Event) {
     emit('update:modelValue', (event.target as HTMLInputElement).value)

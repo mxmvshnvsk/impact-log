@@ -1,0 +1,46 @@
+/*
+ * Печать Recovery Kit: на экране лист скрыт; при печати (класс il-print-kit на <html>, ставит
+ * useRecoveryKit) видно только его. Печать — на бумаге, поэтому цвета фиксированные (исключение из
+ * правила токенов, как подложка QR): чёрный текст на белом в любой теме.
+ */
+.recovery-kit-sheet {
+  display: none;
+}
+
+@media print {
+  /* лист лежит прямо в <body> (Teleport) — всё остальное убираем из раскладки: без пустых страниц */
+  html.il-print-kit body > :not(.recovery-kit-sheet) {
+    display: none;
+  }
+
+  html.il-print-kit body {
+    background: #ffffff;
+  }
+
+  html.il-print-kit .recovery-kit-sheet {
+    display: block;
+    width: 100%;
+    padding: 24px;
+    background: #ffffff;
+    color: #000000;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .recovery-kit-sheet__title {
+    margin-bottom: 16px;
+    font-size: 22px;
+  }
+
+  .recovery-kit-sheet__key {
+    margin: 24px 0;
+    padding: 16px;
+    border: 2px dashed #000000;
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    word-break: break-all;
+  }
+}

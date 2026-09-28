@@ -1,0 +1,11 @@
+{
+  "offline": {
+    "sync": "You're offline — everything works locally, sync will resume later",
+    "local": "You're offline — everything works locally"
+  },
+  "update": {
+    "message": "A new version is available",
+    "action": "Update",
+    "later": "Later"
+  }
+}

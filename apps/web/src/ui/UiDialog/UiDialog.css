@@ -1,0 +1,63 @@
+.ui-dialog {
+  width: min(calc(100% - 2 * var(--gutter)), 460px);
+  max-height: calc(100dvh - 2 * var(--gutter));
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-lg);
+}
+
+.ui-dialog::backdrop {
+  background: var(--color-overlay);
+  backdrop-filter: blur(2px);
+}
+
+.ui-dialog[open] {
+  animation: ui-dialog-in var(--duration-normal) var(--ease-out);
+}
+
+@keyframes ui-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.ui-dialog__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
+
+.ui-dialog__title {
+  font-size: var(--text-xl);
+  /* очень длинное «неразрывное» слово (логин) всё же переносится, а не вылезает за край */
+  overflow-wrap: break-word;
+}
+
+.ui-dialog__description {
+  color: var(--color-text-secondary);
+}
+
+.ui-dialog__body {
+  margin-top: var(--space-1);
+}
+
+.ui-dialog__actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+@media (--tablet) {
+  .ui-dialog__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}

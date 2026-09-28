@@ -144,3 +144,31 @@
     display: none;
   }
 }
+
+/* Ссылка «Перейти к содержимому»: видна только в фокусе с клавиатуры */
+.app-layout__skip {
+  position: fixed;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: var(--z-toast);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  transform: translateY(calc(-100% - var(--space-6)));
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.app-layout__skip:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  transform: none;
+}
+
+/* main получает фокус программно (skip-ссылка) — рамка вокруг всей страницы не нужна */
+.app-layout__content:focus {
+  outline: none;
+}

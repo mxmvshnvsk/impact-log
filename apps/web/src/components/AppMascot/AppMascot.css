@@ -203,7 +203,8 @@
   bottom: 86%;
   left: 74%;
   width: max-content;
-  max-width: 190px;
+  /* На узком экране маскот стоит по центру: пузырь не должен вылезать за правый край */
+  max-width: min(190px, calc(50vw - 40px));
   padding: 8px 12px;
   border: 1px solid var(--color-border);
   border-radius: 14px 14px 14px 4px;

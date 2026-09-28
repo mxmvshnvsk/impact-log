@@ -1,0 +1,144 @@
+{
+  "eyebrow": "Insights",
+  "title": "How it’s going",
+  "lead": "How much you log, how significant the results are and where your contribution goes. Everything is computed right in the browser from your entries — nothing leaves the device.",
+  "loading": "Loading entries…",
+  "structure": "What your contribution is made of",
+  "period": {
+    "label": "Period",
+    "from": "From",
+    "to": "To",
+    "presets": {
+      "month": "30 days",
+      "quarter": "90 days",
+      "halfYear": "6 months",
+      "year": "Year",
+      "all": "All time",
+      "custom": "Custom"
+    }
+  },
+  "units": {
+    "entries": { "one": "{n} entry", "other": "{n} entries" },
+    "weeks": { "one": "{n} week", "other": "{n} weeks" },
+    "days": { "one": "{n} day", "other": "{n} days" }
+  },
+  "kpi": {
+    "label": "Period stats",
+    "items": {
+      "total": "Entries",
+      "average": "Average score",
+      "high": "Strong (4–5)",
+      "metrics": "With metrics",
+      "evidence": "With artifacts",
+      "streak": "Weeks in a row"
+    },
+    "averageHint": "out of 5",
+    "highHint": "{count} entry | {count} entries",
+    "streakHint": "at period end",
+    "points": "pp",
+    "same": "no change",
+    "noCompare": "nothing to compare",
+    "previous": "Compared with the previous period: {range}",
+    "deltaSr": {
+      "up": "{value} vs the previous period",
+      "down": "{value} vs the previous period",
+      "flat": "no change vs the previous period"
+    }
+  },
+  "chart": {
+    "asTable": "As table",
+    "asChart": "As chart",
+    "navX": "{chart}: use left and right arrows to step through values",
+    "navY": "{chart}: use up and down arrows to step through rows"
+  },
+  "timeline": {
+    "title": "Entries over time",
+    "by": { "week": "Weekly", "month": "Monthly" },
+    "desc": "{unit}: {total} in total; the most — {peak}, {when}.",
+    "descEmpty": "No entries in this period.",
+    "scoreTitle": "Average score",
+    "scoreDesc": "{unit}, scale 1 to 5. {average}",
+    "average": "{score} on average for the period",
+    "scoreValue": "Average score {score}",
+    "noScore": "No entries",
+    "partial": { "week": "partial week", "month": "partial month" },
+    "partialNote": "Faded columns are partial weeks or months at the edges of the period.",
+    "column": { "week": "Week", "month": "Month", "count": "Entries", "average": "Average score" }
+  },
+  "scores": {
+    "title": "Impact scores",
+    "subtitle": "Strong (4–5): {share}",
+    "share": "{share} of the period’s entries",
+    "legendHigh": "strong impact (4–5)",
+    "legendRest": "others (1–3)",
+    "column": { "score": "Score", "count": "Entries", "share": "Share" }
+  },
+  "breakdown": {
+    "share": "in {share} of the period’s entries",
+    "column": { "count": "Entries", "share": "Share of entries" },
+    "categories": {
+      "title": "Categories",
+      "subtitle": "Share of the period’s entries; an entry can have several categories",
+      "column": "Category",
+      "empty": "Entries in this period have no categories.",
+      "rest": {
+        "one": "And {n} more category — see the table",
+        "other": "And {n} more categories — see the table"
+      }
+    },
+    "labels": {
+      "title": "Frequent labels",
+      "subtitle": "Share of the period’s entries",
+      "column": "Label",
+      "empty": "Entries in this period have no labels.",
+      "rest": {
+        "one": "And {n} more label — see the table",
+        "other": "And {n} more labels — see the table"
+      }
+    }
+  },
+  "highlights": {
+    "title": "Period highlights",
+    "top": "Most significant entries",
+    "facts": "Observations",
+    "noFacts": "Not enough data for observations yet — they will appear as you add more entries.",
+    "note": "Computed from your entries: plain arithmetic, no guessing, no AI."
+  },
+  "observations": {
+    "countUp": "{change} more entries: {current} vs {previous} in the previous period.",
+    "countDown": "{change} fewer entries: {current} vs {previous} in the previous period.",
+    "countSame": "Same pace: {current} vs {previous} in the previous period.",
+    "topCategory": "Most of your contribution is in “{name}”: {count}, {share} of the period’s entries.",
+    "strongestCategory": "The most significant results are in “{name}”: average score {score} vs {overall} overall.",
+    "quietStretch": "{weeks} in a row with no entries: {range}.",
+    "metricsUp": "The share of entries with metrics grew from {from} to {to}.",
+    "metricsDown": "The share of entries with metrics dropped from {from} to {to}.",
+    "evidenceUp": "The share of entries linking to artifacts grew from {from} to {to}.",
+    "evidenceDown": "The share of entries linking to artifacts dropped from {from} to {to}.",
+    "scoreUp": "The average score went up from {from} to {to}.",
+    "scoreDown": "The average score went down from {from} to {to}.",
+    "peakWeek": "The busiest week was {bucket}: {count}.",
+    "peakMonth": "The busiest month was {bucket}: {count}.",
+    "topLabel": "The most frequent label is #{name}: {count}.",
+    "metricsTip": "Only {share} of entries have a measurable outcome. Before → after numbers are the strongest argument in a review."
+  },
+  "empty": {
+    "title": "Nothing to count yet",
+    "text": "Insights appear after your first entries: trends, scores, categories and the period’s highlights.",
+    "cta": "New entry"
+  },
+  "emptyPeriod": {
+    "title": "No entries in this period",
+    "text": "Pick another period or add what you did during this time.",
+    "showAll": "Show all time"
+  },
+  "locked": {
+    "title": "Advanced analytics",
+    "text": "Available on the extended plan. Basic stats and trends stay with you on any plan.",
+    "features": {
+      "scores": "impact score distribution",
+      "breakdown": "categories and frequent labels",
+      "highlights": "most significant entries and observations for the period"
+    }
+  }
+}

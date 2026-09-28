@@ -1,0 +1,5 @@
+.insights-breakdown__empty {
+  padding: var(--space-4) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}

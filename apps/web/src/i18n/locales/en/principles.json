@@ -1,0 +1,229 @@
+{
+  "eyebrow": "Principles",
+  "title": "Your data is yours",
+  "lead": "Impact log runs on your device and encrypts entries before they go anywhere. An account is only needed for sync — and even then the server sees nothing but ciphertext. Here’s an honest, detailed account of what is stored where, and how.",
+  "values": {
+    "title": "What guides us",
+    "items": {
+      "localFirst": {
+        "title": "Your device first",
+        "text": "The app works without signing up: entries live in an encrypted vault in your browser. An account is only needed to sync devices."
+      },
+      "e2ee": {
+        "title": "End-to-end encryption",
+        "text": "Entries are encrypted on your device with a key we don’t have. Your password, Master Key and Recovery Key never reach the server in the clear — even the server admin can’t read your entries."
+      },
+      "minimal": {
+        "title": "Minimal data",
+        "text": "Sync needs only a username and password. We don’t ask for email, phone or name, and we don’t try to find out who you are."
+      },
+      "noTracking": {
+        "title": "No tracking",
+        "text": "No analytics, telemetry, trackers, ads or emails. We don’t know what you click, and we don’t want to."
+      },
+      "yours": {
+        "title": "Your data belongs to you",
+        "text": "Full export at any time, on any plan. Account deletion is immediate and complete — no trash bins."
+      },
+      "honest": {
+        "title": "No fine print",
+        "text": "If something isn’t there yet, we say so. Any change in how we handle data shows up on this page right away."
+      }
+    }
+  },
+  "device": {
+    "title": "On your device",
+    "lead": "All of this is stored in your browser. Without sync, nothing goes to the server and it knows nothing about you. With sync, the server gets only encrypted copies of entries and what’s listed under “What the server sees”.",
+    "items": {
+      "records": {
+        "what": "Entries",
+        "how": "Text, date, categories, labels, metrics, artifact links — in the browser’s IndexedDB, encrypted only (in the same format that goes to the server when you sync)."
+      },
+      "masterKey": {
+        "what": "Data key (Master Key)",
+        "how": "Stored on disk only wrapped by the device key. Open in the tab’s memory while you work."
+      },
+      "deviceKey": {
+        "what": "Device key",
+        "how": "A non-extractable AES-256-GCM key (WebCrypto): the browser lets the app use it but never hands its bytes to any JavaScript — not even impact log’s own code."
+      },
+      "account": {
+        "what": "Account link",
+        "how": "If sync is on: your username, Account ID, this device’s id and secret, plus the password salt and protection settings from your last sign-in. The browser presents the device id and secret only when signing in (the server keeps just a hash of the secret), and the salt and settings help notice if they suddenly get weaker on the server."
+      },
+      "conflicts": {
+        "what": "Conflicting versions",
+        "how": "If an entry was changed on two devices at once, a copy of the server version is kept here next to yours (encrypted) until you choose which one to keep. Such entries are marked “Version conflict” in the journal and on the entry screen."
+      },
+      "quarantine": {
+        "what": "Quarantine",
+        "how": "If an entry can’t be decrypted when you sign in to an account (corruption, a foreign key), it isn’t lost and doesn’t block sign-in: its ciphertext is set aside on this device and never sent anywhere. In Settings → Data you can download it as is or delete it."
+      },
+      "prefs": {
+        "what": "Interface settings",
+        "how": "The browser’s localStorage holds settings only: theme, language and review report layout. No entries or keys."
+      },
+      "draft": {
+        "what": "Quick capture draft",
+        "how": "It arrives in the page address (/capture#draft=…), so the link may stay in your browser history. Until you save the entry (including while you sign in), the draft sits in this tab’s sessionStorage; it is removed once saved. Of a saved draft, only its id and a pointer to the entry stay on the device — so reopening the same link does not create a duplicate."
+      },
+      "swCache": {
+        "what": "App files",
+        "how": "The browser keeps impact log’s code and design (scripts, styles, fonts, icons) in the service worker cache, so the app opens and works offline. Your entries and keys are not in this cache: requests to the server don’t go through it and aren’t stored. Each new version replaces the cache entirely."
+      }
+    }
+  },
+  "crypto": {
+    "title": "How we encrypt",
+    "items": {
+      "masterKey": {
+        "title": "Master Key",
+        "text": "256 random bits, created on your device and not derived from your password. You can change your password without re-encrypting entries."
+      },
+      "objects": {
+        "title": "AES-256-GCM for every entry",
+        "text": "Each entry has its own random key, wrapped by the Master Key. The ciphertext is bound to the entry id — the server can’t silently swap one entry for another."
+      },
+      "password": {
+        "title": "Argon2id, 64 MiB",
+        "text": "Your browser derives two independent keys from your password (Argon2id: 64 MiB of memory, 3 passes, a unique salt): the KEK opens the Master Key envelope, the authKey proves sign-in. Only the authKey goes to the server — the KEK can’t be derived from it."
+      },
+      "device": {
+        "title": "Device key",
+        "text": "On every device the Master Key is wrapped by a non-extractable browser key: it exists in the clear only in the memory of an open tab. This doesn’t protect against someone with full access to your computer — use disk encryption and a screen lock."
+      }
+    }
+  },
+  "server": {
+    "title": "What the server sees",
+    "lead": "Only if you turned on sync. This is the complete list — if something isn’t here, we don’t store it.",
+    "items": {
+      "account": {
+        "what": "Account",
+        "how": "Username, Account ID (random, says nothing about you), plan, creation date."
+      },
+      "password": {
+        "what": "Password",
+        "how": "We don’t have your password. We store an Argon2id hash of authKey, plus the salt and KDF settings so your browser can repeat the key derivation. The browser remembers them and warns you if at the next sign-in they turn out weaker or change without you."
+      },
+      "keys": {
+        "what": "Master Key envelopes",
+        "how": "The Master Key encrypted with your password, and the Master Key encrypted with your Recovery Key. Without the password or key nobody can open them — neither we nor anyone else."
+      },
+      "recovery": {
+        "what": "Recovery Key",
+        "how": "Only a SHA-256 of the derived recoveryAuthKey — to check the key during recovery. We never see the key itself."
+      },
+      "totp": {
+        "what": "2FA key",
+        "how": "The secret for app codes, encrypted with AES-256-GCM using a key stored separately from the database."
+      },
+      "records": {
+        "what": "Entries",
+        "how": "Opaque ciphertext (up to 256 KiB) with the entry id, version number, change time and a deletion flag. They reveal the size and timing of changes, not the content."
+      },
+      "devices": {
+        "what": "Devices",
+        "how": "A name encrypted with your key, when it was added and last active, a hash of the device secret (so no other session can pose as your device), the “remembered” mark (token hash and expiry), revocation."
+      },
+      "sessions": {
+        "what": "Sessions",
+        "how": "Session token hash, its kind and expiry, the count of wrong 2FA codes."
+      }
+    }
+  },
+  "never": {
+    "title": "What the server never sees",
+    "items": {
+      "password": "Password",
+      "masterKey": "Master Key",
+      "recoveryKey": "Recovery Key",
+      "content": "Entry text",
+      "categories": "Categories",
+      "labels": "Labels",
+      "metrics": "Metrics",
+      "evidence": "Artifact links",
+      "deviceNames": "Device names"
+    }
+  },
+  "recovery": {
+    "title": "Recovery Key: without it, data can’t be recovered",
+    "text": "When you turn on sync, your browser creates a Recovery Key (ILRK1-…, 160 random bits). It opens a second Master Key envelope and replaces both your password and your 2FA phone. We can’t reset your password: we have neither your password nor the key to your data.",
+    "warning": "If you lose both your password and your Recovery Key, nobody can recover the data on the server — not even us. Entries already open on your devices stay available: export them and start over."
+  },
+  "capture": {
+    "title": "Quick capture from the extension, CLI and VS Code",
+    "text": "The draft reaches the app in the page address, in the link fragment (/capture#draft=…). Browsers never send the fragment to the server, and the app removes it from the address bar right away. Still, the link with the draft may stay in your browser history, like any address you open. The entry is encrypted only when you save it."
+  },
+  "limits": {
+    "title": "Honest limitations",
+    "items": {
+      "webCode": "The web app is loaded from the server, so you trust the code it serves: a server serving malicious code could read entries in an open tab. This is a general limit of encryption in web apps. We reduce the risk with a strict CSP and no third-party scripts, but there are no signed builds yet.",
+      "noRotation": "There is no encryption key rotation yet: changing your password protects future sign-ins but doesn’t revoke access that was already obtained — for example, on a device where the vault is already open.",
+      "recoveryKey": "Your Recovery Key together with your username gives full access to the account without 2FA. Keep it offline, separate from your password.",
+      "knownDevice": "On a known device the vault opens without a password: your entries are protected by the browser profile and your OS account. Use a screen lock and disk encryption.",
+      "revoke": "Revoking a device stops its sync but doesn’t erase data already downloaded to it."
+    }
+  },
+  "cookies": {
+    "title": "Cookies",
+    "lead": "Without sync — none at all. With sync — only technical ones, no ads or tracking:",
+    "items": {
+      "session": {
+        "what": "il_session",
+        "how": "Session. HttpOnly, Secure, SameSite=Strict, sent only to /api. Lasts until the browser closes (one day, extended while in use) or 30 days if you checked “Remember this computer”. The database keeps only a hash."
+      },
+      "device": {
+        "what": "il_device",
+        "how": "Only with “Remember this computer”: for 30 days, sign-in on this device without a 2FA code (the password is always required). Sent only to /api/auth, the database keeps a hash. Reset by “sign out everywhere”, account recovery and device revocation."
+      }
+    }
+  },
+  "notCollected": {
+    "title": "What we don’t collect",
+    "items": {
+      "email": "Email",
+      "phone": "Phone number",
+      "name": "Name or other personal data",
+      "analytics": "Analytics or behavior metrics",
+      "telemetry": "Telemetry or crash reports",
+      "fingerprint": "Browser fingerprints",
+      "thirdParty": "Third-party scripts, fonts or pixels",
+      "ads": "Advertising identifiers",
+      "sale": "Anything to sell or share with third parties"
+    }
+  },
+  "infra": {
+    "title": "Where and how it runs",
+    "items": {
+      "location": {
+        "title": "Server in Russia",
+        "text": "Encrypted sync data is stored on a single server in a Moscow data center. No cloud data processing services."
+      },
+      "transport": {
+        "title": "Secure connection",
+        "text": "HTTPS only with HSTS, a strict Content Security Policy, and rate limits on sign-in and code attempts."
+      },
+      "logs": {
+        "title": "Technical logs",
+        "text": "Time, method and path of a request, response code and a truncated IP (IPv4 to /24, IPv6 to /48). No headers, cookies or request bodies. Size-based rotation: only the latest records are kept (up to 5 files of 10 MB)."
+      },
+      "alpha": {
+        "title": "Alpha stage",
+        "text": "The service is in active development. Regular server backups are still being set up — keep an export of your entries at hand."
+      }
+    }
+  },
+  "control": {
+    "title": "You’re in control",
+    "items": {
+      "export": "Full export of entries to JSON, CSV and Markdown — always, on any plan (Settings → Data). Export files are not encrypted: keep them as carefully as the entries themselves.",
+      "wipe": "Wipe data from a device: entries are removed from this browser but stay on the server and your other devices.",
+      "delete": "Account deletion: the server immediately deletes the account, key envelopes, devices, sessions and all encrypted entries — no trash bins or delayed retention.",
+      "devices": "A list of devices, revoking any of them, and signing out everywhere.",
+      "aiPrompt": "“Prompt for your own AI” on the review screen is only copied to the clipboard: you decide where to paste it, the app sends nothing anywhere.",
+      "ai": "AI features, if they appear, only with explicit consent and a warning that entry text will be sent to an external provider."
+    }
+  },
+  "updated": "Updated September 29, 2026."
+}

@@ -1,0 +1,98 @@
+.ui-textarea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-textarea__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-textarea__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.ui-textarea__counter {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.ui-textarea__counter--near {
+  color: var(--color-warning-text);
+}
+
+.ui-textarea__field {
+  display: block;
+  width: 100%;
+  min-height: var(--control-md);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  resize: vertical;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.ui-textarea--autoresize .ui-textarea__field {
+  overflow: hidden;
+  resize: none;
+}
+
+.ui-textarea--mono .ui-textarea__field {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.ui-textarea__field::placeholder {
+  color: var(--color-text-muted);
+}
+
+.ui-textarea__field:hover {
+  border-color: var(--color-border-strong);
+}
+
+.ui-textarea__field:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.ui-textarea--error .ui-textarea__field {
+  border-color: var(--color-danger);
+}
+
+.ui-textarea--error .ui-textarea__field:focus {
+  box-shadow: var(--shadow-focus-danger);
+}
+
+.ui-textarea--disabled .ui-textarea__field {
+  background: var(--color-surface-muted);
+  cursor: not-allowed;
+}
+
+.ui-textarea__hint,
+.ui-textarea__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.ui-textarea__hint {
+  color: var(--color-text-muted);
+}
+
+.ui-textarea__error {
+  color: var(--color-danger);
+}

@@ -1,0 +1,64 @@
+/* Цвета графика — только из токенов; тёмная тема подхватывается автоматически */
+.chart-columns {
+  --chart-bar: var(--color-accent-strong);
+  --chart-grid: var(--color-border);
+  --chart-baseline: var(--color-border-strong);
+  --chart-ink: var(--color-text-secondary);
+
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.chart-columns:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+.chart-columns__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-columns__grid line {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.chart-columns__grid line.chart-columns__baseline {
+  stroke: var(--chart-baseline);
+}
+
+.chart-columns__tick {
+  font-size: 11px;
+  fill: var(--chart-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-columns__bar {
+  fill: var(--chart-bar);
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.chart-columns__bar--partial {
+  opacity: 0.5;
+}
+
+.chart-columns--has-active .chart-columns__bar:not(.chart-columns__bar--active) {
+  opacity: 0.4;
+}
+
+.chart-columns__value {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  fill: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-columns__hit {
+  fill: transparent;
+  cursor: crosshair;
+}

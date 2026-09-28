@@ -14,6 +14,7 @@
   --color-surface: #ffffff; /* карточки, поля */
   --color-surface-muted: #eef1ef; /* вторичные блоки, hover */
   --color-surface-sunken: #e7ebe9; /* трек прогресса, скелетоны */
+  --color-surface-raised: #ffffff; /* выбранный сегмент поверх --color-surface-muted */
   --color-glass: rgb(255 255 255 / 0.72); /* всплывашки, липкая шапка (+ blur) */
   --color-glass-border: rgb(255 255 255 / 0.6);
   --color-overlay: rgb(15 26 21 / 0.32);
@@ -21,10 +22,10 @@
   /* ---------- Цвет: текст ---------- */
   --color-text: #0f1a15;
   --color-text-secondary: #56605b;
-  --color-text-muted: #8a938e;
+  --color-text-muted: #667069; /* ≥ 4.5 на bg / surface / surface-muted */
   --color-text-inverse: #ffffff;
   --color-on-primary: #ffffff; /* текст на --color-primary */
-  --color-on-danger: #ffffff;
+  --color-on-danger: #ffffff; /* текст на --color-danger */
 
   /* ---------- Цвет: границы ---------- */
   --color-border: #e3e8e5;
@@ -35,12 +36,12 @@
   --color-primary-hover: #1d3429;
   --color-logo: #0f1f18; /* плашка логотипа — тёмная в обеих темах */
   --color-accent: #22c77a; /* зелёный акцент: фокус, активные состояния, иконки */
-  --color-accent-strong: #129b5c; /* акцент для текста на светлом (контраст ≥ 4.5) */
+  --color-accent-strong: #0c7a48; /* акцент для текста: ≥ 4.5 на bg, surface и accent-soft */
   --color-accent-soft: #e3f8ed; /* фон выбранного/активного */
   --color-accent-glow: rgb(34 199 122 / 0.22);
 
   /* ---------- Цвет: статусы ---------- */
-  --color-danger: #d93b45;
+  --color-danger: #c8323d; /* ≥ 4.5 как текст на bg / surface / danger-soft и под белым текстом */
   --color-danger-soft: #fdecee;
   --color-warning: #d88a07;
   --color-warning-soft: #fdf3e0;
@@ -97,7 +98,7 @@
   --shadow-md: 0 2px 4px rgb(15 26 21 / 0.04), 0 12px 32px rgb(15 26 21 / 0.07);
   --shadow-lg: 0 4px 8px rgb(15 26 21 / 0.04), 0 24px 64px rgb(15 26 21 / 0.12);
   --shadow-focus: 0 0 0 4px var(--color-accent-glow);
-  --shadow-focus-danger: 0 0 0 4px rgb(217 59 69 / 0.16);
+  --shadow-focus-danger: 0 0 0 4px rgb(200 50 61 / 0.16);
 
   /* ---------- Размеры контролов ---------- */
   --control-sm: 36px;
@@ -135,13 +136,14 @@
   --color-surface: #141a17;
   --color-surface-muted: #1b2420;
   --color-surface-sunken: #232d28;
+  --color-surface-raised: #2a3630;
   --color-glass: rgb(20 26 23 / 0.72);
   --color-glass-border: rgb(255 255 255 / 0.06);
   --color-overlay: rgb(0 0 0 / 0.5);
 
   --color-text: #e7eeea;
   --color-text-secondary: #a4afa9;
-  --color-text-muted: #6f7b75;
+  --color-text-muted: #838f89; /* ≥ 4.5 на bg / surface / surface-muted */
   --color-text-inverse: #0f1a15;
 
   --color-border: #243029;
@@ -158,6 +160,7 @@
   --color-accent-glow: rgb(47 215 134 / 0.25);
 
   --color-danger: #f26673;
+  --color-on-danger: #0f1a15; /* светло-красная кнопка — тёмный текст, как у главной */
   --color-danger-soft: rgb(242 102 115 / 0.14);
   --color-warning: #f0ac3c;
   --color-warning-soft: rgb(240 172 60 / 0.13);

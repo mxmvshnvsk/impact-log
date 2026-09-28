@@ -1,0 +1,103 @@
+.review-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.review-picker__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+}
+
+.review-picker__toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.review-picker__toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.review-picker__toggle-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.review-picker__summary {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.review-picker__chevron {
+  flex: none;
+  color: var(--color-text-secondary);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.review-picker__chevron--open {
+  transform: rotate(180deg);
+}
+
+.review-picker__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.review-picker__bulk {
+  display: flex;
+  gap: var(--space-2);
+  margin-inline: calc(-1 * var(--space-3));
+}
+
+.review-picker__list {
+  display: flex;
+  flex-direction: column;
+  max-height: 360px;
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  list-style: none;
+}
+
+.review-picker__item {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.review-picker__item:last-child {
+  border-bottom: 0;
+}
+
+.review-picker__item-title {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.review-picker__item-meta {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.review-picker__empty {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}

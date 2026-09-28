@@ -1,0 +1,66 @@
+{
+  "eyebrow": "Review",
+  "title": "Review summary",
+  "lead": "Put together a report on your results for a period: choose what to include, check the preview and take it as Markdown, a file or a PDF. Everything is assembled in the browser.",
+  "loading": "Loading entries…",
+  "locked": "The review builder is not available on your current plan. Export all entries in “Settings → Data”.",
+  "noneSelected": "No entries match the current settings — the report will be empty.",
+  "empty": {
+    "title": "A review starts with entries",
+    "text": "Add what you have already done — and your performance review summary will come together here."
+  },
+  "settings": {
+    "label": "What to include",
+    "title": "Report title",
+    "group": {
+      "label": "Grouping",
+      "category": "Categories",
+      "month": "Months",
+      "none": "No groups"
+    },
+    "minScore": "Minimum score",
+    "minScoreAll": "All entries",
+    "minScoreFrom": "From {score} · {label}",
+    "highlights": "Key results",
+    "highlightsNone": "Don’t highlight",
+    "include": "Show in entries",
+    "includeDescriptions": "Descriptions",
+    "includeMetrics": "Before → after metrics",
+    "includeEvidence": "Links to artifacts",
+    "locale": "Report language"
+  },
+  "picker": {
+    "title": "Pick entries manually",
+    "summary": "{selected} of {total} selected",
+    "totalOf": {
+      "one": "{n} entry",
+      "other": "{n} entries"
+    },
+    "search": "Search entries",
+    "all": "Select all",
+    "none": "Clear all",
+    "score": "score {score}",
+    "noCandidates": "No entries match the period and minimum score.",
+    "notFound": "Nothing found."
+  },
+  "preview": {
+    "title": "Preview",
+    "mode": "Preview mode",
+    "rendered": "Document",
+    "source": "Markdown"
+  },
+  "actions": {
+    "label": "Report actions",
+    "copy": "Copy Markdown",
+    "copied": "Copied",
+    "copiedMarkdown": "Markdown copied to the clipboard",
+    "copiedPrompt": "Prompt copied to the clipboard",
+    "download": "Download .md",
+    "print": "Print / PDF",
+    "prompt": "Copy as a prompt for your own AI",
+    "promptNote": "Impact log doesn’t send anything anywhere: the text goes only where you paste it yourself. Check whether you’re allowed to share work data with that service."
+  },
+  "prompt": {
+    "template": "Help me prepare for a performance review. Below is a summary of my work results for {range}, taken from my impact log.\n\nWrite a self-assessment:\n- open with the 3–5 most significant results and their impact on the team, product or business;\n- group the rest by theme, briefly and concretely;\n- use only the facts, numbers and links from the text below.\n\nDo not invent results, numbers, projects or ratings. If there isn’t enough data for a strong statement, list at the end the questions I should clarify."
+  }
+}

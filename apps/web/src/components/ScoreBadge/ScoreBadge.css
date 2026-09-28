@@ -1,0 +1,82 @@
+/* Оценка 1–5: «уровень сигнала» из пяти столбиков + цифра */
+.score-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  height: 28px;
+  padding: 0 var(--space-3) 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.score-badge--sm {
+  gap: 6px;
+  height: 24px;
+  padding: 0 var(--space-2) 0 8px;
+  font-size: var(--text-xs);
+}
+
+.score-badge--high {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.score-badge__bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.score-badge--sm .score-badge__bars {
+  height: 12px;
+}
+
+.score-badge__bar {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--color-border-strong);
+}
+
+.score-badge__bar:nth-child(1) {
+  height: 30%;
+}
+
+.score-badge__bar:nth-child(2) {
+  height: 47%;
+}
+
+.score-badge__bar:nth-child(3) {
+  height: 64%;
+}
+
+.score-badge__bar:nth-child(4) {
+  height: 82%;
+}
+
+.score-badge__bar:nth-child(5) {
+  height: 100%;
+}
+
+.score-badge__bar--on {
+  background: var(--color-text-secondary);
+}
+
+.score-badge--high .score-badge__bar--on {
+  background: var(--color-accent);
+}
+
+.score-badge__value {
+  font-family: var(--font-mono);
+}
+
+.score-badge__label {
+  font-family: var(--font-sans);
+  font-weight: var(--weight-semibold);
+}

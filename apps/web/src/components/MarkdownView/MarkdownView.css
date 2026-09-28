@@ -1,0 +1,205 @@
+/*
+ * Типографика Markdown. Контент приходит через v-html, поэтому стили не scoped:
+ * все селекторы начинаются с корневого класса .markdown-view (Biome не понимает :deep() в .css).
+ */
+.markdown-view {
+  min-width: 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.markdown-view > :first-child {
+  margin-top: 0;
+}
+
+.markdown-view > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-view p,
+.markdown-view ul,
+.markdown-view ol,
+.markdown-view blockquote,
+.markdown-view pre,
+.markdown-view table {
+  margin: 0 0 var(--space-4);
+}
+
+.markdown-view h1,
+.markdown-view h2,
+.markdown-view h3,
+.markdown-view h4,
+.markdown-view h5,
+.markdown-view h6 {
+  margin: var(--space-6) 0 var(--space-3);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+
+.markdown-view h1 {
+  font-size: var(--text-3xl);
+}
+
+.markdown-view h2 {
+  font-size: var(--text-2xl);
+}
+
+.markdown-view h3 {
+  font-size: var(--text-xl);
+}
+
+.markdown-view h4 {
+  font-size: var(--text-lg);
+}
+
+.markdown-view h5,
+.markdown-view h6 {
+  font-size: var(--text-md);
+}
+
+.markdown-view ul,
+.markdown-view ol {
+  padding-left: var(--space-6);
+}
+
+/*
+ * Заголовки внутри пункта списка (описание записи в выжимке к ревью вложено в пункт) — не крупнее
+ * самого пункта, иначе «## Что сделал» из описания перекрикивает заголовки отчёта
+ */
+.markdown-view li :is(h1, h2, h3, h4, h5, h6) {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-md);
+}
+
+.markdown-view li + li {
+  margin-top: var(--space-1);
+}
+
+.markdown-view li > ul,
+.markdown-view li > ol {
+  margin: var(--space-1) 0 0;
+}
+
+.markdown-view li:has(> .md-check) {
+  list-style: none;
+}
+
+.markdown-view .md-check {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin: 0 var(--space-2) 0 calc(-1 * var(--space-6) + 4px);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  vertical-align: -2px;
+}
+
+.markdown-view .md-check--done {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-primary);
+}
+
+.markdown-view a {
+  color: var(--color-accent-strong);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentcolor 35%, transparent);
+  text-underline-offset: 3px;
+}
+
+.markdown-view a:hover {
+  text-decoration-color: currentcolor;
+}
+
+.markdown-view strong {
+  font-weight: var(--weight-bold);
+}
+
+.markdown-view blockquote {
+  padding: var(--space-1) 0 var(--space-1) var(--space-4);
+  border-left: 3px solid var(--color-border-strong);
+  color: var(--color-text-secondary);
+}
+
+/* Внутри цитаты отступ после последнего абзаца лишний: полоса слева становится несимметричной */
+.markdown-view blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-view code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--color-surface-muted);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+}
+
+.markdown-view pre {
+  padding: var(--space-4);
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  line-height: 1.5;
+}
+
+.markdown-view pre code {
+  padding: 0;
+  background: none;
+  font-size: var(--text-sm);
+  overflow-wrap: normal;
+}
+
+.markdown-view hr {
+  margin: var(--space-6) 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.markdown-view table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.markdown-view th,
+.markdown-view td {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.markdown-view th {
+  background: var(--color-surface-muted);
+  font-weight: var(--weight-semibold);
+}
+
+/* компактный режим */
+.markdown-view.markdown-view--compact {
+  font-size: var(--text-sm);
+}
+
+.markdown-view.markdown-view--compact p,
+.markdown-view.markdown-view--compact ul,
+.markdown-view.markdown-view--compact ol,
+.markdown-view.markdown-view--compact blockquote,
+.markdown-view.markdown-view--compact pre {
+  margin-bottom: var(--space-2);
+}
+
+.markdown-view.markdown-view--compact h1,
+.markdown-view.markdown-view--compact h2,
+.markdown-view.markdown-view--compact h3,
+.markdown-view.markdown-view--compact h4 {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: var(--text-md);
+}

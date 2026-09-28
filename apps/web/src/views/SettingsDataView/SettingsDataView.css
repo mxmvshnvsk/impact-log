@@ -1,0 +1,12 @@
+.settings-data {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: var(--content-max-width);
+}
+
+@media (--tablet) {
+  .settings-data {
+    gap: var(--space-6);
+  }
+}

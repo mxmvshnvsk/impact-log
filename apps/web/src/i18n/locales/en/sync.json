@@ -1,0 +1,87 @@
+{
+  "status": {
+    "off": "Sync is off",
+    "idle": "Synced",
+    "syncing": "Syncing…",
+    "offline": "Offline",
+    "signed-out": "Sign in needed",
+    "error": "Sync error"
+  },
+  "indicator": {
+    "pending": "{n} not sent",
+    "conflicts": "{n} conflict | {n} conflicts",
+    "lastSync": "updated {time}"
+  },
+  "panel": {
+    "title": "Sync",
+    "description": "Entries are encrypted on this device; the server only ever sees ciphertext.",
+    "lastSync": "Last synced {time}",
+    "never": "Not synced yet",
+    "pending": "Everything is sent | {n} entry waiting to be sent | {n} entries waiting to be sent",
+    "syncNow": "Sync now",
+    "retry": "Retrying automatically {time}",
+    "offline": "Can’t reach the server. Entries are saved on this device and will be sent when you’re back online.",
+    "off": "Sync works while you’re signed in to your account.",
+    "otherTab": "Another open impact log tab is syncing."
+  },
+  "quota": {
+    "title": "Plan limit reached",
+    "text": "{n} entries are not synced: the {plan} plan stores up to {limit} entries in the cloud. They are saved on this device. | {n} entry is not synced: the {plan} plan stores up to {limit} entries in the cloud. It is saved on this device. | {n} entries are not synced: the {plan} plan stores up to {limit} entries in the cloud. They are saved on this device.",
+    "hint": "Delete entries you don’t need or change your plan — sync will resume on its own.",
+    "usage": "In the cloud now: {count} of {limit}."
+  },
+  "errors": {
+    "INVALID": "The server rejected one of the entries. It is saved on this device.",
+    "TOO_LARGE": "One of the entries is too large to sync. It is saved on this device.",
+    "VAULT_LOCKED": "The vault is locked — reload the page.",
+    "RATE_LIMITED": "Too many requests. We’ll try again shortly.",
+    "ACCOUNT_MISMATCH": "The session open in this browser belongs to a different account. Sync is stopped; entries on this device are untouched. Sign in again to the account this device is linked to, then press “Sync now”.",
+    "generic": "The server returned an error ({code}). We’ll retry automatically."
+  },
+  "conflicts": {
+    "title": "Sync conflicts",
+    "description": "These entries were changed on two devices at the same time. Both versions are kept — choose which one to keep.",
+    "local": "On this device",
+    "server": "From another device",
+    "changed": "changed {time}",
+    "deletedServer": "This entry was deleted on another device.",
+    "deletedLocal": "This entry was deleted on this device.",
+    "undecryptable": "This version could not be decrypted.",
+    "keepLocal": "Keep this device’s version",
+    "keepServer": "Keep the other device’s version",
+    "keepBoth": "Keep both",
+    "restoreLocal": "Restore this device’s version",
+    "delete": "Delete",
+    "confirmDelete": "Delete this entry on all devices?",
+    "cancel": "Cancel",
+    "copySuffix": " (copy)",
+    "differs": "differs",
+    "empty": "—",
+    "failed": "Couldn’t resolve the conflict. Please try again.",
+    "changedMeanwhile": "The entry changed while you were choosing. Check both versions again.",
+    "fields": {
+      "title": "Title",
+      "occurredAt": "Date",
+      "impactScore": "Impact",
+      "description": "Description",
+      "categories": "Categories",
+      "labels": "Labels",
+      "metrics": "Metrics",
+      "evidence": "Artifacts",
+      "attachments": "Attachments",
+      "createdAt": "Created"
+    }
+  },
+  "relative": {
+    "justNow": "just now"
+  },
+  "plans": {
+    "PILOT": "Pilot",
+    "FREE": "Free",
+    "PRO": "Pro"
+  },
+  "summary": {
+    "conflicts": "Choose a version",
+    "quota": "Not everything is synced"
+  }
+}

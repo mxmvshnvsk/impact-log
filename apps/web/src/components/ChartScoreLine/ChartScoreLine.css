@@ -1,0 +1,65 @@
+.chart-score {
+  --chart-line: var(--color-info);
+  --chart-grid: var(--color-border);
+  --chart-ink: var(--color-text-secondary);
+  --chart-ring: var(--color-surface);
+
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.chart-score:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+.chart-score__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-score__grid line {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.chart-score__grid .chart-score__reference {
+  stroke: var(--chart-line);
+  stroke-opacity: 0.45;
+}
+
+.chart-score__tick {
+  font-size: 11px;
+  fill: var(--chart-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-score__crosshair {
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.chart-score__line {
+  fill: none;
+  stroke: var(--chart-line);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-score__dot {
+  fill: var(--chart-line);
+  stroke: var(--chart-ring);
+  stroke-width: 2;
+  paint-order: stroke;
+}
+
+.chart-score__hit {
+  fill: transparent;
+  cursor: crosshair;
+}

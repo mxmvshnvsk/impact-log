@@ -1,0 +1,19 @@
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.settings__title {
+  font-size: var(--text-3xl);
+}
+
+@media (--tablet) {
+  .settings__title {
+    font-size: var(--text-4xl);
+  }
+}
+
+.settings__body {
+  min-width: 0;
+}

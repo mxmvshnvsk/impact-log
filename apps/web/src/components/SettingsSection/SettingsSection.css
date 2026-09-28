@@ -1,0 +1,58 @@
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Опасная секция (удаление аккаунта) — с той же красноватой рамкой, что «Опасная зона» в «Данных» */
+.settings-section--danger {
+  border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
+}
+
+.settings-section__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.settings-section__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+}
+
+.settings-section__icon--accent {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.settings-section__icon--warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning-text);
+}
+
+.settings-section__icon--danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.settings-section__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  padding-top: var(--space-2);
+}
+
+.settings-section__title {
+  font-size: var(--text-xl);
+}
+
+.settings-section__lead {
+  color: var(--color-text-secondary);
+}

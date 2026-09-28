@@ -1,0 +1,85 @@
+.insights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.insights__header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.insights__title {
+  font-size: var(--text-3xl);
+}
+
+.insights__lead {
+  color: var(--color-text-secondary);
+}
+
+@media (--tablet) {
+  .insights {
+    gap: var(--space-8);
+  }
+
+  .insights__title {
+    font-size: var(--text-4xl);
+  }
+}
+
+.insights__loading {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  color: var(--color-text-muted);
+}
+
+.insights__toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.insights__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.insights__h2 {
+  font-size: var(--text-xl);
+}
+
+@media (--tablet) {
+  .insights__h2 {
+    font-size: var(--text-2xl);
+  }
+}
+
+.insights__grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (--tablet) {
+  .insights__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+@media (--desktop) {
+  .insights__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* На планшете третья карточка (метки) — на всю ширину, чтобы не висела одна в половине ряда */
+@media (--tablet-only) {
+  .insights__wide {
+    grid-column: 1 / -1;
+  }
+}

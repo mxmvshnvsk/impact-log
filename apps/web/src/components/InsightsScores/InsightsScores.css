@@ -1,0 +1,20 @@
+.insights-scores__legend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-right: var(--space-4);
+}
+
+.insights-scores__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.insights-scores__swatch--accent {
+  background: var(--color-accent-strong);
+}
+
+.insights-scores__swatch--muted {
+  background: var(--color-text-muted);
+}

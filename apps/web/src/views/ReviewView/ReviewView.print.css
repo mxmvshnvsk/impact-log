@@ -1,0 +1,48 @@
+/*
+ * Печать/PDF со страницы ревью: скрываем всё приложение и печатаем только отчёт.
+ * Стиль глобальный (не scoped), поэтому привязан к наличию .review-print в <body>:
+ * узел телепортируется туда только пока открыт экран ревью.
+ */
+.review-print {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 16mm 14mm;
+  }
+
+  body:has(> .review-print) > :not(.review-print) {
+    display: none;
+  }
+
+  body:has(> .review-print) {
+    background: #fff; /* исключение из правила токенов: бумага всегда белая */
+  }
+
+  /*
+   * Бумага всегда светлая: в тёмной теме токены переопределены — возвращаем значения светлой темы
+   * (исключение из правила «только токены», как подложка QR-кода).
+   */
+  .review-print {
+    --color-text: #0f1a15;
+    --color-text-secondary: #56605b;
+    --color-text-muted: #667069;
+    --color-surface: #ffffff;
+    --color-surface-muted: #eef1ef;
+    --color-border: #e3e8e5;
+    --color-accent-strong: #0c7a48;
+
+    display: block;
+    max-width: none;
+    padding: 0;
+    color: var(--color-text);
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+
+  .review-print a {
+    color: inherit;
+    text-decoration: underline;
+  }
+}

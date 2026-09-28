@@ -1,0 +1,59 @@
+.session__options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.session__option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.session__hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.session__danger {
+  color: var(--color-danger);
+}
+
+.session__everywhere {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.session__everywhere-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.session__everywhere-title {
+  font-size: var(--text-md);
+}
+
+@media (--tablet) {
+  .session__everywhere {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* Длинные подписи на узких экранах переносятся, а не вылезают за карточку */
+.session__button {
+  max-width: 100%;
+  height: auto;
+  min-height: var(--control-md);
+  padding-block: var(--space-2);
+  line-height: var(--leading-tight);
+  white-space: normal;
+  text-align: left;
+}

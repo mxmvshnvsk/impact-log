@@ -17,14 +17,87 @@
       </div>
     </section>
 
-    <section class="principles__section" aria-labelledby="stored-title">
-      <h2 id="stored-title" class="principles__h2">{{ t('principles.stored.title') }}</h2>
-      <p class="principles__section-lead l-content">{{ t('principles.stored.lead') }}</p>
+    <section class="principles__section" aria-labelledby="device-title">
+      <h2 id="device-title" class="principles__h2">{{ t('principles.device.title') }}</h2>
+      <p class="principles__section-lead l-content">{{ t('principles.device.lead') }}</p>
       <UiCard padding="none" class="principles__table">
         <dl>
-          <div v-for="key in stored" :key="key" class="principles__row">
-            <dt class="principles__row-what">{{ t(`principles.stored.items.${key}.what`) }}</dt>
-            <dd class="principles__row-how">{{ t(`principles.stored.items.${key}.how`) }}</dd>
+          <div v-for="key in device" :key="key" class="principles__row">
+            <dt class="principles__row-what">{{ t(`principles.device.items.${key}.what`) }}</dt>
+            <dd class="principles__row-how">{{ t(`principles.device.items.${key}.how`) }}</dd>
+          </div>
+        </dl>
+      </UiCard>
+    </section>
+
+    <section class="principles__section" aria-labelledby="crypto-title">
+      <h2 id="crypto-title" class="principles__h2">{{ t('principles.crypto.title') }}</h2>
+      <div class="principles__grid principles__grid--two">
+        <UiCard v-for="item in crypto" :key="item.key" variant="muted" class="principles__value">
+          <span class="principles__icon"><component :is="item.icon" :size="20" aria-hidden="true" /></span>
+          <h3 class="principles__h3">{{ t(`principles.crypto.items.${item.key}.title`) }}</h3>
+          <p class="principles__text">{{ t(`principles.crypto.items.${item.key}.text`) }}</p>
+        </UiCard>
+      </div>
+    </section>
+
+    <section class="principles__section" aria-labelledby="server-title">
+      <h2 id="server-title" class="principles__h2">{{ t('principles.server.title') }}</h2>
+      <p class="principles__section-lead l-content">{{ t('principles.server.lead') }}</p>
+      <UiCard padding="none" class="principles__table">
+        <dl>
+          <div v-for="key in server" :key="key" class="principles__row">
+            <dt class="principles__row-what">{{ t(`principles.server.items.${key}.what`) }}</dt>
+            <dd class="principles__row-how">{{ t(`principles.server.items.${key}.how`) }}</dd>
+          </div>
+        </dl>
+      </UiCard>
+    </section>
+
+    <section class="principles__section" aria-labelledby="never-title">
+      <h2 id="never-title" class="principles__h2">{{ t('principles.never.title') }}</h2>
+      <ul class="principles__chips">
+        <li v-for="key in never" :key="key" class="principles__chip principles__chip--safe">
+          <EyeOff :size="14" aria-hidden="true" />{{ t(`principles.never.items.${key}`) }}
+        </li>
+      </ul>
+    </section>
+
+    <section class="principles__section" aria-labelledby="recovery-title">
+      <UiCard class="principles__callout">
+        <span class="principles__icon"><KeyRound :size="20" aria-hidden="true" /></span>
+        <h2 id="recovery-title" class="principles__h3">{{ t('principles.recovery.title') }}</h2>
+        <p class="principles__text">{{ t('principles.recovery.text') }}</p>
+        <UiAlert tone="warning">{{ t('principles.recovery.warning') }}</UiAlert>
+      </UiCard>
+    </section>
+
+    <section class="principles__section" aria-labelledby="capture-title">
+      <h2 id="capture-title" class="principles__h2">{{ t('principles.capture.title') }}</h2>
+      <p class="principles__section-lead principles__section-lead--flat l-content">
+        {{ t('principles.capture.text') }}
+      </p>
+    </section>
+
+    <section class="principles__section" aria-labelledby="limits-title">
+      <h2 id="limits-title" class="principles__h2">{{ t('principles.limits.title') }}</h2>
+      <ul class="principles__list l-content">
+        <li v-for="key in limits" :key="key" class="principles__list-item">
+          <span class="principles__list-text">{{ t(`principles.limits.items.${key}`) }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="principles__section" aria-labelledby="cookies-title">
+      <h2 id="cookies-title" class="principles__h2">{{ t('principles.cookies.title') }}</h2>
+      <p class="principles__section-lead l-content">{{ t('principles.cookies.lead') }}</p>
+      <UiCard padding="none" class="principles__table">
+        <dl>
+          <div v-for="key in cookies" :key="key" class="principles__row">
+            <dt class="principles__row-what principles__row-what--mono">
+              {{ t(`principles.cookies.items.${key}.what`) }}
+            </dt>
+            <dd class="principles__row-how">{{ t(`principles.cookies.items.${key}.how`) }}</dd>
           </div>
         </dl>
       </UiCard>
@@ -41,7 +114,7 @@
 
     <section class="principles__section" aria-labelledby="infra-title">
       <h2 id="infra-title" class="principles__h2">{{ t('principles.infra.title') }}</h2>
-      <div class="principles__grid">
+      <div class="principles__grid principles__grid--two">
         <UiCard v-for="item in infra" :key="item.key" variant="muted" class="principles__value">
           <span class="principles__icon"><component :is="item.icon" :size="20" aria-hidden="true" /></span>
           <h3 class="principles__h3">{{ t(`principles.infra.items.${item.key}.title`) }}</h3>
@@ -65,12 +138,14 @@
 </template>
 
 <script setup lang="ts">
-import { Ban } from 'lucide-vue-next'
+import { Ban, EyeOff, KeyRound } from 'lucide-vue-next'
+import { UiAlert } from '@/ui/UiAlert'
 import { UiCard } from '@/ui/UiCard'
 import { UiEyebrow } from '@/ui/UiEyebrow'
 import { usePrinciplesView } from './usePrinciplesView'
 
-const { t, values, stored, notCollected, infra, control } = usePrinciplesView()
+const { t, values, device, crypto, server, never, limits, cookies, notCollected, infra, control } =
+  usePrinciplesView()
 </script>
 
 <style scoped src="./PrinciplesView.css"></style>

@@ -4,11 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f4f6f5" />
+    <!-- цвет панели браузера / окна PWA: --color-bg по системной теме; после старта — по выбранной (src/pwa/themeColor.ts) -->
+    <meta name="theme-color" content="#f4f6f5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c110f" media="(prefers-color-scheme: dark)" />
     <!-- тема до первой отрисовки, без вспышки (см. public/theme-init.js) -->
     <script src="/theme-init.js"></script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>impact-log</title>
+    <!-- PWA: установка на устройство и офлайн-оболочка (docs/pwa.md) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="impact log" />
+    <title>impact log</title>
   </head>
   <body>
     <div id="app"></div>

@@ -1,17 +1,33 @@
 {
   "common": {
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "loading": "Loading…",
+    "remove": "Remove",
+    "retry": "Retry",
+    "optional": "optional"
   },
   "nav": {
     "label": "Sections",
-    "entries": "Entries",
-    "summaries": "Summaries",
     "principles": "Principles",
     "soon": "soon",
     "logout": "Sign out",
-    "openApp": "Open dashboard",
-    "dashboard": "Dashboard"
+    "openApp": "Open journal",
+    "dashboard": "Journal",
+    "insights": "Insights",
+    "review": "Review",
+    "settings": "Settings",
+    "newImpact": "New entry",
+    "impact": "Entry",
+    "editImpact": "Edit entry",
+    "capture": "Quick capture",
+    "recover": "Account recovery",
+    "skip": "Skip to content"
   },
   "footer": {
     "label": "Links"
@@ -20,70 +36,9 @@
     "input": {
       "show": "Show password",
       "hide": "Hide password"
-    }
-  },
-  "auth": {
-    "fields": {
-      "login": "Login",
-      "password": "Password",
-      "passwordConfirm": "Repeat password",
-      "totp": "Code from the app",
-      "recoveryCode": "Recovery code"
     },
-    "login": {
-      "eyebrow": "Welcome back",
-      "title": "Sign in",
-      "subtitle": "Your impact log is waiting for new entries.",
-      "submit": "Sign in",
-      "noAccount": "No account yet?"
-    },
-    "secondFactor": {
-      "eyebrow": "Two-factor protection",
-      "title": "Verification code",
-      "subtitleTotp": "Enter the 6 digits from your authenticator app.",
-      "subtitleRecovery": "Enter one of the recovery codes you saved during sign-up.",
-      "submit": "Verify",
-      "useRecovery": "No access to the app?",
-      "useTotp": "Use a code from the app",
-      "back": "Another account",
-      "remember": "Remember this computer for 30 days",
-      "rememberHint": "We won’t ask for a 2FA code on this device. Don’t check this on shared computers."
-    },
-    "register": {
-      "cta": "Sign up",
-      "next": "Next",
-      "stepOf": "Step {step} of {total}",
-      "title": "Sign up",
-      "titles": {
-        "credentials": "Create an account",
-        "totp": "Set up 2FA",
-        "recovery": "Save your codes"
-      },
-      "subtitles": {
-        "credentials": "Just a login and a password — no email, no phone.",
-        "totp": "Two-factor protection is mandatory: your entries stay safe even if your password leaks.",
-        "recovery": "They are the only way to regain access if you lose your phone."
-      },
-      "loginHint": "3–32 characters: latin letters, digits, “-” and “_”.",
-      "passwordHint": "At least 12 characters. A phrase of several words works great.",
-      "haveAccount": "Already have an account?",
-      "howWeStore": "How we store data"
-    },
-    "totp": {
-      "step1": "Open your authenticator app (Google Authenticator, 1Password, Bitwarden, Aegis…) and scan the QR code.",
-      "step2": "Enter the 6-digit code the app shows.",
-      "qrAlt": "QR code for the authenticator app",
-      "manual": "Or enter the key manually",
-      "codeLabel": "Code from the app",
-      "submit": "Verify and finish"
-    },
-    "recovery": {
-      "warning": "Each code works once. We don’t have your email — without these codes the account can’t be recovered.",
-      "copy": "Copy all",
-      "download": "Download .txt",
-      "confirm": "I saved my recovery codes in a safe place",
-      "finish": "Go to impact log",
-      "fileTitle": "Recovery codes"
+    "chip": {
+      "remove": "Remove"
     }
   },
   "mascot": {
@@ -97,9 +52,9 @@
   },
   "validation": {
     "login": {
-      "tooShort": "Login must be at least 3 characters",
-      "tooLong": "Login must be at most 32 characters",
-      "format": "Only latin letters, digits, “-” and “_”; must start and end with a letter or digit"
+      "tooShort": "Username must be at least 3 characters",
+      "tooLong": "Username must be at most 32 characters",
+      "format": "Only Latin letters, digits, “-” and “_”; must start and end with a letter or digit"
     },
     "password": {
       "tooShort": "Password must be at least 12 characters",
@@ -112,118 +67,21 @@
     },
     "recoveryCode": {
       "format": "A recovery code has 12 characters, e.g. abcd-efgh-jkmn"
+    },
+    "impact": {
+      "titleRequired": "Write what you did — even briefly",
+      "titleTooLong": "Too long: up to 200 characters. Put the details into the description",
+      "date": "Pick a date",
+      "score": "Choose a score from 1 to 5",
+      "descriptionTooLong": "The description is too long (20,000 characters max)",
+      "metricLabelRequired": "Name the metric",
+      "metricValueRequired": "Enter the “after” value",
+      "metricNumber": "A number is needed, e.g. 2 or 3.5",
+      "metricInvalid": "Check this metric",
+      "evidenceInvalid": "Check this artifact: the link or text is too long",
+      "chipTooLong": "Up to 40 characters per label or category",
+      "invalid": "Check this field"
     }
-  },
-  "principles": {
-    "eyebrow": "Principles",
-    "title": "Your data is yours",
-    "lead": "impact log stores notes about your work, so privacy and security matter more to us than convenience. Here we explain, honestly and in detail, what guides us, what we store and how.",
-    "values": {
-      "title": "What guides us",
-      "items": {
-        "minimal": {
-          "title": "Minimal data",
-          "text": "An account needs only a login and a password. We don’t ask for your email, phone or name, and we don’t try to find out who you are."
-        },
-        "yours": {
-          "title": "Your data belongs to you",
-          "text": "Your entries are yours. We use them for nothing but showing them to you, and we’ll provide full export and full deletion."
-        },
-        "secure": {
-          "title": "Secure by default",
-          "text": "Two-factor protection is mandatory for everyone, passwords are stored only as hashes, everything travels over HTTPS."
-        },
-        "noTracking": {
-          "title": "No tracking",
-          "text": "No analytics, no trackers, no third-party scripts, no ads. We don’t know what you click and don’t want to."
-        },
-        "honest": {
-          "title": "Honest about limits",
-          "text": "If something isn’t there yet, we say so. Any change in how we handle data will appear on this page."
-        }
-      }
-    },
-    "stored": {
-      "title": "What we store and how",
-      "lead": "The complete list. If it isn’t here, we don’t store it.",
-      "items": {
-        "login": {
-          "what": "Login",
-          "how": "The nickname you chose at sign-up. Used to sign in."
-        },
-        "password": {
-          "what": "Password",
-          "how": "Only an Argon2id hash. We don’t know your password and can’t recover it."
-        },
-        "totp": {
-          "what": "2FA key",
-          "how": "The secret for app codes is stored encrypted (AES-256-GCM). The encryption key is kept separately from the database."
-        },
-        "recovery": {
-          "what": "Recovery codes",
-          "how": "10 one-time codes. We store only their SHA-256 hashes and whether they were used."
-        },
-        "sessions": {
-          "what": "Sessions",
-          "how": "A random token in a cookie with HttpOnly, Secure and SameSite=Strict flags. The database keeps only the token hash and expiry: a day and until the browser closes, or 30 days if you chose “Remember this computer”."
-        },
-        "entries": {
-          "what": "Your entries",
-          "how": "Coming soon: notes on your work, tags, projects. Stored in the database on our server and accessible only to your account. Not end-to-end encrypted yet — technically the server administrator can access them; we are considering end-to-end encryption."
-        },
-        "logs": {
-          "what": "Technical logs",
-          "how": "Time, request method and path, response code and a truncated IP address (last octet zeroed). No headers, cookies or request bodies. Logs are rotated and kept briefly."
-        },
-        "locale": {
-          "what": "Interface language and theme",
-          "how": "Stored only in your browser (localStorage) and never sent anywhere."
-        },
-        "trustedDevices": {
-          "what": "Trusted devices",
-          "how": "If you chose “Remember this computer”, a random token (cookie) is stored in your browser and only its hash and expiry (30 days) in our database. No 2FA code is asked on that device, the password always is. No browser fingerprints, IPs or device names. “Sign out everywhere” resets all trusted devices."
-        }
-      }
-    },
-    "notCollected": {
-      "title": "What we don’t collect",
-      "items": {
-        "email": "Email",
-        "phone": "Phone number",
-        "name": "Name or other personal details",
-        "analytics": "Analytics and behaviour metrics",
-        "thirdParty": "Third-party scripts, fonts and pixels",
-        "ads": "Advertising identifiers",
-        "sale": "Anything to sell or share with third parties"
-      }
-    },
-    "infra": {
-      "title": "Where and how it runs",
-      "items": {
-        "location": {
-          "title": "Server in Russia",
-          "text": "All data lives on a single server in a data center in Moscow. No cloud data-processing services."
-        },
-        "transport": {
-          "title": "Secure connection",
-          "text": "HTTPS only with HSTS, a strict content security policy (CSP) and rate-limited sign-in attempts."
-        },
-        "alpha": {
-          "title": "Alpha stage",
-          "text": "The service is under active development. Regular database backups are being set up — for now, don’t keep anything here you can’t afford to lose."
-        }
-      }
-    },
-    "control": {
-      "title": "You are in control",
-      "items": {
-        "export": "Full export of all your data as JSON and Markdown.",
-        "delete": "Account deletion with all data — no trash bins or delayed retention.",
-        "sessions": "A list of active sessions and signing out everywhere.",
-        "ai": "AI features, if they appear, only with explicit consent and a warning that entry text will be sent to an external provider."
-      }
-    },
-    "updated": "Last updated on September 27, 2026."
   },
   "apiStatus": {
     "label": "Server status",
@@ -231,6 +89,8 @@
     "ok": "Operational",
     "degraded": "Running, but the database is unavailable",
     "error": "Unavailable",
+    "offline": "offline",
+    "idle": "not in use: impact log is running on this device",
     "version": "version {version}"
   },
   "notFound": {
@@ -243,49 +103,104 @@
     "ru": "ru",
     "en": "en"
   },
-  "errors": {
-    "VALIDATION_ERROR": "Please check your input",
-    "NOT_FOUND": "Not found",
-    "UNAUTHORIZED": "Please sign in",
-    "FORBIDDEN": "Request rejected",
-    "RATE_LIMITED": "Too many attempts — please wait a few minutes",
-    "INTERNAL_ERROR": "Something went wrong on the server",
-    "NETWORK_ERROR": "Cannot reach the server",
-    "UNKNOWN_ERROR": "Unknown error",
-    "LOGIN_TAKEN": "This login is already taken",
-    "INVALID_CREDENTIALS": "Wrong login or password",
-    "INVALID_CODE": "Wrong code, try again",
-    "SESSION_EXPIRED": "Time to enter the code ran out or there were too many attempts — start over",
-    "REGISTRATION_CLOSED": "Sign-up is closed right now"
-  },
   "theme": {
     "toDark": "Switch to dark theme",
     "toLight": "Switch to light theme"
   },
   "dashboard": {
-    "eyebrow": "Alpha",
-    "greeting": "Hi, {login}!",
-    "lead": "This is where your impact log will live: notes on what you did and what it led to, plus summaries for your review.",
+    "title": "Your impact log",
+    "lead": "What you did and what it changed — in a line, while you still remember.",
+    "vault": {
+      "localOnly": "Only on this device · encrypted",
+      "sync": "Sync"
+    },
+    "new": "New entry",
+    "quota": "{n} of {max}",
+    "undecryptable": "{n} entry could not be decrypted — it may be encrypted with another key. Nothing was deleted. | {n} entries could not be decrypted — they may be encrypted with another key. Nothing was deleted.",
+    "deleted": "Entry “{title}” deleted.",
+    "undo": "Undo",
+    "aside": "Overview",
+    "vocab": {
+      "categories": "Top categories",
+      "labels": "Top labels"
+    },
+    "empty": {
+      "title": "Your impact log starts here",
+      "text": "Did something worthwhile? Write it in one line above — details can come later.",
+      "tipQuick": "Quick entry: text, score, Enter — done",
+      "tipKey": "Press N anywhere in the journal to open the full form",
+      "tipPrivate": "Everything is stored and encrypted on this device",
+      "cta": "Detailed entry"
+    },
+    "nothing": {
+      "title": "Nothing found",
+      "text": "Try another query or clear some filters."
+    },
     "stats": {
       "label": "Statistics",
       "total": "Total entries",
-      "streak": "Weekly streak",
-      "month": "This month"
+      "month": "This month",
+      "streak": "Weeks in a row",
+      "high": "Strong (4–5)",
+      "streakHint": "Consecutive weeks with at least one entry",
+      "highHint": "{n} entry scored 4–5 | {n} entries scored 4–5"
     },
-    "empty": {
-      "title": "Nothing here yet",
-      "text": "Entries arrive in the next update. Meanwhile, our little terminal is already on duty.",
-      "cta": "New entry"
+    "feed": {
+      "count": "{n} entry | {n} entries",
+      "more": "Show {n} more | Show {n} more"
+    },
+    "quick": {
+      "label": "Quick entry",
+      "field": "What did you do?",
+      "placeholder": "Fixed flaky CI tests — the pipeline is stable now",
+      "details": "More details",
+      "submit": "Save",
+      "done": "Saved.",
+      "addDetails": "Add details"
+    },
+    "filters": {
+      "search": "Search entries",
+      "searchPlaceholder": "Search entries",
+      "toggle": "Filters",
+      "periodLabel": "Period",
+      "scoreLabel": "Score",
+      "categoryLabel": "Category",
+      "labelLabel": "Label",
+      "period": {
+        "month": "30 days",
+        "quarter": "90 days",
+        "halfYear": "6 months",
+        "year": "Year",
+        "all": "All time"
+      },
+      "score": {
+        "any": "Any score",
+        "from": "Score {score}+",
+        "only": "Only {score}"
+      },
+      "category": {
+        "all": "All categories"
+      },
+      "label": {
+        "all": "All labels"
+      },
+      "found": "Found {found} of {total} | Found {found} of {total}",
+      "removeChip": "Remove filter {value}",
+      "reset": "Clear filters"
     }
   },
   "landing": {
     "hero": {
-      "eyebrow": "impact log · alpha",
+      "eyebrow": "impact log · local-first",
       "title": "Your impact — in facts, not memories",
-      "lead": "Jot down what you did and what it led to. When your performance review, promotion or résumé update comes, you’ll already have a summary of results and artifacts."
+      "lead": "Jot down what you did and what it led to. Everything is stored and encrypted on your device, and when your performance review comes, you’ll already have a summary of results and artifacts."
     },
     "cta": {
-      "start": "Start your impact log"
+      "start": "Start without sign-up",
+      "login": "Sign in",
+      "noteLocal": "No email, no password — entries stay on your device",
+      "noteLogin": "Already syncing? Sign in to pull your entries",
+      "unavailable": "Your browser doesn’t allow storing data on this device (e.g. in a private window). Open impact log in a regular window."
     },
     "examples": {
       "first": {
@@ -327,11 +242,11 @@
       "steps": {
         "write": {
           "title": "Write it down",
-          "text": "Did something worthwhile? Briefly note what, why and the result. Markdown, links to PRs, docs and dashboards."
+          "text": "Did something worthwhile? One line in the journal or a detailed entry with metrics and PR links."
         },
         "organize": {
           "title": "Organize",
-          "text": "Tags, projects and categories turn a stream of notes into a picture of where you make the most impact."
+          "text": "Impact scores, categories and labels turn a stream of notes into a picture of where you make the most impact."
         },
         "summary": {
           "title": "Get a summary",
@@ -344,46 +259,47 @@
       "title": "Everything to keep track of your results",
       "items": {
         "entries": {
-          "title": "Quick entries",
-          "text": "A short Markdown note with a date, the result and links to artifacts."
+          "title": "Entries in seconds",
+          "text": "A quick line or a detailed story: Markdown, impact score, “before → after” metrics."
         },
-        "tags": {
-          "title": "Tags and projects",
-          "text": "Group entries by project, skill and team."
+        "capture": {
+          "title": "Capture from Chrome, CLI and VS Code",
+          "text": "A PR, an issue or selected text — into your impact log in a couple of clicks. The draft travels in the link, not through the server."
         },
         "search": {
-          "title": "Feed and search",
-          "text": "Filter by period, tags and projects, full-text search."
+          "title": "Feed, search and filters",
+          "text": "Period, categories, labels, score. Search runs right on your device."
         },
         "summaries": {
-          "title": "Summaries and stats",
-          "text": "An activity dashboard and a period summary for your review."
+          "title": "Insights and a review summary",
+          "text": "Stats for any period and a ready-made text for your performance review."
         },
         "export": {
-          "title": "Export",
-          "text": "Export entries and summaries to Markdown — your data always stays with you."
+          "title": "Export to JSON, CSV and Markdown",
+          "text": "Take all your entries at any time — your data always stays with you."
         },
         "privacy": {
-          "title": "Privacy",
-          "text": "No email, no tracking, two-factor protection for everyone."
+          "title": "End-to-end encryption",
+          "text": "Entries are encrypted on your device. Even with sync on, the server sees only ciphertext."
         }
       }
     },
     "privacy": {
       "eyebrow": "Privacy",
-      "title": "Work notes deserve serious protection",
-      "text": "We store the bare minimum and explain honestly what exactly and how.",
+      "title": "Only you can read your entries",
+      "text": "Impact log runs right in your browser, no sign-up needed. An account is only for syncing devices — and even then the server stores encrypted data that only you hold the key to.",
       "link": "How we store data",
       "items": {
-        "noEmail": "Just a login and a password — no email, phone or name",
-        "twoFactor": "Mandatory two-factor protection",
+        "noAccount": "Works without sign-up — no email, no password",
+        "e2ee": "Encrypted on your device: the server sees only ciphertext",
+        "sync": "Sync between devices — only if you want it",
         "noTracking": "No analytics, trackers or ads",
-        "yours": "Your data is yours: export and deletion"
+        "yours": "Export to JSON, CSV and Markdown, full deletion — at any time"
       }
     },
     "final": {
       "title": "Start your impact log today",
-      "text": "Six months from now, you’ll thank yourself."
+      "text": "One button and your journal is ready. Six months from now, you’ll thank yourself."
     }
   }
 }

@@ -1,0 +1,39 @@
+.impact-missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  text-align: center;
+}
+
+.impact-missing__mascot {
+  width: 112px;
+}
+
+.impact-missing__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.impact-missing__title {
+  font-size: var(--text-2xl);
+}
+
+.impact-missing__lead {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+@media (--tablet) {
+  .impact-missing {
+    flex-direction: row;
+    justify-content: center;
+    text-align: left;
+  }
+
+  .impact-missing__text {
+    align-items: flex-start;
+  }
+}

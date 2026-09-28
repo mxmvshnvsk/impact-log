@@ -1,45 +1,66 @@
-import type { User } from '@impact-log/shared'
+import type { SessionResponse, User } from '@impact-log/shared'
 import { computed, readonly, ref } from 'vue'
 import { authApi } from '@/api/auth'
+import { ApiError } from '@/api/http'
 
 /*
- * Текущий пользователь — единственное глобальное состояние приложения.
- * Хранится в модуле (синглтон), без Pinia: пока этого достаточно (ADR-0002).
+ * Сессия на сервере синхронизации (local-first, ADR-0006/0008). Главное — локальное хранилище (useVault):
+ * приложение работает и без сессии. Здесь — только «вошли ли мы на сервер сейчас»:
+ * unknown — ещё не проверяли; active — cookie действует; expired — аккаунт привязан, но сессия
+ * закончилась (истекла, выход везде, устройство отозвано) → «Войти снова»; none — аккаунта нет.
+ * Синглтон модуля (ADR-0002). Router guard сессию больше не проверяет.
  */
-const user = ref<User | null>(null)
-let loaded: Promise<void> | null = null
+export type SessionState = 'unknown' | 'active' | 'expired' | 'none'
 
-/** Загружает сессию один раз (вызывается из router guard) */
-export function ensureSession(): Promise<void> {
-  loaded ??= authApi
-    .me()
-    .then((response) => {
-      user.value = response.user
-    })
-    .catch(() => {
-      user.value = null
-    })
-  return loaded
-}
+const user = ref<User | null>(null)
+const deviceId = ref<string | null>(null)
+const state = ref<SessionState>('unknown')
+let checking: Promise<SessionState> | null = null
 
 export function useSession() {
-  function setUser(next: User | null) {
-    user.value = next
-    loaded = Promise.resolve()
+  function setSession(next: SessionResponse) {
+    user.value = next.user
+    deviceId.value = next.deviceId
+    state.value = 'active'
   }
 
-  async function logout() {
-    try {
-      await authApi.logout()
-    } finally {
-      setUser(null)
-    }
+  function markExpired() {
+    user.value = null
+    state.value = 'expired'
+  }
+
+  function clear() {
+    user.value = null
+    deviceId.value = null
+    state.value = 'none'
+  }
+
+  /** Проверить cookie сессии (GET /api/auth/me). Сетевая ошибка — состояние не меняем */
+  function refresh(): Promise<SessionState> {
+    checking ??= authApi
+      .me()
+      .then((response) => {
+        setSession(response)
+        return state.value
+      })
+      .catch((error) => {
+        if (error instanceof ApiError && error.status === 401) markExpired()
+        return state.value
+      })
+      .finally(() => {
+        checking = null
+      })
+    return checking
   }
 
   return {
     user: readonly(user),
-    isAuthenticated: computed(() => user.value !== null),
-    setUser,
-    logout,
+    deviceId: readonly(deviceId),
+    state: readonly(state),
+    isAuthenticated: computed(() => state.value === 'active'),
+    setSession,
+    markExpired,
+    clear,
+    refresh,
   }
 }

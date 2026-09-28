@@ -1,0 +1,62 @@
+/*
+ * Тост обновления — под липкой шапкой, поверх контента (z-toast): внизу живут липкие панели
+ * (нижняя навигация, действия формы), их не закрываем. mobile — по центру, tablet+ — справа.
+ */
+.pwa-update {
+  position: fixed;
+  top: calc(var(--header-height) + var(--space-2));
+  right: var(--gutter);
+  left: var(--gutter);
+  z-index: var(--z-toast);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+@media (--tablet) {
+  .pwa-update {
+    justify-content: flex-end;
+  }
+}
+
+.pwa-update__toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-glass);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(20px) saturate(1.4);
+  pointer-events: auto;
+}
+
+.pwa-update__icon {
+  flex: none;
+  margin-right: var(--space-1);
+  color: var(--color-accent-strong);
+}
+
+.pwa-update__text {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+}
+
+.pwa-update-enter-active,
+.pwa-update-leave-active {
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out);
+}
+
+.pwa-update-enter-from,
+.pwa-update-leave-to {
+  opacity: 0;
+  transform: translateY(calc(-1 * var(--space-2)));
+}

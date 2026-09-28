@@ -1,0 +1,127 @@
+.settings-account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: var(--content-max-width);
+}
+
+@media (--tablet) {
+  .settings-account {
+    gap: var(--space-6);
+  }
+}
+
+.settings-account__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.settings-account__points {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-account__points li {
+  display: flex;
+  gap: var(--space-3);
+  color: var(--color-text-secondary);
+}
+
+.settings-account__points svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-accent-strong);
+}
+
+.settings-account__facts {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.settings-account__fact {
+  display: grid;
+  gap: var(--space-1) var(--space-6);
+  padding: var(--space-3) 0;
+}
+
+.settings-account__fact + .settings-account__fact {
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-account__fact:first-child {
+  padding-top: 0;
+}
+
+.settings-account__fact:last-child {
+  padding-bottom: 0;
+}
+
+.settings-account__fact dt {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.settings-account__fact dd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  min-width: 0;
+}
+
+@media (--tablet) {
+  .settings-account__fact {
+    grid-template-columns: 180px 1fr;
+    align-items: baseline;
+  }
+}
+
+.settings-account__strong {
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.settings-account__id {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settings-account__id code {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+}
+
+.settings-account__fact .settings-account__meters {
+  gap: var(--space-3);
+}
+
+.settings-account__meter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.settings-account__meter-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 var(--space-3);
+}
+
+.settings-account__meter-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.settings-account__hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

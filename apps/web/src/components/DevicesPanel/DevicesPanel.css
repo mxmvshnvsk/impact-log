@@ -1,0 +1,138 @@
+.devices__muted {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+.devices__error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.devices__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.devices__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+}
+
+.devices__item + .devices__item {
+  border-top: 1px solid var(--color-border);
+}
+
+.devices__item:first-child {
+  padding-top: 0;
+}
+
+.devices__item:last-child {
+  padding-bottom: 0;
+}
+
+.devices__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+}
+
+.devices__icon--current {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.devices__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.devices__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.devices__name--muted {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.devices__badge {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.devices__badge--current {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.devices__meta {
+  /* «Активность» и «Добавлено» — всегда двумя строками: у разных устройств одинаковая раскладка */
+  display: flex;
+  flex-direction: column;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.devices__trusted {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.devices__actions {
+  grid-column: 2;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.devices__revoke {
+  color: var(--color-danger);
+}
+
+.devices__rename {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.devices__rename-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+@media (--tablet) {
+  .devices__item {
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+  }
+
+  .devices__actions {
+    grid-column: 3;
+  }
+}
