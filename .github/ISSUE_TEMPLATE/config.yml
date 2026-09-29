@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability · Уязвимость
+    url: https://github.com/mxmvshnvsk/impact-log/security/advisories/new
+    about: Report privately, not in a public issue · Сообщите приватно, не в публичном issue
+  - name: How data is stored · Как хранятся данные
+    url: https://impact-log.com/principles
+    about: What the server sees and what it never does · Что видит сервер и чего не видит никогда

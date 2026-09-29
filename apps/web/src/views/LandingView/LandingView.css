@@ -71,6 +71,10 @@
   color: var(--color-accent-strong);
 }
 
+.landing__note-alpha svg {
+  color: var(--color-info);
+}
+
 .landing__hero-visual {
   position: relative;
   display: flex;

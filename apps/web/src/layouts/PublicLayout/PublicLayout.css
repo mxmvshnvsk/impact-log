@@ -20,6 +20,13 @@
   height: var(--header-height);
 }
 
+.public-layout__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .public-layout__logo {
   display: inline-flex;
 }

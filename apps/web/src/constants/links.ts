@@ -35,6 +35,9 @@ export const CLIENT_LINKS: readonly CaptureClient[] = CAPTURE_CLIENTS.filter(
   (client) => client.published,
 )
 
+/** Новый issue на GitHub (выбор шаблона): так тестировщики альфы сообщают о проблемах */
+export const ISSUES_URL = `${SOURCE_URL}/issues/new/choose`
+
 /** Файл или папка репозитория на GitHub */
 export function sourceUrl(path: string, kind: 'blob' | 'tree' = 'blob'): string {
   return `${SOURCE_URL}/${kind}/main/${path}`

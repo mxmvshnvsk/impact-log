@@ -2,9 +2,12 @@
   <div class="public-layout">
     <header class="public-layout__header">
       <div class="public-layout__header-inner l-container">
-        <RouterLink :to="{ name: 'landing' }" class="public-layout__logo">
-          <UiLogo responsive />
-        </RouterLink>
+        <div class="public-layout__brand">
+          <RouterLink :to="{ name: 'landing' }" class="public-layout__logo">
+            <UiLogo responsive />
+          </RouterLink>
+          <AlphaBadge />
+        </div>
         <div class="public-layout__actions">
           <ThemeSwitcher />
           <LocaleSwitcher />
@@ -34,6 +37,7 @@
 </template>
 
 <script setup lang="ts">
+import { AlphaBadge } from '@/components/AlphaBadge'
 import { AppFooter } from '@/components/AppFooter'
 import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 import { ThemeSwitcher } from '@/components/ThemeSwitcher'

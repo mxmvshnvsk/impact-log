@@ -16,7 +16,7 @@ import { useBreakpoint } from '@/composables/useBreakpoint'
 import { useClipboard } from '@/composables/useClipboard'
 import { useMascot } from '@/composables/useMascot'
 import { useVault } from '@/composables/useVault'
-import { CAPTURE_CLIENTS, CLI_INSTALL_COMMAND, SOURCE_URL } from '@/constants/links'
+import { CAPTURE_CLIENTS, CLI_INSTALL_COMMAND, ISSUES_URL, SOURCE_URL } from '@/constants/links'
 
 const PAINS = ['memory', 'small', 'impact'] as const
 const STEPS = ['write', 'organize', 'summary'] as const
@@ -89,6 +89,7 @@ export function useLandingView() {
     features: FEATURES,
     privacy: PRIVACY,
     sourceUrl: SOURCE_URL,
+    issuesUrl: ISSUES_URL,
     clients: CLIENTS,
     copied: clipboard.copied,
     copy: clipboard.copy,

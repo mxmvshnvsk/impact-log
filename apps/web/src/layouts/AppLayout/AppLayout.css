@@ -72,6 +72,14 @@
   letter-spacing: var(--tracking-tight);
 }
 
+/* на самых узких экранах (320 px) пометка не помещается рядом с кнопками шапки — там она остаётся
+   на лендинге и в «Принципах» */
+@media (max-width: 359.98px) {
+  .app-layout__alpha {
+    display: none;
+  }
+}
+
 .app-layout__actions {
   display: flex;
   align-items: center;

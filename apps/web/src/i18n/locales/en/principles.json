@@ -218,7 +218,7 @@
       },
       "alpha": {
         "title": "Alpha stage",
-        "text": "The service is in active development. Regular server backups are still being set up — keep an export of your entries at hand."
+        "text": "The service is in active development. Regular server backups are still being set up — keep an export of your entries at hand. Found a problem? Open an issue on GitHub — without passwords, the Recovery Key or entry text: issues are public."
       }
     }
   },

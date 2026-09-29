@@ -26,6 +26,7 @@
             <UiLogo compact />
           </RouterLink>
           <p class="app-layout__title">{{ title }}</p>
+          <AlphaBadge class="app-layout__alpha" />
           <div class="app-layout__actions">
             <ThemeSwitcher />
             <LocaleSwitcher />
@@ -67,6 +68,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import { AccountMenu } from '@/components/AccountMenu'
+import { AlphaBadge } from '@/components/AlphaBadge'
 import { AppFooter } from '@/components/AppFooter'
 import { KeyRotationBanner } from '@/components/KeyRotationBanner'
 import { LocaleSwitcher } from '@/components/LocaleSwitcher'

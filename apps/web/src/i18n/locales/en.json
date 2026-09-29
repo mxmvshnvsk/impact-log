@@ -34,6 +34,10 @@
     "recover": "Account recovery",
     "skip": "Skip to content"
   },
+  "alpha": {
+    "badge": "alpha",
+    "title": "Alpha version: expect rough edges. Report a problem in GitHub Issues"
+  },
   "footer": {
     "label": "Links",
     "source": "Source code",
@@ -212,7 +216,9 @@
       "login": "Sign in",
       "noteLocal": "No email, no password — entries stay on your device",
       "noteLogin": "Already syncing? Sign in to pull your entries",
-      "unavailable": "Your browser doesn’t allow storing data on this device (e.g. in a private window). Open impact log in a regular window."
+      "unavailable": "Your browser doesn’t allow storing data on this device (e.g. in a private window). Open impact log in a regular window.",
+      "noteAlpha": "Alpha version: expect rough edges — keep an export of your entries at hand.",
+      "reportIssue": "Report a problem"
     },
     "examples": {
       "first": {

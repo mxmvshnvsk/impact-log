@@ -20,6 +20,13 @@
         <ul class="landing__notes">
           <li><Check :size="16" aria-hidden="true" />{{ t('landing.cta.noteLocal') }}</li>
           <li><Check :size="16" aria-hidden="true" />{{ t('landing.cta.noteLogin') }}</li>
+          <li class="landing__note-alpha">
+            <FlaskConical :size="16" aria-hidden="true" />
+            <span>
+              {{ t('landing.cta.noteAlpha') }}
+              <a :href="issuesUrl" target="_blank" rel="noopener noreferrer">{{ t('landing.cta.reportIssue') }}<span class="sr-only"> {{ t('footer.newTab') }}</span></a>
+            </span>
+          </li>
         </ul>
       </div>
       <div class="landing__hero-visual" aria-hidden="true">
@@ -146,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowRight, Check, Copy, ExternalLink } from 'lucide-vue-next'
+import { ArrowRight, Check, Copy, ExternalLink, FlaskConical } from 'lucide-vue-next'
 import { AppMascot } from '@/components/AppMascot'
 import { EntryPreview } from '@/components/EntryPreview'
 import { UiAlert } from '@/ui/UiAlert'
@@ -158,7 +165,7 @@ import { useLandingView } from './useLandingView'
 
 const l = useLandingView()
 const { t, isMobile, mascot, examples, pains, steps, features, privacy } = l
-const { sourceUrl, clients, copied, copy, starting, startError, unavailable, start } = l
+const { sourceUrl, issuesUrl, clients, copied, copy, starting, startError, unavailable, start } = l
 </script>
 
 <style scoped src="./LandingView.css"></style>

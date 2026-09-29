@@ -1,0 +1,51 @@
+name: Bug report · Ошибка
+description: Something doesn't work as expected · Что-то работает не так
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Issues are public.** Don't paste passwords, your Recovery Key, 2FA codes, capture links (`…#draft=…`) or the text of your entries.
+        **Issues публичные.** Не вставляйте пароли, Recovery Key, коды 2FA, ссылки черновиков (`…#draft=…`) и текст записей.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where · Где
+      options:
+        - Web app · Веб-приложение
+        - Chrome extension · Расширение Chrome
+        - VS Code extension · Расширение VS Code
+        - CLI
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode · Режим
+      options:
+        - Local, no sync · Без синхронизации
+        - With sync · С синхронизацией
+        - Not sure · Не знаю
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened · Что случилось
+      description: Steps to reproduce, what you expected and what happened instead · Шаги, что ожидали и что получилось
+      placeholder: |
+        1. …
+        2. …
+        Expected · Ожидал: …
+        Got · Получил: …
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment · Окружение
+      description: Browser, OS, app or extension version · Браузер, ОС, версия приложения или расширения
+      placeholder: Chrome 131, macOS 15 · VS Code 1.106, impact log 0.1.0 · impact 0.1.0
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, console errors · Скриншоты, ошибки из консоли
+      description: Optional. Check that nothing private is visible · Необязательно. Проверьте, что на них нет личного
