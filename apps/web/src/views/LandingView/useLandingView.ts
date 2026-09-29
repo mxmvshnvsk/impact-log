@@ -1,11 +1,22 @@
-import { ChartColumnBig, FileDown, NotebookPen, Search, ShieldCheck, Zap } from 'lucide-vue-next'
+import {
+  ChartColumnBig,
+  Chrome,
+  FileDown,
+  NotebookPen,
+  Search,
+  ShieldCheck,
+  SquareCode,
+  Terminal,
+  Zap,
+} from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useBreakpoint } from '@/composables/useBreakpoint'
+import { useClipboard } from '@/composables/useClipboard'
 import { useMascot } from '@/composables/useMascot'
 import { useVault } from '@/composables/useVault'
-import { EXTENSION_LINKS, SOURCE_URL } from '@/constants/links'
+import { CAPTURE_CLIENTS, CLI_INSTALL_COMMAND, SOURCE_URL } from '@/constants/links'
 
 const PAINS = ['memory', 'small', 'impact'] as const
 const STEPS = ['write', 'organize', 'summary'] as const
@@ -18,6 +29,13 @@ const FEATURES = [
   { key: 'privacy', icon: ShieldCheck, soon: false },
 ] as const
 const PRIVACY = ['noAccount', 'e2ee', 'sync', 'noTracking', 'yours'] as const
+const CLIENT_ICONS = { chrome: Chrome, vscode: SquareCode, cli: Terminal } as const
+/** Секция «Быстрая запись»: иконка и, у CLI, команда установки с кнопкой копирования */
+const CLIENTS = CAPTURE_CLIENTS.map((client) => ({
+  ...client,
+  icon: CLIENT_ICONS[client.key],
+  command: client.key === 'cli' ? CLI_INSTALL_COMMAND : null,
+}))
 
 export function useLandingView() {
   const { t } = useI18n()
@@ -27,6 +45,7 @@ export function useLandingView() {
   const { isMobile } = useBreakpoint()
   // На посадочной маскот просто живёт: моргает, оглядывается, иногда засыпает
   const mascot = reactive(useMascot())
+  const clipboard = useClipboard()
 
   /** Примеры записей для первого экрана */
   const examples = computed(() =>
@@ -70,7 +89,9 @@ export function useLandingView() {
     features: FEATURES,
     privacy: PRIVACY,
     sourceUrl: SOURCE_URL,
-    extensionLinks: EXTENSION_LINKS,
+    clients: CLIENTS,
+    copied: clipboard.copied,
+    copy: clipboard.copy,
     starting,
     startError,
     unavailable,

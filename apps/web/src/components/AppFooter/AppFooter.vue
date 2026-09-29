@@ -5,14 +5,14 @@
       <nav class="app-footer__links" :aria-label="t('footer.label')">
         <RouterLink :to="{ name: 'principles' }">{{ t('nav.principles') }}</RouterLink>
         <a
-          v-for="link in extensionLinks"
+          v-for="link in clientLinks"
           :key="link.key"
           :href="link.url"
           target="_blank"
           rel="noopener noreferrer"
           class="app-footer__external"
         >
-          {{ t(`footer.extension.${link.key}`) }}<ExternalLink :size="12" aria-hidden="true" />
+          {{ t(`footer.clients.${link.key}`) }}<ExternalLink :size="12" aria-hidden="true" />
           <span class="sr-only">{{ t('footer.newTab') }}</span>
         </a>
         <a :href="sourceUrl" target="_blank" rel="noopener noreferrer" class="app-footer__external">
@@ -33,7 +33,7 @@ import { ApiStatus } from '@/components/ApiStatus'
 import { useAppFooter } from './useAppFooter'
 
 defineProps<{ compact?: boolean }>()
-const { t, year, sourceUrl, extensionLinks } = useAppFooter()
+const { t, year, sourceUrl, clientLinks } = useAppFooter()
 </script>
 
 <style scoped src="./AppFooter.css"></style>

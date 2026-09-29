@@ -24,7 +24,7 @@
             {{ hasVault ? t('capture.toJournal') : t('capture.toLanding') }}
           </UiButton>
           <UiButton
-            v-for="link in extensionLinks"
+            v-for="link in clientLinks"
             :key="link.key"
             :href="link.url"
             target="_blank"
@@ -146,7 +146,7 @@ const {
   allowSaveAgain,
   save,
   cancel,
-  extensionLinks,
+  clientLinks,
 } = c
 </script>
 

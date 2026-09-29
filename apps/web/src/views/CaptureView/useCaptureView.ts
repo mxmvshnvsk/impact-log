@@ -10,7 +10,7 @@ import { useI18n } from 'vue-i18n'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useImpacts } from '@/composables/useImpacts'
 import { useVault } from '@/composables/useVault'
-import { EXTENSION_LINKS } from '@/constants/links'
+import { CLIENT_LINKS } from '@/constants/links'
 import {
   clearHandoffFromUrl,
   clearStashedDraft,
@@ -199,6 +199,6 @@ export function useCaptureView() {
     headerLead,
     save,
     cancel,
-    extensionLinks: EXTENSION_LINKS,
+    clientLinks: CLIENT_LINKS,
   }
 }

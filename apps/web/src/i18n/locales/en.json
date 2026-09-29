@@ -13,7 +13,8 @@
     "optional": "optional",
     "install": {
       "chrome": "Install for Chrome",
-      "vscode": "Install for VS Code"
+      "vscode": "Install for VS Code",
+      "cli": "Install the CLI"
     }
   },
   "nav": {
@@ -36,9 +37,10 @@
   "footer": {
     "label": "Links",
     "source": "Source code",
-    "extension": {
+    "clients": {
       "chrome": "Chrome extension",
-      "vscode": "VS Code extension"
+      "vscode": "VS Code extension",
+      "cli": "CLI on npm"
     },
     "newTab": "(opens in a new tab)"
   },
@@ -291,6 +293,25 @@
         "privacy": {
           "title": "End-to-end encryption",
           "text": "Entries are encrypted on your device. Even with sync on, the server sees only ciphertext."
+        }
+      }
+    },
+    "clients": {
+      "eyebrow": "Quick capture",
+      "title": "Capture where you work",
+      "lead": "In the browser, the editor or the terminal: the draft opens in impact log with the title, links and quote already filled in. Nothing is sent to a server on the way.",
+      "items": {
+        "chrome": {
+          "title": "Chrome extension",
+          "text": "A PR, issue or doc page becomes a draft in one click or from the context menu: the title, link and selected text are already there."
+        },
+        "vscode": {
+          "title": "VS Code extension",
+          "text": "Select code or take the last commit — the draft gets a link to the lines, the commit and the branch."
+        },
+        "cli": {
+          "title": "Command-line tool",
+          "text": "impact add logs a win in one line, impact git drafts one from the last commit. Handy when your hands are already in the terminal."
         }
       }
     },

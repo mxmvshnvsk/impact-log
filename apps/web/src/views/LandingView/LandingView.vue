@@ -77,16 +77,33 @@
             <span v-if="item.soon" class="landing__soon">{{ t('nav.soon') }}</span>
           </h3>
           <p class="landing__text">{{ t(`landing.features.items.${item.key}.text`) }}</p>
-          <div v-if="item.key === 'capture' && extensionLinks.length" class="landing__card-links">
-            <a
-              v-for="link in extensionLinks"
-              :key="link.key"
-              :href="link.url"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="landing__link"
-            >
-              {{ t(`common.install.${link.key}`) }}<ExternalLink :size="16" aria-hidden="true" />
+        </UiCard>
+      </div>
+    </section>
+
+    <!-- быстрая запись: расширения и CLI -->
+    <section class="landing__section" aria-labelledby="clients-title">
+      <UiEyebrow>{{ t('landing.clients.eyebrow') }}</UiEyebrow>
+      <h2 id="clients-title" class="landing__h2">{{ t('landing.clients.title') }}</h2>
+      <p class="landing__text landing__section-lead">{{ t('landing.clients.lead') }}</p>
+      <div class="landing__grid landing__grid--3">
+        <UiCard v-for="client in clients" :key="client.key" class="landing__card">
+          <span class="landing__icon"><component :is="client.icon" :size="20" aria-hidden="true" /></span>
+          <h3 class="landing__h3">
+            {{ t(`landing.clients.items.${client.key}.title`) }}
+            <span v-if="!client.published" class="landing__soon">{{ t('nav.soon') }}</span>
+          </h3>
+          <p class="landing__text">{{ t(`landing.clients.items.${client.key}.text`) }}</p>
+          <div v-if="client.command" class="landing__command">
+            <code>{{ client.command }}</code>
+            <UiIconButton :label="copied ? t('common.copied') : t('common.copy')" @click="copy(client.command)">
+              <Check v-if="copied" :size="16" aria-hidden="true" />
+              <Copy v-else :size="16" aria-hidden="true" />
+            </UiIconButton>
+          </div>
+          <div v-if="client.published" class="landing__card-links">
+            <a :href="client.url" target="_blank" rel="noopener noreferrer" class="landing__link">
+              {{ t(`common.install.${client.key}`) }}<ExternalLink :size="16" aria-hidden="true" />
               <span class="sr-only">{{ t('footer.newTab') }}</span>
             </a>
           </div>
@@ -129,18 +146,19 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowRight, Check, ExternalLink } from 'lucide-vue-next'
+import { ArrowRight, Check, Copy, ExternalLink } from 'lucide-vue-next'
 import { AppMascot } from '@/components/AppMascot'
 import { EntryPreview } from '@/components/EntryPreview'
 import { UiAlert } from '@/ui/UiAlert'
 import { UiButton } from '@/ui/UiButton'
 import { UiCard } from '@/ui/UiCard'
 import { UiEyebrow } from '@/ui/UiEyebrow'
+import { UiIconButton } from '@/ui/UiIconButton'
 import { useLandingView } from './useLandingView'
 
 const l = useLandingView()
 const { t, isMobile, mascot, examples, pains, steps, features, privacy } = l
-const { sourceUrl, extensionLinks, starting, startError, unavailable, start } = l
+const { sourceUrl, clients, copied, copy, starting, startError, unavailable, start } = l
 </script>
 
 <style scoped src="./LandingView.css"></style>

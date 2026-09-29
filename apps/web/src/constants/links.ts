@@ -12,21 +12,28 @@ export const CHROME_WEB_STORE_URL = `https://chromewebstore.google.com/detail/${
 export const VSCODE_EXTENSION_ID = 'impact-log.impact-log-vscode'
 export const VSCODE_MARKETPLACE_URL = `https://marketplace.visualstudio.com/items?itemName=${VSCODE_EXTENSION_ID}`
 
-export interface ExtensionLink {
-  key: 'chrome' | 'vscode'
+/** CLI в npm: пакет impact-log, команда impact */
+export const CLI_NPM_URL = 'https://www.npmjs.com/package/impact-log'
+export const CLI_INSTALL_COMMAND = 'npm install -g impact-log'
+
+export interface CaptureClient {
+  key: 'chrome' | 'vscode' | 'cli'
   url: string
+  /** false — магазин ещё проверяет: страница отвечает «не найдено», ссылку не показываем */
+  published: boolean
 }
 
-/**
- * Ссылки «Установить для …» (лендинг, /capture без черновика, футер). Показываем только опубликованные:
- * пока магазин проверяет расширение, его страница отвечает «не найдено».
- */
-export const EXTENSION_LINKS: readonly ExtensionLink[] = [
-  { key: 'chrome' as const, url: CHROME_WEB_STORE_URL, published: false },
-  { key: 'vscode' as const, url: VSCODE_MARKETPLACE_URL, published: true },
+/** Клиенты быстрой записи — секция на лендинге */
+export const CAPTURE_CLIENTS: readonly CaptureClient[] = [
+  { key: 'chrome', url: CHROME_WEB_STORE_URL, published: false },
+  { key: 'vscode', url: VSCODE_MARKETPLACE_URL, published: true },
+  { key: 'cli', url: CLI_NPM_URL, published: true },
 ]
-  .filter((link) => link.published)
-  .map(({ key, url }) => ({ key, url }))
+
+/** Ссылки «Установить …» (/capture без черновика, футер) — только опубликованные клиенты */
+export const CLIENT_LINKS: readonly CaptureClient[] = CAPTURE_CLIENTS.filter(
+  (client) => client.published,
+)
 
 /** Файл или папка репозитория на GitHub */
 export function sourceUrl(path: string, kind: 'blob' | 'tree' = 'blob'): string {
