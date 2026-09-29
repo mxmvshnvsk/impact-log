@@ -1,4 +1,4 @@
-import { type RegisterStartResponse, totpCodeSchema } from '@impact-log/shared'
+import { type TotpEnrollment, totpCodeSchema } from '@impact-log/shared'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { errorKey } from '@/account'
@@ -22,7 +22,7 @@ export function useTotpRotation(emit: Emit) {
   const busy = ref(false)
   const stage = ref<AccountStage | null>(null)
   const error = ref<string | null>(null)
-  const enrollment = ref<RegisterStartResponse | null>(null)
+  const enrollment = ref<TotpEnrollment | null>(null)
   const code = ref('')
   const codeError = ref<string | null>(null)
   const totpRef = ref<{ focus: () => void } | null>(null)

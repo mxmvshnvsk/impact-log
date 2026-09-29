@@ -26,7 +26,8 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   /** Непрозрачный публичный ID: 12 символов Crockford Base32 (60 случайных бит), не кодирует регион */
   accountId: varchar('account_id', { length: 12 }).notNull().unique(),
-  login: varchar('login', { length: 32 }).notNull().unique(),
+  /** HMAC-SHA256 логина (hex) — сам логин сервер не хранит (lib/crypto.ts → createLoginHasher) */
+  loginHash: varchar('login_hash', { length: 64 }).notNull().unique(),
   /** Argon2id (PHC-строка) от authKey — ключа, выведенного из пароля на клиенте */
   authKeyHash: text('auth_key_hash').notNull(),
   /** Параметры KDF и соль пароля — клиент получает их через prelogin */

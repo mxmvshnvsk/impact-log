@@ -10,8 +10,8 @@ import {
   recoveryBeginResponseSchema,
   recoveryDelayResponseSchema,
   recoveryUnlockResponseSchema,
-  registerStartResponseSchema,
   sessionResponseSchema,
+  totpSecretResponseSchema,
 } from '@impact-log/shared'
 import { post, request } from './http'
 
@@ -20,7 +20,7 @@ export const authApi = {
   /** Сессия + состояние безопасности аккаунта (recoveryPending — идёт отложенное восстановление) */
   me: () => request('/auth/me', meResponseSchema),
   prelogin: (login: string) => post('/auth/prelogin', preloginResponseSchema, { login }),
-  register: (body: RegisterRequest) => post('/auth/register', registerStartResponseSchema, body),
+  register: (body: RegisterRequest) => post('/auth/register', totpSecretResponseSchema, body),
   confirmRegistration: (body: CodeRequest) =>
     post('/auth/register/confirm', sessionResponseSchema, body),
   login: (body: LoginRequest) => post('/auth/login', loginResponseSchema, body),
@@ -43,7 +43,7 @@ export const authApi = {
     post('/auth/recovery/complete', sessionResponseSchema, body),
   /** B. Пароль проверен, телефона нет: Recovery Key вместо кода → новая 2FA для приложения */
   loginRecoveryKey: (recoveryAuthKey: string) =>
-    post('/auth/login/recovery-key', registerStartResponseSchema, { recoveryAuthKey }),
+    post('/auth/login/recovery-key', totpSecretResponseSchema, { recoveryAuthKey }),
   /** B. Первый код новой 2FA → полная сессия (старая 2FA и остальные сессии сброшены) */
   loginTotpReset: (body: CodeRequest) =>
     post('/auth/login/totp-reset', sessionResponseSchema, body),

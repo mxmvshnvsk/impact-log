@@ -1,4 +1,4 @@
-import { totpCodeSchema } from '@impact-log/shared'
+import { type TotpEnrollment, totpCodeSchema } from '@impact-log/shared'
 import { CloudUpload, KeyRound, MonitorSmartphone } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -138,7 +138,7 @@ export function useRegisterView() {
 
   // ---------- шаг 2: Recovery Kit → отправка ----------
   const kitRef = ref<{ validate: () => boolean } | null>(null)
-  const enrollment = ref<{ otpauthUri: string; secret: string } | null>(null)
+  const enrollment = ref<TotpEnrollment | null>(null)
 
   function back() {
     error.value = null
@@ -200,7 +200,13 @@ export function useRegisterView() {
     codeSubmitted = true
     try {
       // Хранилище переходит на MK нового аккаунта только здесь — после подтверждения кода
-      await accountFlow.confirmRegistration(parsed.data, remember.value, prepared.value, report)
+      await accountFlow.confirmRegistration(
+        login.value,
+        parsed.data,
+        remember.value,
+        prepared.value,
+        report,
+      )
       discardPrepared()
       step.value = 'done'
       mascot.react('happy')

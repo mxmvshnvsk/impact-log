@@ -23,7 +23,8 @@
 | Эпоха Master Key (ADR-0012) | `users.key_epoch` — с 1, +1 при каждой завершённой ротации MK |
 | Идущая ротация MK | `key_rotations`: конверты нового MK (непрозрачные), SHA-256 нового `recoveryAuthKey`, устройство-инициатор, целевая эпоха; `rotation_objects`: черновик — перешифрованные живые объекты до commit |
 | Устройства | зашифрованное название, SHA-256 секрета устройства, SHA-256 trust-токена, срок, `last_seen_at`, отзыв |
-| Аккаунт | `accountId` (12 символов Crockford Base32 из 60 случайных бит), логин, тариф |
+| Логин | не хранится: только HMAC-SHA256 (hex) ключом `HKDF(TOTP_ENCRYPTION_KEY, 'impact-log/login-hash/v1')` — `users.login_hash`. Наружу логин не отдаётся (в `user` его нет), otpauth:// URI для QR собирает клиент |
+| Аккаунт | `accountId` (12 символов Crockford Base32 из 60 случайных бит), тариф |
 
 Пароль → Argon2id(соль, параметры) → HKDF → **KEK** (остаётся на клиенте, открывает password-конверт)
 и **authKey** (уходит на сервер вместо пароля). Recovery Key (`ILRK1-…`) → HKDF → recovery-KEK и
@@ -95,11 +96,11 @@
 | --- | --- | --- | --- |
 | `GET /api/health` | — | → `{status, db, version}` | |
 | `POST /api/auth/prelogin` | — | `{login}` → `{kdf, salt}` | Для несуществующего / незавершённого логина — детерминированная фальшивая соль, `kdf = DEFAULT_KDF_PARAMS` |
-| `POST /api/auth/register` | — | `registerRequestSchema` → `{otpauthUri, secret}` | Ставит enrollment-сессию. `LOGIN_TAKEN` (409), `REGISTRATION_CLOSED` (403). Брошенные pending-регистрации переиспользуются |
+| `POST /api/auth/register` | — | `registerRequestSchema` → `{secret}` | Ставит enrollment-сессию. `LOGIN_TAKEN` (409), `REGISTRATION_CLOSED` (403). Брошенные pending-регистрации переиспользуются |
 | `POST /api/auth/register/confirm` | enrollment | `{code, remember}` → `{user, deviceId, deviceSecret}` | Активирует аккаунт, создаёт первое устройство |
 | `POST /api/auth/login` | — | `{login, authKey, deviceId?, deviceSecret?}` → `{next:'second-factor'}` \| `{next:'done', user, deviceId}` | `done` — валидная cookie `il_device` этого пользователя (сессия на 30 дней). `deviceId` без верного `deviceSecret` игнорируется |
 | `POST /api/auth/login/verify` | second-factor | `{code, remember}` → `{user, deviceId, deviceSecret?}` | Устройство — кандидат из login (секрет совпал, не отозвано) или новое (тогда `deviceSecret`) |
-| `POST /api/auth/login/recovery-key` | second-factor | `{recoveryAuthKey}` → `{otpauthUri, secret}` | Путь B. Неверный ключ → `401 INVALID_CREDENTIALS` + попытка сессии (5-я → `SESSION_EXPIRED`). Верный → новая 2FA, сессия становится `totp-reset` (попытки с нуля, 5 мин) |
+| `POST /api/auth/login/recovery-key` | second-factor | `{recoveryAuthKey}` → `{secret}` | Путь B. Неверный ключ → `401 INVALID_CREDENTIALS` + попытка сессии (5-я → `SESSION_EXPIRED`). Верный → новая 2FA, сессия становится `totp-reset` (попытки с нуля, 5 мин) |
 | `POST /api/auth/login/totp-reset` | totp-reset | `{code, remember}` → `{user, deviceId, deviceSecret?}` | Код новой 2FA (блокировку перебора не проверяет, см. выше). Секрет заменён, `totp_last_step` — шаг этого кода, блокировка снята, все остальные сессии удалены, доверие снято со всех устройств (`remember` — доверие этому), отложенное восстановление снято. Сессия не `via_recovery` |
 | `POST /api/auth/recovery/begin` | — | `{login, recoveryAuthKey}` → `{delayed: {status: none\|pending\|ready, availableAt?}}` | Ставит recovery-сессию (стадия `key`), конверт **не** выдаёт. `delayed` — отложенное восстановление (истёкшее → `none`). Ошибка — `INVALID_CREDENTIALS` |
 | `POST /api/auth/recovery/verify` | recovery | `{code}` → `{recoveryEnvelope}` | Путь A: код 2FA (блокировка перебора, защита от повтора, попытки сессии) → стадия `unlocked-totp` |
@@ -116,7 +117,7 @@
 | `POST /api/account/password` | full | `{currentAuthKey, authKey, kdf, salt, passwordEnvelope}` → `{ok}` | Остальные сессии удаляются, отложенное восстановление снимается, идущая ротация MK отменяется |
 | `POST /api/account/recovery-key` | full | `{currentAuthKey, recoveryEnvelope, recoveryAuthKey}` → `{ok}` | Старый Recovery Key сразу перестаёт работать; начатые им восстановления и сбросы 2FA (recovery- и totp-reset-сессии) удаляются, отложенное восстановление снимается, идущая ротация MK отменяется |
 | `POST /api/account/recovery/cancel` | full | — → `{ok}` | Снимает отложенное восстановление, удаляет recovery- и totp-reset-сессии пользователя. Без повторного подтверждения (действие только защитное) |
-| `POST /api/account/totp/start` | full | `{currentAuthKey, code?}` → `{otpauthUri, secret}` | `code` — текущий код 2FA (блокировка перебора, защита от повтора); без него — `400 INVALID_CODE`, кроме сессии после отложенного восстановления (путь C, `via_recovery`). Новый секрет ждёт подтверждения, старый пока работает |
+| `POST /api/account/totp/start` | full | `{currentAuthKey, code?}` → `{secret}` | `code` — текущий код 2FA (блокировка перебора, защита от повтора); без него — `400 INVALID_CODE`, кроме сессии после отложенного восстановления (путь C, `via_recovery`). Новый секрет ждёт подтверждения, старый пока работает |
 | `POST /api/account/totp/confirm` | full | `{code}` → `{ok}` | Код по новому секрету; остальные сессии удаляются, у текущей снимается `via_recovery` (без кода — только один перевыпуск) |
 | `POST /api/account/delete` | full | `{currentAuthKey, code}` → `{ok}` | Удаляет всё каскадом, сбрасывает cookie |
 | `GET /api/devices` | full | → `{devices: [{deviceId, encryptedLabel, trusted, createdAt, lastSeenAt, current}]}` | Только не отозванные |
@@ -250,7 +251,7 @@ KDF → тот же `authKey`) и новый Recovery Key. Шифротекст�
 | Переменная | По умолчанию | Назначение |
 | --- | --- | --- |
 | `DATABASE_URL` | `postgres://impact:impact@localhost:5432/impact` (в prod обязательна) | Postgres |
-| `TOTP_ENCRYPTION_KEY` | нули (в prod обязательна) | 32 байта hex. Сам ключом не используется: из него HKDF выводит ключ шифрования TOTP-секретов (метка `impact-log/v1/totp-secret`) и ключ фальшивой соли prelogin (метка `impact-log/prelogin-salt/v1`). Не менять после появления пользователей |
+| `TOTP_ENCRYPTION_KEY` | нули (в prod обязательна) | 32 байта hex. Сам ключом не используется: из него HKDF выводит ключ шифрования TOTP-секретов (метка `impact-log/v1/totp-secret`), ключ фальшивой соли prelogin (метка `impact-log/prelogin-salt/v1`) и ключ HMAC логина (метка `impact-log/login-hash/v1`). Нужен и `migrate` (миграция 0006 переводит существующие аккаунты на хеш логина). Не менять после появления пользователей: без прежнего ключа не войти ни в один аккаунт |
 | `SYNC_RATE_LIMIT_MAX` | `120` | Запросов `/api/sync/*` в минуту на пользователя |
 | `REGISTRATION_ENABLED` | `true` | `false` закрывает регистрацию |
 | `REGION` | `ru-1` | Регион инстанса для `/api/region/resolve` |

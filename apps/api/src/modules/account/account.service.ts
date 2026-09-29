@@ -115,7 +115,7 @@ export function createAccountService({ db, cipher }: Deps) {
         .returning({ id: users.id })
       if (!updated) throw new AppError('INVALID_CODE', 400)
     }
-    return totpEnrollment(key, current.user.login)
+    return totpEnrollment(key)
   }
 
   /**

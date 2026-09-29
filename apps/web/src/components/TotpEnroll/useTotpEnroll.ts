@@ -1,12 +1,12 @@
-import type { RegisterStartResponse } from '@impact-log/shared'
+import type { TotpEnrollment } from '@impact-log/shared'
 import QRCode from 'qrcode'
 import { type Ref, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useClipboard } from '@/composables/useClipboard'
 
 export type TotpEnrollProps = {
-  /** otpauth:// и секрет из POST /auth/register или /account/totp/start */
-  enrollment: RegisterStartResponse
+  /** Секрет с сервера (register, login/recovery-key, account/totp/start) и otpauth:// URI от клиента */
+  enrollment: TotpEnrollment
   submitting?: boolean
   /** Уже переведённый текст ошибки кода */
   error?: string | null

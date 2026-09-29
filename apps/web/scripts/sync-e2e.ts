@@ -341,12 +341,13 @@ async function serverObject(client: Client, objectId: string): Promise<ServerObj
   }
 }
 
-async function setPlan(login: string, plan: 'FREE' | 'PILOT' | 'PRO') {
+async function setPlan(userId: string, plan: 'FREE' | 'PILOT' | 'PRO') {
   const require = createRequire(new URL('../../api/package.json', import.meta.url))
   // biome-ignore lint/suspicious/noExplicitAny: postgres из apps/api, без типов в этом пакете
   const postgres = require('postgres') as (url: string, options: object) => any
   const sql = postgres(DATABASE_URL, { max: 1, onnotice: () => {} })
-  await sql`update users set plan = ${plan} where login = ${login}`
+  // Логина в БД нет (только HMAC) — ищем по id
+  await sql`update users set plan = ${plan} where id = ${userId}`
   await sql.end()
 }
 
@@ -671,7 +672,7 @@ await scenario('схлопывание циклов', async () => {
 await scenario('квота FREE', async () => {
   const clientQ = new Client()
   const quotaAccount = await registerAccount(clientQ, 'quota')
-  await setPlan(quotaAccount.login, 'FREE')
+  await setPlan(quotaAccount.userId, 'FREE')
   const Q = new Device('Q', clientQ, quotaAccount)
   const items: Impact[] = []
   for (let i = 0; i < 17; i++) items.push(await Q.create(`Запись ${i + 1}`))
@@ -718,7 +719,7 @@ await scenario('квота FREE', async () => {
     report.quotaRejected === 1 && (await Q.engine.counts()).quotaBlocked === 1,
     report,
   )
-  await setPlan(quotaAccount.login, 'PRO')
+  await setPlan(quotaAccount.userId, 'PRO')
   Q.engine.releaseQuota() // runtime делает это, когда GET /api/entitlements вернул другой тариф
   report = await Q.sync()
   check(

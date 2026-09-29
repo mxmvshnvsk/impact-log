@@ -9,7 +9,7 @@
  * API_LOG_FILE (по умолчанию /tmp/api.log) — лог API этого прогона: проверяется, что в нём нет секретов
  * и параметров SQL. Если в файл ничего не пишется, проверка пропускается (SKIP).
  */
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { createHash, createHmac, hkdfSync, randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { decodeBase32IgnorePadding } from '@oslojs/encoding'
 import { generateHOTP } from '@oslojs/otp'
@@ -19,6 +19,21 @@ const API = process.env.API_URL ?? 'http://127.0.0.1:3000'
 const API_LOG_FILE = process.env.API_LOG_FILE ?? '/tmp/api.log'
 const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://impact:impact@127.0.0.1:5432/impact'
 const ORIGIN = new URL(API).origin
+/**
+ * users.login_hash — как на сервере: HMAC-SHA256 логина ключом HKDF(TOTP_ENCRYPTION_KEY, 'impact-log/login-hash/v1').
+ * Ключ — тот же, с которым запущен API (по умолчанию — нулевой ключ разработки).
+ */
+const LOGIN_HASH_KEY = Buffer.from(
+  hkdfSync(
+    'sha256',
+    Buffer.from(process.env.TOTP_ENCRYPTION_KEY ?? '0'.repeat(64), 'hex'),
+    Buffer.alloc(0),
+    'impact-log/login-hash/v1',
+    32,
+  ),
+)
+const loginHash = (login) =>
+  createHmac('sha256', LOGIN_HASH_KEY).update(login, 'utf8').digest('hex')
 
 let passed = 0
 let failed = 0
@@ -223,14 +238,14 @@ const userRow = async (login) =>
   (
     await sql`select id, totp_failed_count, totp_locked_until, totp_secret, totp_last_step,
       recovery_started_at, recovery_available_at
-      from users where login = ${login}`
+      from users where login_hash = ${loginHash(login)}`
   )[0]
 /** Сколько минут до конца блокировки TOTP (по часам БД) */
 const lockMinutes = async (login) =>
   Number(
     (
       await sql`select extract(epoch from totp_locked_until - now()) / 60 as m
-        from users where login = ${login}`
+        from users where login_hash = ${loginHash(login)}`
     )[0]?.m ?? Number.NaN,
   )
 /** Строка сессии клиента (по cookie il_session; в БД — SHA-256 токена) */
@@ -244,7 +259,7 @@ const sessionRow = async (client) => {
   )[0]
 }
 const unlockTotp = (login) =>
-  sql`update users set totp_locked_until = now() - interval '1 second' where login = ${login}`
+  sql`update users set totp_locked_until = now() - interval '1 second' where login_hash = ${loginHash(login)}`
 
 /**
  * Запрос с телом больше bodyLimit: сервер может ответить 413 и закрыть соединение раньше, чем клиент допишет
@@ -314,11 +329,22 @@ r = await a1.post('/auth/register', { ...alice, authKey: 'short' })
 check('register с кривым authKey → 400', isError(r, 400, 'VALIDATION_ERROR'), r)
 r = await a1.post('/auth/register', { ...alice, login: '  Alice ' })
 check(
-  'register → otpauth URI и секрет',
-  r.status === 200 && r.json.otpauthUri.startsWith('otpauth://totp/') && r.json.secret.length > 20,
+  'register → только TOTP-секрет (otpauth URI с логином собирает клиент)',
+  r.status === 200 && r.json.secret.length > 20 && Object.keys(r.json).join() === 'secret',
   r,
 )
-check('логин нормализован', r.json?.otpauthUri.includes('alice'), r.json)
+const aliceRow = (
+  await sql`select to_jsonb(u) as row from users u where login_hash = ${loginHash('alice')}`
+)[0]
+check('логин нормализован (HMAC от «alice»)', aliceRow !== undefined, aliceRow)
+check(
+  'в строке users нет логина в открытом виде — только HMAC-SHA256 (hex)',
+  aliceRow !== undefined &&
+    !JSON.stringify(aliceRow.row).toLowerCase().includes('alice') &&
+    /^[0-9a-f]{64}$/.test(aliceRow.row.login_hash) &&
+    !('login' in aliceRow.row),
+  aliceRow,
+)
 const aliceTotp = new Totp(r.json.secret)
 r = await a1.get('/auth/me')
 check('me с enrollment-сессией → 401', r.status === 401, r)
@@ -329,7 +355,7 @@ const aliceRegisterCode = aliceTotp.at(aliceTotp.last)
 check(
   'confirm → user (accountId, PILOT) + deviceId + deviceSecret (32 байта base64url)',
   r.status === 200 &&
-    r.json.user.login === 'alice' &&
+    !('login' in r.json.user) &&
     ACCOUNT_ID.test(r.json.user.accountId) &&
     r.json.user.plan === 'PILOT' &&
     UUID.test(r.json.deviceId) &&
@@ -360,7 +386,7 @@ r = await a1.get('/auth/me')
 check(
   'me → user и deviceId этой сессии (без deviceSecret)',
   r.status === 200 &&
-    r.json.user.login === 'alice' &&
+    !('login' in r.json.user) &&
     r.json.deviceId === aliceDevice &&
     r.json.deviceSecret === undefined,
   r,
@@ -403,7 +429,7 @@ r = await a2.post('/auth/login/verify', { code: await aliceTotp.next() })
 check(
   'verify → полная сессия на переданном устройстве, новый секрет не выдаётся',
   r.status === 200 &&
-    r.json.user.login === 'alice' &&
+    !('login' in r.json.user) &&
     r.json.deviceId === aliceDevice &&
     r.json.deviceSecret === undefined,
   r,
@@ -582,7 +608,7 @@ r = await rc.post('/auth/recovery/complete', {
 check(
   'recovery/complete (deviceId + верный секрет) → полная сессия на том же устройстве',
   r.status === 200 &&
-    r.json.user.login === 'alice' &&
+    !('login' in r.json.user) &&
     r.json.deviceId === aliceDevice &&
     r.json.deviceSecret === undefined,
   r,
@@ -648,7 +674,7 @@ check(
 )
 // 2FA заблокирована чужим перебором — сбросу по паролю и Recovery Key это не мешает
 await sql`update users set totp_failed_count = 10,
-  totp_locked_until = now() + interval '15 minutes' where login = 'oscar'`
+  totp_locked_until = now() + interval '15 minutes' where login_hash = ${loginHash('oscar')}`
 const oscarSecretBefore = (await userRow('oscar'))?.totp_secret
 const os3 = new Client()
 r = await os3.post('/auth/login', {
@@ -673,9 +699,9 @@ check('login/recovery-key с кривым ключом → 400', isError(r, 400,
 r = await os3.post('/auth/login/recovery-key', { recoveryAuthKey: oscar.recoveryAuthKey })
 const os3Session = await sessionRow(os3)
 check(
-  'login/recovery-key верным ключом → новая 2FA (otpauth), сессия totp-reset, попытки обнулены',
+  'login/recovery-key верным ключом → новая 2FA (секрет), сессия totp-reset, попытки обнулены',
   r.status === 200 &&
-    r.json.otpauthUri.startsWith('otpauth://totp/') &&
+    !('otpauthUri' in r.json) &&
     r.json.secret.length > 20 &&
     os3Session?.kind === 'totp-reset' &&
     os3Session.attempts === 0 &&
@@ -702,7 +728,7 @@ r = await os3.post('/auth/login/totp-reset', { code: await oscarTotp2.next(), re
 check(
   'login/totp-reset верным кодом → полная сессия на устройстве-кандидате, remember → il_device',
   r.status === 200 &&
-    r.json.user.login === 'oscar' &&
+    !('login' in r.json.user) &&
     r.json.deviceId === oscar.deviceId &&
     r.json.deviceSecret === undefined &&
     os3.has('il_device'),
@@ -856,7 +882,7 @@ check(
   r.status === 200 && r.json.recoveryPending?.availableAt === patAvailableAt,
   r,
 )
-await sql`update users set recovery_available_at = now() - interval '1 minute' where login = 'pat'`
+await sql`update users set recovery_available_at = now() - interval '1 minute' where login_hash = ${loginHash('pat')}`
 patRow = await userRow('pat')
 const patReadyAt = patRow?.recovery_available_at?.toISOString()
 const { client: pc3, res: pc3Begin } = await patBegin()
@@ -885,7 +911,7 @@ r = await pc.post('/auth/recovery/complete', patPassword2)
 check(
   'complete → полная сессия на новом устройстве',
   r.status === 200 &&
-    r.json.user.login === 'pat' &&
+    !('login' in r.json.user) &&
     r.json.deviceId !== pat.deviceId &&
     DEVICE_SECRET.test(secret(r.json.deviceSecret) ?? ''),
   r,
@@ -908,7 +934,7 @@ check('другие recovery-сессии мертвы', isError(r, 401, 'SESSIO
 r = await pc.post('/account/totp/start', { currentAuthKey: patPassword2.authKey })
 check(
   'via_recovery: totp/start без кода 2FA → новый секрет',
-  r.status === 200 && r.json.otpauthUri.startsWith('otpauth://totp/'),
+  r.status === 200 && r.json.secret.length > 20 && !('otpauthUri' in r.json),
   r,
 )
 const patTotp2 = r.status === 200 ? new Totp(r.json.secret) : null
@@ -965,7 +991,7 @@ r = await qc.post('/auth/recovery/delay')
 const quinnAvailableAt2 = r.json?.availableAt
 check('отсчёт после отмены можно начать заново', r.status === 200, r)
 await sql`update users set recovery_available_at = now() - interval '7 days' - interval '1 minute'
-  where login = 'quinn'`
+  where login_hash = ${loginHash('quinn')}`
 const { client: qd, res: qdBegin } = await quinnBegin()
 check(
   'истёкшее (созрело больше 7 дней назад) → begin: delayed.status = none',
@@ -1121,7 +1147,7 @@ r = await b1.post('/account/totp/start', { currentAuthKey: bob.authKey, code: bo
 check(
   'totp/start с текущим кодом → новый секрет, счётчик неудач сброшен',
   r.status === 200 &&
-    r.json.otpauthUri.startsWith('otpauth://totp/') &&
+    !('otpauthUri' in r.json) &&
     r.json.secret.length > 20 &&
     (await userRow('bob'))?.totp_failed_count === 0,
   r,
@@ -1330,7 +1356,7 @@ check(
   live.length === 6 && r.json?.results?.every((x) => x.status === 'accepted'),
   r,
 )
-await sql`update users set plan = 'FREE' where login = 'carol'`
+await sql`update users set plan = 'FREE' where login_hash = ${loginHash('carol')}`
 r = await c1.get('/entitlements')
 check(
   'entitlements: FREE, лимит 15, 0 активных',
@@ -1487,7 +1513,7 @@ check(
 r = await gD.post('/auth/login/verify', { code: grace.totp.now() })
 check('снова заблокировано → 429', isError(r, 429, 'RATE_LIMITED'), r)
 await sql`update users set totp_failed_count = 16, totp_locked_until = now() - interval '1 second'
-  where login = 'grace'`
+  where login_hash = ${loginHash('grace')}`
 r = await gA.post('/auth/login/verify', { code: grace.totp.wrong() })
 graceLock = await lockMinutes('grace')
 check(
@@ -1598,7 +1624,7 @@ const ivanRecover = async (client, device) => {
   if (begun.status !== 200) throw new Error(`ivan recovery: ${JSON.stringify(begun)}`)
   await client.post('/auth/recovery/delay')
   await sql`update users set recovery_available_at = now() - interval '1 minute'
-    where login = 'ivan'`
+    where login_hash = ${loginHash('ivan')}`
   const resumed = await client.post('/auth/recovery/resume')
   if (resumed.status !== 200) throw new Error(`ivan resume: ${JSON.stringify(resumed)}`)
   ivan.authKey = newKey()
@@ -1653,7 +1679,7 @@ check(
 // ---------------------------------------------------------------------------------------------
 section('AAD TOTP-секрета: шифротекст не переносится в чужую строку (ivan → grace)')
 const graceSecretBefore = (await userRow('grace'))?.totp_secret
-await sql`update users set totp_secret = ${ivanRow.totp_secret} where login = 'grace'`
+await sql`update users set totp_secret = ${ivanRow.totp_secret} where login_hash = ${loginHash('grace')}`
 const gE = await graceLogin()
 r = await gE.post('/auth/login/verify', { code: ivan.totp.now() })
 check(
@@ -1662,7 +1688,7 @@ check(
   r,
 )
 await sql`update users set totp_secret = ${graceSecretBefore}, totp_failed_count = 0
-  where login = 'grace'`
+  where login_hash = ${loginHash('grace')}`
 
 // ---------------------------------------------------------------------------------------------
 section('квота хранилища: число объектов (judy, PILOT)')
@@ -1670,10 +1696,10 @@ const j1 = new Client()
 await register(j1, 'judy')
 await sql`insert into objects (user_id, object_id, kind, version, ciphertext, deleted, seq)
   select u.id, gen_random_uuid(), 'impact', 1, 'x', false, nextval('object_seq')
-  from users u, generate_series(1, 99995) where u.login = 'judy'`
+  from users u, generate_series(1, 99995) where u.login_hash = ${loginHash('judy')}`
 await sql`insert into objects (user_id, object_id, kind, version, ciphertext, deleted, seq)
   select u.id, gen_random_uuid(), 'impact', 2, null, true, nextval('object_seq')
-  from users u, generate_series(1, 50) where u.login = 'judy'`
+  from users u, generate_series(1, 50) where u.login_hash = ${loginHash('judy')}`
 r = await j1.get('/entitlements')
 check(
   "PILOT: maxObjects 100000; tombstone'ы в usage.objects не входят",
@@ -1703,16 +1729,16 @@ check(
 )
 r = await j1.get('/entitlements')
 check('usage.objects = 100000', r.json?.usage.objects === 100_000, r.json?.usage)
-await sql`delete from objects where user_id = (select id from users where login = 'judy')`
+await sql`delete from objects where user_id = (select id from users where login_hash = ${loginHash('judy')})`
 
 // ---------------------------------------------------------------------------------------------
 section("потолок строк с tombstone'ами: 2 × maxObjects (nina, FREE)")
 const n1 = new Client()
 await register(n1, 'nina')
-await sql`update users set plan = 'FREE' where login = 'nina'`
+await sql`update users set plan = 'FREE' where login_hash = ${loginHash('nina')}`
 await sql`insert into objects (user_id, object_id, kind, version, ciphertext, deleted, seq)
   select u.id, gen_random_uuid(), 'impact', 2, null, true, nextval('object_seq')
-  from users u, generate_series(1, 1995) where u.login = 'nina'`
+  from users u, generate_series(1, 1995) where u.login_hash = ${loginHash('nina')}`
 const nIds = Array.from({ length: 6 }, () => randomUUID())
 r = await n1.push(nIds.map((id) => impact(id, 0, 'n')))
 check(
@@ -1725,18 +1751,18 @@ r = await n1.push([impact(nIds[0], 1, 'n-updated')])
 check('на потолке строк обновление → accepted', r.json?.results?.[0]?.status === 'accepted', r.json)
 r = await n1.get('/entitlements')
 check("usage.objects = 5 (tombstone'ы не считаются)", r.json?.usage.objects === 5, r.json?.usage)
-await sql`delete from objects where user_id = (select id from users where login = 'nina')`
+await sql`delete from objects where user_id = (select id from users where login_hash = ${loginHash('nina')})`
 
 // ---------------------------------------------------------------------------------------------
 section('квота хранилища: байты (kate, FREE)')
 const k1 = new Client()
 await register(k1, 'kate')
-await sql`update users set plan = 'FREE' where login = 'kate'`
+await sql`update users set plan = 'FREE' where login_hash = ${loginHash('kate')}`
 const bigId = randomUUID()
 const bigBytes = 50 * MiB - 300 * KiB
 await sql`insert into objects (user_id, object_id, kind, version, ciphertext, deleted, seq)
   select id, ${bigId}, 'impact', 1, repeat('x', ${bigBytes}), false, nextval('object_seq')
-  from users where login = 'kate'`
+  from users where login_hash = ${loginHash('kate')}`
 r = await k1.get('/entitlements')
 check(
   'usage.storageBytes считает байты шифротекста',

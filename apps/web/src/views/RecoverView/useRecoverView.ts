@@ -1,7 +1,7 @@
 import {
   loginSchema,
   passwordSchema,
-  type RegisterStartResponse,
+  type TotpEnrollment,
   totpCodeSchema,
 } from '@impact-log/shared'
 import {
@@ -248,7 +248,7 @@ export function useRecoverView() {
   }
 
   // ---------- шаг 4 (только без второго фактора): новая 2FA обязательна ----------
-  const totpEnrollment = ref<RegisterStartResponse | null>(null)
+  const totpEnrollment = ref<TotpEnrollment | null>(null)
   const totpBusy = ref(false)
   const totpCode = ref('')
   const totpError = ref<string | null>(null)

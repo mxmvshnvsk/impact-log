@@ -104,7 +104,7 @@
     "items": {
       "account": {
         "what": "Account",
-        "how": "Username, Account ID (random, says nothing about you), plan, creation date."
+        "how": "Your username passes through the server when you sign in but is never stored: the database keeps only its HMAC-SHA256 under a key kept separately from it. Plus Account ID (random, says nothing about you), plan, creation date."
       },
       "password": {
         "what": "Password",

@@ -5,7 +5,6 @@ export function toUserDto(user: UserRow): User {
   return {
     id: user.id,
     accountId: user.accountId,
-    login: user.login,
     plan: user.plan,
     createdAt: user.createdAt.toISOString(),
   }

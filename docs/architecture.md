@@ -63,7 +63,7 @@ flowchart LR
 
 | Сервер видит | Сервер не видит |
 | --- | --- |
-| логин, `accountId`, тариф, TOTP-секрет (зашифрован ключом из env) | пароль (приходит `authKey`), MK, DEK, Recovery Key |
+| HMAC логина (ключ из env; сам логин не хранится), `accountId`, тариф, TOTP-секрет (зашифрован ключом из env) | пароль (приходит `authKey`), MK, DEK, Recovery Key |
 | хеш `authKey`, SHA-256 от `recoveryAuthKey`, секрета устройства и trust-токена | сами эти значения |
 | конверты MK `password` и `recovery` (непрозрачные строки) | device-конверт и ключ устройства (только на устройстве) |
 | объекты: `objectId`, вид, версия, размер, время, `seq`, флаг удаления, эпоха ключа | заголовки, описания, оценки, метки, категории, метрики, даты событий, evidence |
@@ -250,7 +250,7 @@ sequenceDiagram
 | Маршруты и доступ (`vault` / `guest` / `any`) | `apps/web/src/router/index.ts` |
 | HTTP-клиент | `apps/web/src/api/*` |
 | Сигналы между вкладками | `apps/web/src/utils/vaultChannel.ts` |
-| Схема БД и миграции | `apps/api/src/db/schema.ts`, `apps/api/drizzle/*.sql` (`0002_e2ee.sql` — переход на E2EE, `0003_hardening.sql` — секрет устройства, блокировка TOTP, `via_recovery`, `0004_recovery_factors.sql` — восстановление со вторым фактором, `0005_key_rotation.sql` — эпохи ключа и ротация MK) |
+| Схема БД и миграции | `apps/api/src/db/schema.ts`, `apps/api/drizzle/*.sql` (`0002_e2ee.sql` — переход на E2EE, `0003_hardening.sql` — секрет устройства, блокировка TOTP, `via_recovery`, `0004_recovery_factors.sql` — восстановление со вторым фактором, `0005_key_rotation.sql` — эпохи ключа и ротация MK, `0006_login_hash.sql` — логин только как HMAC, пересчёт ключом из `migrate.ts`) |
 | Модули API | `apps/api/src/modules/{auth,account,keys,devices,entitlements,sync,region}` |
 | Ротация Master Key на сервере: start / stage / commit / abort, автоотмена | `apps/api/src/modules/keys/{keys.routes,rotation.service,rotationStore}.ts` |
 | Сессии и cookie, CSRF | `apps/api/src/plugins/{session,csrf}.ts` |

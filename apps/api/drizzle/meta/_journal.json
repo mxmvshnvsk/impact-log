@@ -43,6 +43,13 @@
       "when": 1790669394572,
       "tag": "0005_key_rotation",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790683424784,
+      "tag": "0006_login_hash",
+      "breakpoints": true
     }
   ]
 }

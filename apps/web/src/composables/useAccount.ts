@@ -4,8 +4,10 @@ import {
   type EntitlementsResponse,
   type RecoveryBeginResponse,
   type RecoveryPending,
-  type RegisterStartResponse,
   type SessionResponse,
+  type TotpEnrollment,
+  type TotpSecretResponse,
+  totpKeyUri,
 } from '@impact-log/shared'
 import { computed, ref, shallowRef } from 'vue'
 import {
@@ -94,7 +96,7 @@ export type PendingSecondFactor = {
    * Путь B (телефона нет): Recovery Key вместо кода → новая 2FA для приложения. Неверный ключ —
    * 401 INVALID_CREDENTIALS (считается попыткой, как неверный код).
    */
-  submitRecoveryKey(recoveryKey: string, onStage?: StageReporter): Promise<RegisterStartResponse>
+  submitRecoveryKey(recoveryKey: string, onStage?: StageReporter): Promise<TotpEnrollment>
   /**
    * Путь B: первый код новой 2FA → вход (старая 2FA, остальные сессии и «запомненные» компьютеры
    * сброшены сервером). Возвращает authKey пароля — перевыпустить Recovery Key без повторного ввода.
@@ -147,6 +149,14 @@ const usage = shallowRef<EntitlementsResponse['usage'] | null>(null)
 /** Логин только что удалённого аккаунта: экран настроек предлагает оставить или стереть локальные записи */
 const deletedLogin = ref<string | null>(null)
 const noop: StageReporter = () => {}
+
+/**
+ * Экран подключения 2FA: секрет от сервера + otpauth:// URI для QR. URI собираем здесь — в нём логин,
+ * а логина у сервера нет (только HMAC).
+ */
+function enrollmentFor(login: string, { secret }: TotpSecretResponse): TotpEnrollment {
+  return { secret, otpauthUri: totpKeyUri(login, secret) }
+}
 
 export function useAccount() {
   const vault = useVault()
@@ -211,8 +221,11 @@ export function useAccount() {
       : { deviceId: current.deviceId }
   }
 
-  /** Привязка из ответа сервера; секрет устройства приходит только при создании устройства */
-  function accountFrom(response: SessionResponse, keyEpoch: number): VaultAccount {
+  /**
+   * Привязка из ответа сервера; секрет устройства приходит только при создании устройства.
+   * Логин — тот, что ввёл пользователь: сервер хранит только его HMAC и вернуть логин не может.
+   */
+  function accountFrom(response: SessionResponse, keyEpoch: number, login: string): VaultAccount {
     const { user, deviceId } = response
     const previous = account.value
     const deviceSecret =
@@ -223,7 +236,7 @@ export function useAccount() {
     return {
       userId: user.id,
       accountId: user.accountId,
-      login: user.login,
+      login,
       deviceId,
       ...(deviceSecret ? { deviceSecret } : {}),
       keyEpoch,
@@ -292,7 +305,7 @@ export function useAccount() {
     keyEpoch: number,
   ) {
     try {
-      const binding = accountFrom(response, keyEpoch)
+      const binding = accountFrom(response, keyEpoch, kdfPin.login)
       if (plan === 'create') {
         await vault.create(masterKey.slice(), { account: binding, kdfPin })
       } else if (plan === 'same') {
@@ -353,9 +366,9 @@ export function useAccount() {
     login: string,
     prepared: PreparedRegistration,
     onStage: StageReporter = noop,
-  ): Promise<RegisterStartResponse> {
+  ): Promise<TotpEnrollment> {
     onStage('server')
-    return authApi.register({
+    const response = await authApi.register({
       login,
       authKey: prepared.password.authKey,
       kdf: prepared.password.kdf,
@@ -364,10 +377,12 @@ export function useAccount() {
       recoveryEnvelope: prepared.recovery.recoveryEnvelope,
       recoveryAuthKey: prepared.recovery.recoveryAuthKey,
     })
+    return enrollmentFor(login, response)
   }
 
   /** Шаг 3: код 2FA → аккаунт активен; только теперь хранилище переходит на MK нового аккаунта */
   async function confirmRegistration(
+    login: string,
     code: string,
     remember: boolean,
     prepared: PreparedRegistration,
@@ -377,14 +392,10 @@ export function useAccount() {
     const response = await authApi.confirmRegistration({ code, remember })
     onStage('vault')
     const masterKey = prepared.masterKey.slice()
-    const kdfPin: KdfPin = {
-      login: response.user.login,
-      kdf: prepared.password.kdf,
-      salt: prepared.password.salt,
-    }
+    const kdfPin: KdfPin = { login, kdf: prepared.password.kdf, salt: prepared.password.salt }
     let plan: AdoptionPlan
     try {
-      plan = await planAdoption(masterKey, response.user.login, 'merge')
+      plan = await planAdoption(masterKey, login, 'merge')
     } catch (error) {
       masterKey.fill(0)
       throw error
@@ -416,7 +427,7 @@ export function useAccount() {
     try {
       plan = await planAdoption(
         masterKey,
-        response.user.login,
+        kdfPin.login,
         options.decideMerge,
         isRotated(response.user.id, keyEpoch),
       )
@@ -489,7 +500,7 @@ export function useAccount() {
         stage('verify')
         const recoveryAuthKey = await recoveryAuthKeyFrom(recoveryKey)
         stage('server')
-        return authApi.loginRecoveryKey(recoveryAuthKey)
+        return enrollmentFor(loginName, await authApi.loginRecoveryKey(recoveryAuthKey))
       },
       async resetTotp(code, remember, stage = noop) {
         if (used) throw new ApiError(401, 'SESSION_EXPIRED')
@@ -607,7 +618,7 @@ export function useAccount() {
         await finish(
           masterKey,
           response,
-          { login: response.user.login, kdf: password.kdf, salt: password.salt },
+          { login: loginName, kdf: password.kdf, salt: password.salt },
           plan,
           keyEpoch,
         )
@@ -725,14 +736,18 @@ export function useAccount() {
   async function startTotpRotation(
     confirm: { password: string; code: string } | { currentAuthKey: string },
     onStage: StageReporter = noop,
-  ): Promise<RegisterStartResponse> {
+  ): Promise<TotpEnrollment> {
+    // Полная сессия бывает только у привязанного хранилища — логин известен
+    const login = account.value?.login ?? ''
     if ('password' in confirm) {
       const authKey = await currentAuthKey(confirm.password, onStage)
       onStage('server')
-      return accountApi.startTotpRotation(authKey, confirm.code).catch(handle)
+      const response = await accountApi.startTotpRotation(authKey, confirm.code).catch(handle)
+      return enrollmentFor(login, response)
     }
     onStage('server')
-    return accountApi.startTotpRotation(confirm.currentAuthKey).catch(handle)
+    const response = await accountApi.startTotpRotation(confirm.currentAuthKey).catch(handle)
+    return enrollmentFor(login, response)
   }
 
   async function confirmTotpRotation(code: string) {

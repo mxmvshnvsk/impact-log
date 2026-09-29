@@ -16,8 +16,8 @@ import {
   recoveryUnlockResponseSchema,
   recoveryVerifyRequestSchema,
   registerRequestSchema,
-  registerStartResponseSchema,
   sessionResponseSchema,
+  totpSecretResponseSchema,
 } from '@impact-log/shared'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import type { UserRow } from '../../db/schema'
@@ -55,7 +55,7 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
     '/register',
     {
       config: rateLimit(5, 60),
-      schema: { body: registerRequestSchema, response: { 200: registerStartResponseSchema } },
+      schema: { body: registerRequestSchema, response: { 200: totpSecretResponseSchema } },
     },
     async (request, reply) => {
       const { session, enrollment } = await auth.startRegistration(request.body, request.session)
@@ -118,7 +118,7 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
       preHandler: requireSession('second-factor'),
       schema: {
         body: loginRecoveryKeyRequestSchema,
-        response: { 200: registerStartResponseSchema },
+        response: { 200: totpSecretResponseSchema },
       },
     },
     async (request) => auth.loginWithRecoveryKey(sessionOf(request), request.body.recoveryAuthKey),

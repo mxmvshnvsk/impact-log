@@ -82,11 +82,14 @@ export const envelopeTextSchema = z.string().min(1).max(4096)
 
 // ---------- пользователь и сессия ----------
 
+/**
+ * Логина здесь нет намеренно: сервер хранит только HMAC-SHA256 от логина под серверным ключом и вернуть
+ * его не может. Логин знает клиент — он его ввёл.
+ */
 export const userSchema = z.object({
   id: z.uuid(),
   /** Непрозрачный публичный ID аккаунта (12 символов Crockford Base32), не кодирует регион */
   accountId: z.string(),
-  login: z.string(),
   plan: z.enum(PLAN_IDS),
   createdAt: z.string(),
 })
@@ -125,7 +128,7 @@ export type PreloginResponse = z.infer<typeof preloginResponseSchema>
 
 /**
  * POST /api/auth/register — шаг 1: логин, authKey, параметры KDF и оба конверта MK.
- * Ответ — TOTP для приложения; аккаунт станет активным после подтверждения кода.
+ * Ответ — TOTP-секрет для приложения; аккаунт станет активным после подтверждения кода.
  */
 export const registerRequestSchema = z.object({
   login: loginSchema,
@@ -138,11 +141,38 @@ export const registerRequestSchema = z.object({
 })
 export type RegisterRequest = z.infer<typeof registerRequestSchema>
 
-export const registerStartResponseSchema = z.object({
-  otpauthUri: z.string(),
-  secret: z.string(),
-})
-export type RegisterStartResponse = z.infer<typeof registerStartResponseSchema>
+/**
+ * Новый TOTP-секрет (base32, группами по 4) — ответ регистрации, сброса и перевыпуска 2FA.
+ * otpauth:// URI для QR собирает клиент (totpKeyUri): в нём логин, а логина у сервера нет.
+ */
+export const totpSecretResponseSchema = z.object({ secret: z.string() })
+export type TotpSecretResponse = z.infer<typeof totpSecretResponseSchema>
+
+/** Что показывает экран подключения 2FA: секрет для ручного ввода и URI для QR */
+export interface TotpEnrollment {
+  secret: string
+  otpauthUri: string
+}
+
+export const TOTP_ISSUER = 'impact log'
+export const TOTP_PERIOD_SECONDS = 30
+
+/**
+ * otpauth://totp/… (Key Uri Format): SHA-1, TOTP_DIGITS цифр, шаг TOTP_PERIOD_SECONDS — как проверяет сервер.
+ * accountName — логин, как его ввёл пользователь (после loginSchema). Пробел кодируется как %20 (RFC 3986),
+ * не «+»: иначе часть приложений покажет издателя как «impact+log».
+ */
+export function totpKeyUri(accountName: string, secret: string): string {
+  const issuer = encodeURIComponent(TOTP_ISSUER)
+  const query = [
+    `issuer=${issuer}`,
+    'algorithm=SHA1',
+    `secret=${encodeURIComponent(secret.replace(/\s+/g, '').toUpperCase())}`,
+    `period=${TOTP_PERIOD_SECONDS}`,
+    `digits=${TOTP_DIGITS}`,
+  ]
+  return `otpauth://totp/${issuer}:${encodeURIComponent(accountName)}?${query.join('&')}`
+}
 
 /** remember — «Запомнить этот компьютер»: сессия на 30 дней и вход без кода с этого устройства */
 export const codeRequestSchema = z.object({
@@ -248,7 +278,7 @@ export type RecoveryCompleteRequest = z.infer<typeof recoveryCompleteRequestSche
 
 /**
  * B. POST /api/auth/login/recovery-key (second-factor-сессия: пароль уже проверен) — Recovery Key вместо кода.
- * Ответ — новая 2FA для приложения (как registerStartResponseSchema); сессия переходит в kind 'totp-reset'.
+ * Ответ — новый TOTP-секрет (totpSecretResponseSchema); сессия переходит в kind 'totp-reset'.
  * Неверный ключ → 401 INVALID_CREDENTIALS (считается попыткой сессии, как неверный код).
  */
 export const loginRecoveryKeyRequestSchema = z.object({ recoveryAuthKey: authKeySchema })

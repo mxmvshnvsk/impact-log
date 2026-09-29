@@ -1,4 +1,4 @@
-import { type RegisterStartResponse, totpCodeSchema } from '@impact-log/shared'
+import { type TotpEnrollment, totpCodeSchema } from '@impact-log/shared'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { errorKey, isStepExpiredError } from '@/account'
@@ -67,7 +67,7 @@ export function useRecoveryKeyLogin(props: RecoveryKeyLoginProps, emit: Emit) {
     keyField.onBlur()
   }
 
-  const enrollment = ref<RegisterStartResponse | null>(null)
+  const enrollment = ref<TotpEnrollment | null>(null)
 
   async function submitKey() {
     if (busy.value) return

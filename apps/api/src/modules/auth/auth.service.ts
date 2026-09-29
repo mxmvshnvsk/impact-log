@@ -13,6 +13,7 @@ import {
   type Cipher,
   decodeBase64Url,
   generateAccountId,
+  type LoginHasher,
   safeEqualHex,
   sha256Hex,
 } from '../../lib/crypto'
@@ -58,6 +59,8 @@ type Deps = {
   cipher: Cipher
   /** Ключ для детерминированной «фальшивой» соли prelogin (производная от серверного секрета) */
   preloginKey: Uint8Array
+  /** HMAC логина: в users хранится только он, сам логин — нигде */
+  hashLogin: LoginHasher
   registrationEnabled: boolean
 }
 
@@ -72,7 +75,13 @@ const DUMMY_RECOVERY_HASH = sha256Hex('impact-log-dummy-recovery-auth-key')
 /** Сколько раз пробуем подобрать свободный accountId (коллизия 60 бит практически невозможна) */
 const ACCOUNT_ID_ATTEMPTS = 5
 
-export function createAuthService({ db, cipher, preloginKey, registrationEnabled }: Deps) {
+export function createAuthService({
+  db,
+  cipher,
+  preloginKey,
+  hashLogin,
+  registrationEnabled,
+}: Deps) {
   /** Жива ли ещё регистрационная сессия этого (pending) пользователя */
   async function hasLiveEnrollment(userId: string): Promise<boolean> {
     const [row] = await db
@@ -94,7 +103,7 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
     const [user] = await db
       .select({ status: users.status, kdf: users.kdfParams, salt: users.kdfSalt })
       .from(users)
-      .where(eq(users.login, login))
+      .where(eq(users.loginHash, hashLogin(login)))
     if (user?.status === 'active') return { kdf: user.kdf, salt: user.salt }
     return { kdf: DEFAULT_KDF_PARAMS, salt: fakeSalt(preloginKey, login) }
   }
@@ -106,7 +115,8 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
   async function startRegistration(input: RegisterRequest, current: ActiveSession | null) {
     if (!registrationEnabled) throw new AppError('REGISTRATION_CLOSED', 403)
 
-    const [existing] = await db.select().from(users).where(eq(users.login, input.login))
+    const loginHash = hashLogin(input.login)
+    const [existing] = await db.select().from(users).where(eq(users.loginHash, loginHash))
     if (existing) {
       // Брошенная регистрация: срок вышел или у неё не осталось живой enrollment-сессии
       // (например, сгорела после лимита неверных кодов) — логин можно занять заново
@@ -127,7 +137,7 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
     const id = randomUUID()
     const values = {
       id,
-      login: input.login,
+      loginHash,
       authKeyHash: await hashAuthKey(input.authKey),
       kdfParams: input.kdf,
       kdfSalt: input.salt,
@@ -143,7 +153,7 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
     })
 
     const session = await createSession(db, user.id, 'enrollment')
-    return { session, enrollment: totpEnrollment(key, user.login) }
+    return { session, enrollment: totpEnrollment(key) }
   }
 
   /** Вставка пользователя со свежим accountId; при коллизии accountId — повтор (savepoint) */
@@ -163,7 +173,7 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
         })
       } catch (error) {
         const constraint = uniqueViolation(error)
-        if (constraint === 'users_login_unique') throw new AppError('LOGIN_TAKEN', 409)
+        if (constraint === 'users_login_hash_unique') throw new AppError('LOGIN_TAKEN', 409)
         if (constraint !== 'users_account_id_unique' || attempt >= ACCOUNT_ID_ATTEMPTS) throw error
       }
     }
@@ -231,7 +241,10 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
    * С доверенного устройства («Запомнить этот компьютер») код не нужен — сразу полная сессия на 30 дней.
    */
   async function login(input: LoginRequest, trustToken: string | undefined) {
-    const [user] = await db.select().from(users).where(eq(users.login, input.login))
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.loginHash, hashLogin(input.login)))
     if (user?.status !== 'active') {
       await verifyDummy(input.authKey)
       throw new AppError('INVALID_CREDENTIALS', 401)
@@ -321,7 +334,7 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
       .where(and(eq(sessions.id, current.id), eq(sessions.kind, 'second-factor')))
       .returning({ id: sessions.id })
     if (!updated) throw new AppError('SESSION_EXPIRED', 401)
-    return totpEnrollment(key, user.login)
+    return totpEnrollment(key)
   }
 
   /**
@@ -389,7 +402,7 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
         keyEnvelopes,
         and(eq(keyEnvelopes.userId, users.id), eq(keyEnvelopes.type, 'recovery')),
       )
-      .where(eq(users.login, input.login))
+      .where(eq(users.loginHash, hashLogin(input.login)))
     const active = row?.user.status === 'active' ? row : null
     const matches = safeEqualHex(
       recoveryAuthHash(input.recoveryAuthKey),

@@ -4,7 +4,10 @@ import { z } from 'zod'
 export const DEV_DATABASE_URL = 'postgres://impact:impact@localhost:5432/impact'
 
 /** Ключ шифрования TOTP-секретов для разработки. В production обязателен свой (TOTP_ENCRYPTION_KEY) */
-const DEV_TOTP_KEY = '0'.repeat(64)
+export const DEV_TOTP_KEY = '0'.repeat(64)
+
+/** Формат TOTP_ENCRYPTION_KEY: 32 байта в hex */
+export const SERVER_SECRET_PATTERN = /^[0-9a-f]{64}$/i
 
 const booleanFromString = (fallback: 'true' | 'false') =>
   z
@@ -24,7 +27,7 @@ const envSchema = z.object({
   /** 32 байта в hex (64 символа): openssl rand -hex 32 */
   TOTP_ENCRYPTION_KEY: z
     .string()
-    .regex(/^[0-9a-f]{64}$/i, 'must be 64 hex chars (openssl rand -hex 32)')
+    .regex(SERVER_SECRET_PATTERN, 'must be 64 hex chars (openssl rand -hex 32)')
     .optional(),
   /** Secure-флаг cookie. По умолчанию включён в production */
   COOKIE_SECURE: z.enum(['true', 'false']).optional(),

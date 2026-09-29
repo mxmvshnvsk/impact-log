@@ -28,7 +28,7 @@ ADR-0001 строил вход на пароле, который приходи�
 
 | Идентификатор | Формат | Для чего |
 | --- | --- | --- |
-| Логин | 3–32 символа `[a-z0-9_-]`, приводится к нижнему регистру (`loginSchema`) | вход, восстановление, резолвинг региона; остаётся из ADR-0001 |
+| Логин | 3–32 символа `[a-z0-9_-]`, приводится к нижнему регистру (`loginSchema`) | вход, восстановление, резолвинг региона; остаётся из ADR-0001. Сервер его не хранит и не отдаёт — только HMAC (§4) |
 | `accountId` | 12 символов Crockford Base32 из 60 случайных бит, показывается группами `7F82-KL92-PA71` | непрозрачный публичный ID аккаунта; регион не кодирует (ADR-0011) |
 | `users.id` | UUID | внутренний ключ БД, наружу — только в `user.id` |
 | `deviceId` | UUID | экземпляр клиента (ADR-0005: «per-client device identity») |
@@ -71,6 +71,7 @@ Web-клиент не доверяет ответу prelogin вслепую (п�
 
 | Данные | Как хранится |
 | --- | --- |
+| Логин | только HMAC-SHA256 hex (`users.login_hash`, уникальный) ключом `HKDF(TOTP_ENCRYPTION_KEY, 'impact-log/login-hash/v1')`. Дамп базы без ключа из env логины не раскрывает и не позволяет проверить догадку «есть ли такой логин». В ответах (`user`) логина нет, otpauth:// URI для QR собирает клиент (`totpKeyUri`), сервер отдаёт только секрет. Логин проходит через сервер в запросах (prelogin, register, login, recovery/begin) и живёт в памяти только как ключ лимита частоты |
 | `authKey` | Argon2id, PHC-строка (`users.auth_key_hash`) |
 | Параметры KDF и соль пароля | как есть (`users.kdf_params`, `users.kdf_salt`) — отдаются через prelogin |
 | Конверты MK `password` и `recovery` | непрозрачные строки ≤ 4096 символов (`key_envelopes`), отдаются `GET /api/keys` только полной сессии |
@@ -118,7 +119,7 @@ account/delete) ещё до проверки атомарно увеличива
    `recoveryAuthKey` (`createRecoveryEnvelope`).
 2. Клиент показывает Recovery Kit (§8); пользователь подтверждает, что сохранил ключ.
 3. `POST /api/auth/register { login, authKey, kdf, salt, passwordEnvelope, recoveryEnvelope, recoveryAuthKey }`
-   → `{ otpauthUri, secret }` и enrollment-сессия (30 мин). Логин занят — `409 LOGIN_TAKEN`;
+   → `{ secret }` (otpauth:// URI для QR собирает клиент — логина у сервера нет) и enrollment-сессия (30 мин). Логин занят — `409 LOGIN_TAKEN`;
    регистрация закрыта — `403 REGISTRATION_CLOSED`. Клиент показывает QR для приложения-аутентификатора.
 4. `POST /api/auth/register/confirm { code, remember }` → аккаунт активен, создано первое устройство,
    полная сессия; ответ `{ user, deviceId, deviceSecret }`. **Только теперь** локальное хранилище переходит
@@ -204,7 +205,7 @@ ADR-0007 §3). Если на устройстве есть записи друг
 **B. Пароль + Recovery Key вместо кода** — шаг второго фактора обычного входа (§7).
 
 1. `POST /api/auth/login` → `{ next: 'second-factor' }` (пароль проверен).
-2. `POST /api/auth/login/recovery-key { recoveryAuthKey }` → `{ otpauthUri, secret }`: новый TOTP-секрет
+2. `POST /api/auth/login/recovery-key { recoveryAuthKey }` → `{ secret }`: новый TOTP-секрет
    (зашифрован так же, как `users.totp_secret`, хранится в самой сессии — `sessions.totp_pending_secret`), сессия
    становится `totp-reset` (5 мин, попытки с нуля). Неверный ключ — `401 INVALID_CREDENTIALS` и попытка сессии,
    как неверный код (5-я — `SESSION_EXPIRED`). Старая 2FA работает, пока новая не подтверждена; перевыпуск 2FA

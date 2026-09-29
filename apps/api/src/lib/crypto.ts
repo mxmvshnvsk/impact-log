@@ -56,6 +56,29 @@ export function generateAccountId(): string {
   return id
 }
 
+/**
+ * Метка HKDF для ключа HMAC логина. Та же строка — в migrate.ts: миграция 0006 переводит уже созданные
+ * аккаунты на хеш тем же ключом.
+ */
+export const LOGIN_HASH_KEY_LABEL = 'impact-log/login-hash/v1'
+
+/** HMAC-SHA256 логина ключом `key` (hex, 64 символа) — значение `users.login_hash` */
+export function loginHashWithKey(key: Uint8Array, login: string): string {
+  return createHmac('sha256', key).update(login, 'utf8').digest('hex')
+}
+
+/**
+ * Логин в БД хранится только как HMAC-SHA256 под ключом HKDF(TOTP_ENCRYPTION_KEY, LOGIN_HASH_KEY_LABEL).
+ * Дамп БД без ключа из env не раскрывает логины, и проверить догадку «есть ли такой логин» по нему нельзя:
+ * без ключа хеш не посчитать. Логин приходит уже нормализованным (loginSchema: trim + lower case).
+ */
+export function createLoginHasher(hexSecret: string) {
+  const key = deriveServerKey(hexSecret, LOGIN_HASH_KEY_LABEL)
+  return (login: string): string => loginHashWithKey(key, login)
+}
+
+export type LoginHasher = ReturnType<typeof createLoginHasher>
+
 /** Метка HKDF для ключа шифрования TOTP-секретов (отдельно от ключа «фальшивой» соли prelogin) */
 export const TOTP_SECRET_KEY_LABEL = 'impact-log/v1/totp-secret'
 

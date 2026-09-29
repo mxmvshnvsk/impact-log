@@ -10,7 +10,7 @@ import {
 } from 'fastify-type-provider-zod'
 import type { Config } from './config'
 import type { Database } from './db/client'
-import { createTotpCipher, deriveServerKey } from './lib/crypto'
+import { createLoginHasher, createTotpCipher, deriveServerKey } from './lib/crypto'
 import { AppError } from './lib/errors'
 import { sanitizeLogArgs, serializeError } from './lib/logging'
 import { accountRoutes } from './modules/account/account.routes'
@@ -143,6 +143,7 @@ export async function buildApp({ config, db, ping }: Deps) {
     db,
     cipher,
     preloginKey: deriveServerKey(config.TOTP_ENCRYPTION_KEY, PRELOGIN_KEY_LABEL),
+    hashLogin: createLoginHasher(config.TOTP_ENCRYPTION_KEY),
     registrationEnabled: config.REGISTRATION_ENABLED,
   })
   const account = createAccountService({ db, cipher })

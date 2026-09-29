@@ -2,10 +2,10 @@ import {
   changePasswordRequestSchema,
   deleteAccountRequestSchema,
   okResponseSchema,
-  registerStartResponseSchema,
   rotateRecoveryKeyRequestSchema,
   totpRotateConfirmRequestSchema,
   totpRotateStartRequestSchema,
+  totpSecretResponseSchema,
 } from '@impact-log/shared'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { rateLimit } from '../../lib/rateLimit'
@@ -59,7 +59,7 @@ export const accountRoutes: FastifyPluginAsyncZod<Options> = async (app, { accou
       config: rateLimit(10, 15),
       schema: {
         body: totpRotateStartRequestSchema,
-        response: { 200: registerStartResponseSchema },
+        response: { 200: totpSecretResponseSchema },
       },
     },
     async (request) => account.startTotpRotation(fullSessionOf(request), request.body),

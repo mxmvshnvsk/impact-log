@@ -8,10 +8,10 @@ import {
   type RotateRecoveryKeyRequest,
   type RotationStageRequest,
   type RotationStartRequest,
-  registerStartResponseSchema,
   rotationCommitResponseSchema,
   rotationStageResponseSchema,
   SYNC_ACCOUNT_HEADER,
+  totpSecretResponseSchema,
 } from '@impact-log/shared'
 import { post, request } from './http'
 
@@ -28,7 +28,7 @@ export const accountApi = {
     post('/account/recovery-key', okResponseSchema, body),
   /** code — текущий код 2FA; не нужен только в сессии, созданной восстановлением по Recovery Key */
   startTotpRotation: (currentAuthKey: string, code?: string) =>
-    post('/account/totp/start', registerStartResponseSchema, {
+    post('/account/totp/start', totpSecretResponseSchema, {
       currentAuthKey,
       ...(code ? { code } : {}),
     }),
