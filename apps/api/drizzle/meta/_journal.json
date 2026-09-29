@@ -36,6 +36,13 @@
       "when": 1790665241815,
       "tag": "0004_recovery_factors",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790669394572,
+      "tag": "0005_key_rotation",
+      "breakpoints": true
     }
   ]
 }

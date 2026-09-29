@@ -82,6 +82,17 @@ export class WrongPasswordError extends Error {
   }
 }
 
+/**
+ * MK аккаунта (из password-конверта) не совпадает с MK хранилища этого устройства — ротацию отсюда делать
+ * нельзя (хранилище не на ключе аккаунта: нужно войти заново)
+ */
+export class KeyMismatchError extends Error {
+  constructor() {
+    super('KEY_MISMATCH')
+    this.name = 'KeyMismatchError'
+  }
+}
+
 export type PasswordMaterial = {
   authKey: string
   kdf: KdfParams
@@ -176,6 +187,38 @@ export async function unlockWithPassword(
   } catch (error) {
     if (error instanceof CryptoError) throw new WrongPasswordError()
     throw error
+  } finally {
+    kek.fill(0)
+  }
+}
+
+/**
+ * Ротация MK (ADR-0012): password-конверт НОВОГО MK тем же паролем — тем же KEK (соль и параметры KDF
+ * берутся из текущего конверта), поэтому authKey не меняется и пароль остаётся прежним. Одним выводом
+ * ключей заодно проверяется пароль (текущий конверт должен открыться) и возвращается MK текущей эпохи —
+ * вызывающий сверяет его с MK хранилища и обнуляет.
+ */
+export async function rewrapPasswordEnvelope(
+  envelopeText: string,
+  password: string,
+  nextMasterKey: Uint8Array,
+): Promise<{ authKey: string; currentMasterKey: Uint8Array; passwordEnvelope: string }> {
+  const envelope = readEnvelope(envelopeText, 'password')
+  const kdf = kdfParamsSchema.safeParse(envelope.kdf)
+  if (!kdf.success) throw new CryptoError('unsupported kdf')
+  assertKdfWithinLimits(kdf.data)
+  const salt = fromBase64Url(envelope.salt)
+  const { kek, authKey } = await derivePasswordKeysAsync(password, salt, kdf.data)
+  try {
+    let currentMasterKey: Uint8Array
+    try {
+      currentMasterKey = await unwrapMasterKey(envelope, kek)
+    } catch (error) {
+      if (error instanceof CryptoError) throw new WrongPasswordError()
+      throw error
+    }
+    const next = await wrapMasterKey(nextMasterKey, kek, { type: 'password', kdf: kdf.data, salt })
+    return { authKey, currentMasterKey, passwordEnvelope: serializeEnvelope(next) }
   } finally {
     kek.fill(0)
   }

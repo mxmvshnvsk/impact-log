@@ -21,8 +21,9 @@
   },
   "signedOut": {
     "title": "Sign in again",
-    "text": "Your server session has ended: it expired, you signed out everywhere, or this device was revoked. Entries on this device are safe — sync resumes after you sign in.",
-    "action": "Sign in again"
+    "text": "Your server session has ended: it expired, you signed out everywhere, this device was revoked, or the encryption key was changed on another device. Entries on this device are safe — sync resumes after you sign in.",
+    "action": "Sign in again",
+    "keyChanged": "The encryption key was changed on another device. Entries on this device are fine: after you sign in they switch to the new key, and unsent changes go to the server."
   },
   "profile": {
     "title": "Account",
@@ -69,7 +70,9 @@
     "loading": "Loading devices…",
     "retry": "Retry",
     "empty": "No other devices.",
-    "defaultName": "Browser"
+    "defaultName": "Browser",
+    "rotateHint": "A revoked device may have kept the key. To make sure it can’t read new or changed entries, change the encryption key.",
+    "rotateAction": "Change encryption key"
   },
   "security": {
     "title": "Security",
@@ -111,6 +114,91 @@
       "currentCode": "Current code from the app",
       "lostPhone": "No access to your authenticator app? Sign out and sign in again: at the code step, choose “No access to my 2FA app” — your password and Recovery Key set up new 2FA.",
       "done": "2FA reissued. Other sessions were ended."
+    },
+    "keyRotation": {
+      "title": "Encryption key",
+      "text": "Your Master Key encrypts all your entries. Change it if a device is lost, revoked, or may have fallen into the wrong hands: entries are re-encrypted with a new key and you get a new Recovery Key. Your password stays the same.",
+      "action": "Change encryption key"
+    }
+  },
+  "keyRotation": {
+    "explain": {
+      "whatTitle": "What happens",
+      "what": {
+        "newKey": "Your browser creates a new Master Key and re-encrypts every entry with it — on this device and on the server. Each entry gets a new key of its own.",
+        "recoveryKey": "You get a new Recovery Key — the old one stops working. Your password stays the same.",
+        "devices": "Other devices will ask you to sign in again and switch to the new key on their own. Their unsent edits won’t be lost."
+      },
+      "protectsTitle": "What it protects against",
+      "protects": "A revoked or compromised device can’t read new or changed entries, even if it kept the old key. The old password envelope and the old Recovery Key, together with old copies of the data (say, from a leaked backup), won’t open the new ones.",
+      "limitsTitle": "What it doesn’t do",
+      "limits": "Entries already downloaded to another device stay there — they can only be erased on that device. Anyone who has copied them keeps the copy.",
+      "timeTitle": "How long it takes",
+      "time": "Entries on this device: {n}. It usually takes a few seconds, up to a couple of minutes for thousands of entries. Keep this tab open while it runs; if something interrupts it, you can resume or cancel.",
+      "continue": "Continue"
+    },
+    "password": {
+      "label": "Current password",
+      "hint": "Your password doesn’t change: it will open the new key too.",
+      "submit": "Create a new key"
+    },
+    "kit": {
+      "title": "Save your new Recovery Key",
+      "note": "It starts working once the key change is complete and replaces the old one right away. Until then, your current Recovery Key stays valid.",
+      "submit": "Change the key"
+    },
+    "progress": {
+      "title": "Changing the encryption key",
+      "starting": "Saving the new key and starting the change",
+      "sync": "Sending unsent changes and fetching fresh ones",
+      "encrypt": "Re-encrypting entries: {done} of {total}",
+      "encryptEmpty": "Re-encrypting entries",
+      "commit": "Confirming the key change on the server",
+      "commitRetry": "Re-encrypting entries changed on other devices (attempt {n})",
+      "finish": "Switching this device to the new key",
+      "keepOpen": "Keep this tab open while the key is being changed.",
+      "label": "Key change progress"
+    },
+    "done": {
+      "title": "Key changed",
+      "text": "All entries are re-encrypted with the new key. Other devices will ask you to sign in again and switch to the new key on their own. Your old Recovery Key no longer works — use the new one you saved.",
+      "close": "Done"
+    },
+    "failed": {
+      "title": "The key change isn’t complete",
+      "text": "Until it completes, everything keeps working with the current key. The new key is saved on this device — you can retry without your password.",
+      "retry": "Retry"
+    },
+    "unfinished": {
+      "title": "The key change isn’t finished",
+      "text": "It was started on this device on {date}. The new key is saved here — you can resume without your password. Until the change completes, everything keeps working with the current key.",
+      "resume": "Resume"
+    },
+    "abort": "Cancel key change",
+    "abortDialog": {
+      "title": "Cancel the key change?",
+      "text": "Your entries and keys stay as they are, and your current Recovery Key keeps working. You won’t need the new Recovery Key you saved.",
+      "confirm": "Cancel key change",
+      "keep": "Keep going"
+    },
+    "other": {
+      "title": "A key change is in progress on another device",
+      "text": "It was started on {date}. Sync works as usual meanwhile; once the change completes, this device will ask you to sign in again. If you didn’t start it or that device is lost, cancel it.",
+      "abort": "Cancel key change",
+      "password": "Confirm with your current password",
+      "confirm": "Cancel key change",
+      "cancel": "Don’t cancel"
+    },
+    "notice": {
+      "aborted": "Key change cancelled. Your entries and keys are unchanged, and your current Recovery Key still works.",
+      "cancelled": "The key change didn’t go through: it was cancelled on another device, or the password was changed, the Recovery Key reissued, or access recovered. Your entries and keys are unchanged, your current Recovery Key still works, and you won’t need the new one.",
+      "otherAborted": "The key change started on another device has been cancelled."
+    },
+    "banner": {
+      "running": "Changing the encryption key",
+      "runningText": "Keep this tab open until it finishes.",
+      "dismiss": "Dismiss",
+      "cancelledTitle": "Key change cancelled"
     }
   },
   "recoveryPending": {

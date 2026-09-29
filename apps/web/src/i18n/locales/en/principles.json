@@ -49,7 +49,7 @@
       },
       "account": {
         "what": "Account link",
-        "how": "If sync is on: your username, Account ID, this device’s id and secret, plus the password salt and protection settings from your last sign-in. The browser presents the device id and secret only when signing in (the server keeps just a hash of the secret), and the salt and settings help notice if they suddenly get weaker on the server."
+        "how": "If sync is on: your username, Account ID, this device’s id and secret, the key epoch (the number of your account’s current Master Key), plus the password salt and protection settings from your last sign-in. The browser presents the device id and secret only when signing in (the server keeps just a hash of the secret), and the salt and settings help notice if they suddenly get weaker on the server."
       },
       "conflicts": {
         "what": "Conflicting versions",
@@ -58,6 +58,10 @@
       "quarantine": {
         "what": "Quarantine",
         "how": "If an entry can’t be decrypted when you sign in to an account (corruption, a foreign key), it isn’t lost and doesn’t block sign-in: its ciphertext is set aside on this device and never sent anywhere. In Settings → Data you can download it as is or delete it."
+      },
+      "pendingRotation": {
+        "what": "Unfinished key change",
+        "how": "Only while an encryption key change started on this device is in progress: the new Master Key is kept here wrapped by the device key — just like the current one — so the change can be resumed after a reload without your password. It’s removed as soon as the change completes or is cancelled."
       },
       "prefs": {
         "what": "Interface settings",
@@ -78,7 +82,7 @@
     "items": {
       "masterKey": {
         "title": "Master Key",
-        "text": "256 random bits, created on your device and not derived from your password. You can change your password without re-encrypting entries."
+        "text": "256 random bits, created on your device and not derived from your password. You can change your password without re-encrypting entries. And the Master Key itself can be changed in Settings → Security: every entry is re-encrypted with the new key, each with a new key of its own."
       },
       "objects": {
         "title": "AES-256-GCM for every entry",
@@ -108,7 +112,11 @@
       },
       "keys": {
         "what": "Master Key envelopes",
-        "how": "The Master Key encrypted with your password, and the Master Key encrypted with your Recovery Key. Without the password or key nobody can open them — neither we nor anyone else."
+        "how": "The Master Key encrypted with your password, and the Master Key encrypted with your Recovery Key — for the current key epoch (the Master Key’s number, which grows with each encryption key change). Without the password or key nobody can open them — neither we nor anyone else."
+      },
+      "rotation": {
+        "what": "Key change",
+        "how": "Only while an encryption key change is in progress — a temporary draft: copies of entries re-encrypted with the new key (also ciphertext, with the entry id and version), envelopes of the new Master Key and a hash of the new Recovery Key, when it started and which device started it. Once confirmed, the draft replaces the old ciphertexts and envelopes; if cancelled, it’s deleted."
       },
       "recovery": {
         "what": "Recovery Key",
@@ -120,7 +128,7 @@
       },
       "records": {
         "what": "Entries",
-        "how": "Opaque ciphertext (up to 256 KiB) with the entry id, version number, change time and a deletion flag. They reveal the size and timing of changes, not the content."
+        "how": "Opaque ciphertext (up to 256 KiB) with the entry id, version number, key epoch, change time and a deletion flag. They reveal the size and timing of changes, not the content."
       },
       "devices": {
         "what": "Devices",
@@ -159,10 +167,10 @@
     "title": "Honest limitations",
     "items": {
       "webCode": "The web app is loaded from the server, so you trust the code it serves: a server serving malicious code could read entries in an open tab. This is a general limit of encryption in web apps. We reduce the risk with a strict CSP and no third-party scripts, but there are no signed builds yet.",
-      "noRotation": "There is no encryption key rotation yet: changing your password protects future sign-ins but doesn’t revoke access that was already obtained — for example, on a device where the vault is already open.",
-      "recoveryKey": "The Recovery Key is a decryption key. The 48-hour delay protects access to the account, not the data: whoever has both the key and the ciphertext (for example, from a database leak) can read your entries right away. And if nobody opens the app on a signed-in device during those 48 hours, nobody sees the warning. Keep the key offline, separate from your password.",
+      "rotation": "Changing the encryption key protects the future, not the past. A revoked or compromised device can’t read entries created or changed afterwards, and the old password envelope and old Recovery Key, together with old copies of the data, won’t open the new ones. But entries already downloaded to another device or copied stay there: what was read can’t be un-read. Changing your password doesn’t change the encryption key.",
+      "recoveryKey": "The Recovery Key is a decryption key. The 48-hour delay protects access to the account, not the data: whoever has both the key and the ciphertext (for example, from a database leak) can read your entries right away. And if nobody opens the app on a signed-in device during those 48 hours, nobody sees the warning. Keep the key offline, separate from your password; if it may have fallen into the wrong hands, change the encryption key — the old Recovery Key won’t open the new data.",
       "knownDevice": "On a known device the vault opens without a password: your entries are protected by the browser profile and your OS account. Use a screen lock and disk encryption.",
-      "revoke": "Revoking a device stops its sync but doesn’t erase data already downloaded to it."
+      "revoke": "Revoking a device stops its sync but doesn’t erase data already downloaded to it. To make sure it can’t read new or changed entries, change the encryption key after revoking it."
     }
   },
   "cookies": {
@@ -221,6 +229,7 @@
       "wipe": "Wipe data from a device: entries are removed from this browser but stay on the server and your other devices.",
       "delete": "Account deletion: the server immediately deletes the account, key envelopes, devices, sessions and all encrypted entries — no trash bins or delayed retention.",
       "devices": "A list of devices, revoking any of them, and signing out everywhere.",
+      "rotation": "Changing the encryption key: a new Master Key, every entry re-encrypted, a new Recovery Key issued, and your other devices ask you to sign in again.",
       "aiPrompt": "“Prompt for your own AI” on the review screen is only copied to the clipboard: you decide where to paste it, the app sends nothing anywhere.",
       "ai": "AI features, if they appear, only with explicit consent and a warning that entry text will be sent to an external provider."
     }

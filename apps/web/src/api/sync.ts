@@ -15,8 +15,9 @@ export const ACCOUNT_HEADER = 'X-Impact-Account'
  * Каждый запрос /api/sync/* несёт публичный Account ID хранилища (vault.account.accountId): если cookie
  * сессии принадлежит другому аккаунту (вошли в другой аккаунт в соседней вкладке), сервер откажет,
  * и объекты одного аккаунта не уйдут в другой. Без привязанного аккаунта запрос не отправляется.
+ * keyEpoch — эпоха ключа хранилища (ADR-0012), ею помечается каждый push.
  */
-export function createSyncApi(accountId: () => string | null) {
+export function createSyncApi(accountId: () => string | null, keyEpoch: () => number = () => 1) {
   function headers(): Record<string, string> {
     const id = accountId()
     if (!id) throw new ApiError(409, 'ACCOUNT_MISMATCH')
@@ -27,8 +28,16 @@ export function createSyncApi(accountId: () => string | null) {
       request(`/sync/pull?cursor=${cursor}&limit=${limit}`, pullResponseSchema, {
         headers: headers(),
       }),
-    push: async (changes: PushChange[]) =>
-      post('/sync/push', pushResponseSchema, { changes }, headers()),
+    /** Каждое изменение помечается эпохой ключа хранилища (ADR-0012): шифротекст старой эпохи → STALE_KEY */
+    push: async (changes: PushChange[]) => {
+      const epoch = keyEpoch()
+      return post(
+        '/sync/push',
+        pushResponseSchema,
+        { changes: changes.map((change) => ({ ...change, keyEpoch: epoch })) },
+        headers(),
+      )
+    },
     entitlements: () => request('/entitlements', entitlementsResponseSchema),
   } satisfies SyncTransport & { entitlements: unknown }
 }

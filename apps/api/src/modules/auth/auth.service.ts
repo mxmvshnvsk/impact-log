@@ -30,6 +30,7 @@ import {
   setDeviceTrust,
 } from '../devices/devices'
 import { putEnvelope } from '../keys/envelopes'
+import { cancelRotation } from '../keys/rotationStore'
 import { hashAuthKey, verifyAuthKey, verifyDummy } from './authKey'
 import {
   CLEAR_DELAYED_RECOVERY,
@@ -461,7 +462,8 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
    * новый пароль (authKey, KDF, соль, конверт того же MK). Все сессии пользователя удаляются, «доверие»
    * снимается со всех устройств, блокировка перебора TOTP снимается, отложенное восстановление снимается.
    * Новая сессия помечена viaRecovery только после пути C (перевыпуск 2FA без текущего кода — телефона нет);
-   * после пути A 2FA у пользователя есть.
+   * после пути A 2FA у пользователя есть. Идущая ротация MK отменяется: её password-конверт сделан старым
+   * паролем, а новый password-конверт — прежнего MK (ADR-0012).
    */
   async function completeRecovery(current: ActiveSession, input: RecoveryCompleteRequest) {
     const stage = current.recoveryStage
@@ -502,6 +504,7 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
         .returning()
       if (!user) throw new AppError('RECOVERY_NOT_READY', 403)
       await putEnvelope(tx, user.id, 'password', input.passwordEnvelope)
+      await cancelRotation(tx, user.id)
       await deleteUserSessions(tx, user.id)
       await forgetDeviceTrust(tx, user.id)
       const candidate = await findDeviceBySecret(tx, user.id, input.deviceId, input.deviceSecret)

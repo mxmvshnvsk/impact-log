@@ -5,7 +5,8 @@
     "syncing": "Syncing…",
     "offline": "Offline",
     "signed-out": "Sign in needed",
-    "error": "Sync error"
+    "error": "Sync error",
+    "paused": "Sync paused"
   },
   "indicator": {
     "pending": "{n} not sent",
@@ -22,7 +23,8 @@
     "retry": "Retrying automatically {time}",
     "offline": "Can’t reach the server. Entries are saved on this device and will be sent when you’re back online.",
     "off": "Sync works while you’re signed in to your account.",
-    "otherTab": "Another open impact log tab is syncing."
+    "otherTab": "Another open impact log tab is syncing.",
+    "paused": "Sync is paused while the encryption key is being changed and will resume on its own."
   },
   "quota": {
     "title": "Plan limit reached",
@@ -36,7 +38,8 @@
     "VAULT_LOCKED": "The vault is locked — reload the page.",
     "RATE_LIMITED": "Too many requests. We’ll try again shortly.",
     "ACCOUNT_MISMATCH": "The session open in this browser belongs to a different account. Sync is stopped; entries on this device are untouched. Sign in again to the account this device is linked to, then press “Sync now”.",
-    "generic": "The server returned an error ({code}). We’ll retry automatically."
+    "generic": "The server returned an error ({code}). We’ll retry automatically.",
+    "KEY_CHANGED": "The encryption key was changed on another device — sign in again. Entries on this device are untouched: after you sign in they switch to the new key."
   },
   "conflicts": {
     "title": "Sync conflicts",

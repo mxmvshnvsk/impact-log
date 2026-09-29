@@ -2,6 +2,7 @@ import { createApp, defineComponent, h } from 'vue'
 import App from './App.vue'
 import { PwaOfflineBanner } from './components/PwaOfflineBanner'
 import { PwaUpdateToast } from './components/PwaUpdateToast'
+import { refreshKeyRotation } from './composables/useKeyRotation'
 import { bootstrapAccount } from './composables/useSync'
 import { initTheme } from './composables/useTheme'
 import { i18n } from './i18n'
@@ -26,5 +27,6 @@ createApp(AppRoot).use(i18n).use(router).mount('#app')
 // Офлайн-оболочка (service worker, только production) и цвет панели браузера под тему
 initPwa()
 
-// Аккаунт синхронизации — после первого рендера: локальные записи доступны и без сети
-void bootstrapAccount()
+// Аккаунт синхронизации — после первого рендера: локальные записи доступны и без сети.
+// Затем — сверка незавершённой ротации ключа (ADR-0012), если она была начата на этом устройстве
+void bootstrapAccount().then(() => refreshKeyRotation({ onlyDraft: true }))

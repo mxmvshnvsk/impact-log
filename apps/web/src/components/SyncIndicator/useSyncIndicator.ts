@@ -1,4 +1,12 @@
-import { CloudAlert, CloudCheck, CloudOff, CloudUpload, LogIn, RefreshCw } from 'lucide-vue-next'
+import {
+  CloudAlert,
+  CloudCheck,
+  CloudOff,
+  CloudUpload,
+  LogIn,
+  RefreshCcwDot,
+  RefreshCw,
+} from 'lucide-vue-next'
 import { type Component, computed, onScopeDispose, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSync } from '@/composables/useSync'
@@ -26,6 +34,8 @@ export function useSyncIndicator() {
         return { icon: CloudOff, tone: 'muted' }
       case 'signed-out':
         return { icon: LogIn, tone: 'warning' }
+      case 'paused':
+        return { icon: RefreshCcwDot, tone: 'muted' }
       case 'error':
         return { icon: CloudAlert, tone: 'danger' }
       default:

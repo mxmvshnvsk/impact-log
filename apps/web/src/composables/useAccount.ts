@@ -40,6 +40,7 @@ import {
   VaultUnavailableError,
 } from '@/vault'
 import { useEntitlements } from './useEntitlements'
+import { refreshKeyRotation } from './useKeyRotation'
 import { useSession } from './useSession'
 import { useSync } from './useSync'
 import { useVault } from './useVault'
@@ -80,8 +81,11 @@ export type LoginOptions = {
   decideMerge?: MergeDecider
 }
 
-/** Как хранилище переходит на MK аккаунта */
-type AdoptionPlan = 'create' | 'same' | 'merge' | 'wipe'
+/**
+ * Как хранилище переходит на MK аккаунта. rekey — тот же аккаунт, но его MK сменили на другом устройстве
+ * (ротация, ADR-0012): версии и неотправленные правки сохраняются, никакого диалога слияния
+ */
+type AdoptionPlan = 'create' | 'same' | 'merge' | 'wipe' | 'rekey'
 
 /** Вход прошёл пароль, ждём код 2FA. KEK держим в замыкании до ответа, затем обнуляем */
 export type PendingSecondFactor = {
@@ -208,7 +212,7 @@ export function useAccount() {
   }
 
   /** Привязка из ответа сервера; секрет устройства приходит только при создании устройства */
-  function accountFrom(response: SessionResponse): VaultAccount {
+  function accountFrom(response: SessionResponse, keyEpoch: number): VaultAccount {
     const { user, deviceId } = response
     const previous = account.value
     const deviceSecret =
@@ -222,6 +226,7 @@ export function useAccount() {
       login: user.login,
       deviceId,
       ...(deviceSecret ? { deviceSecret } : {}),
+      keyEpoch,
     }
   }
 
@@ -233,6 +238,14 @@ export function useAccount() {
     broadcast({ type: 'vault-changed' })
     await Promise.all([labelDeviceIfNeeded(deviceId), refreshEntitlements()])
     void sync.start().catch((error) => console.warn('[account] sync start failed', error))
+    // Ротация ключа, начатая на этом устройстве до входа: продолжить, доделать или забыть
+    void refreshKeyRotation({ onlyDraft: true })
+  }
+
+  /** Ключ аккаунта сменили на другом устройстве: хранилище этого же аккаунта, эпоха на сервере новее */
+  function isRotated(userId: string, keyEpoch: number): boolean {
+    const current = account.value
+    return current !== null && current.userId === userId && keyEpoch > vault.keyEpoch.value
   }
 
   /**
@@ -245,6 +258,7 @@ export function useAccount() {
     masterKey: Uint8Array,
     login: string,
     decide: MergeDecider | 'merge' | undefined,
+    rotated = false,
   ): Promise<AdoptionPlan> {
     // Хранилище есть, но не открылось (сбой) — не создаём новое поверх: прежний MK пропал бы навсегда
     if (vault.status.value === 'unavailable')
@@ -254,6 +268,8 @@ export function useAccount() {
     const same = sameKey(local, masterKey)
     local.fill(0)
     if (same) return 'same'
+    // MK сменили ротацией (тот же аккаунт): молча переходим на новый ключ, правки на устройстве сохраняются
+    if (rotated) return 'rekey'
     if (decide === 'merge') return 'merge'
     const count = await countActive('impact').catch(() => 0)
     // Записей нет — сливать нечего (служебные остатки переносит/откладывает в карантин сама смена MK)
@@ -273,13 +289,24 @@ export function useAccount() {
     response: SessionResponse,
     kdfPin: KdfPin,
     plan: AdoptionPlan,
+    keyEpoch: number,
   ) {
     try {
-      const binding = accountFrom(response)
+      const binding = accountFrom(response, keyEpoch)
       if (plan === 'create') {
         await vault.create(masterKey.slice(), { account: binding, kdfPin })
       } else if (plan === 'same') {
         await vault.bind(binding, kdfPin)
+      } else if (plan === 'rekey') {
+        // Перешифровка всех объектов — синхронизация в это время не должна работать
+        sync.stop()
+        const result = await vault.rekeyMasterKey(masterKey, keyEpoch, {
+          account: binding,
+          kdfPin,
+        })
+        if (result.quarantined > 0) {
+          console.warn('[account] undecryptable objects moved to quarantine', result.quarantined)
+        }
       } else {
         // Смена MK переписывает все объекты — синхронизация в это время не должна работать
         sync.stop()
@@ -362,7 +389,8 @@ export function useAccount() {
       masterKey.fill(0)
       throw error
     }
-    await finish(masterKey, response, kdfPin, plan)
+    // Новый аккаунт — первая эпоха ключа
+    await finish(masterKey, response, kdfPin, plan, 1)
   }
 
   // ---------- вход ----------
@@ -376,15 +404,22 @@ export function useAccount() {
   ) {
     onStage('unlock')
     let masterKey: Uint8Array
+    let keyEpoch: number
     try {
-      const { envelopes } = await accountApi.keys()
-      masterKey = await openPasswordEnvelopeWithKek(pickEnvelope(envelopes, 'password'), kek)
+      const keys = await accountApi.keys()
+      keyEpoch = keys.keyEpoch
+      masterKey = await openPasswordEnvelopeWithKek(pickEnvelope(keys.envelopes, 'password'), kek)
     } finally {
       kek.fill(0)
     }
     let plan: AdoptionPlan
     try {
-      plan = await planAdoption(masterKey, response.user.login, options.decideMerge)
+      plan = await planAdoption(
+        masterKey,
+        response.user.login,
+        options.decideMerge,
+        isRotated(response.user.id, keyEpoch),
+      )
     } catch (error) {
       masterKey.fill(0)
       // Отказались от входа: только что открытую сессию закрываем, хранилище не тронуто
@@ -392,7 +427,7 @@ export function useAccount() {
       throw error
     }
     onStage('vault')
-    await finish(masterKey, response, kdfPin, plan)
+    await finish(masterKey, response, kdfPin, plan, keyEpoch)
   }
 
   /**
@@ -527,8 +562,12 @@ export function useAccount() {
       async complete(newPassword, options = {}) {
         if (done || !masterKey) throw new ApiError(401, 'SESSION_EXPIRED')
         const stage = options.onStage ?? noop
+        // Хранилище этого же логина с другим MK — скорее всего, ключ сменили ротацией на другом устройстве:
+        // тогда без вопросов (проверим по эпохе после ответа сервера)
+        const bound = account.value
+        const maybeRotated = bound !== null && bound.login === loginName
         // Что делать с локальными записями — спрашиваем до запроса к серверу: отмена ничего не меняет
-        const plan = await planAdoption(masterKey, loginName, options.decideMerge)
+        let plan = await planAdoption(masterKey, loginName, options.decideMerge, maybeRotated)
         stage('kdf')
         const password = await createPasswordMaterial(newPassword, masterKey)
         stage('server')
@@ -549,11 +588,28 @@ export function useAccount() {
         }
         done = true
         stage('vault')
+        const keyEpoch = await accountApi
+          .keys()
+          .then((keys) => keys.keyEpoch)
+          .catch(() => (bound?.userId === response.user.id ? vault.keyEpoch.value : 1))
+        if (plan === 'rekey' && !isRotated(response.user.id, keyEpoch)) {
+          // Не ротация (например, аккаунт с этим логином создан заново) — прежний вопрос о записях
+          try {
+            plan = await planAdoption(masterKey, loginName, options.decideMerge)
+          } catch (error) {
+            masterKey.fill(0)
+            masterKey = null
+            if (error instanceof AccountFlowCancelledError) await serverLogout({}).catch(() => {})
+            resumeSync()
+            throw error
+          }
+        }
         await finish(
           masterKey,
           response,
           { login: response.user.login, kdf: password.kdf, salt: password.salt },
           plan,
+          keyEpoch,
         )
         masterKey = null
         return { currentAuthKey: password.authKey, totpRequired: unlockedBy === 'delay' }
@@ -605,6 +661,8 @@ export function useAccount() {
       await accountApi.changePassword({ currentAuthKey: authKey, ...next }).catch(handle)
       // Смена пароля снимает и отложенное восстановление (сервер), предупреждение больше не нужно
       session.clearRecoveryPending()
+      // …и отменяет идущую ротацию ключа (её конверты сделаны прежним паролем)
+      void refreshKeyRotation()
       // Новые соль и параметры KDF — это наша смена, при следующем входе предупреждать не о чем
       const current = account.value
       if (current) {
@@ -656,6 +714,8 @@ export function useAccount() {
       .catch(handle)
     // Старый ключ больше не действует — отложенное восстановление по нему сервер снял
     session.clearRecoveryPending()
+    // Перевыпуск отменяет идущую ротацию ключа (у неё свой Recovery Key)
+    void refreshKeyRotation()
   }
 
   /**

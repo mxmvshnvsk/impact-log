@@ -1,5 +1,5 @@
 /** Действия раздела «Безопасность» (Настройки → Аккаунт) */
-export type SecurityAction = 'password' | 'recoveryKey' | 'totp'
+export type SecurityAction = 'password' | 'recoveryKey' | 'totp' | 'keyRotation'
 
 /**
  * Якорь строки раздела (#security-recoveryKey): ссылка на него открывает нужную форму сразу.

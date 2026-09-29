@@ -15,9 +15,11 @@ import {
   watch,
 } from 'vue'
 import { useI18n } from 'vue-i18n'
+import type { RouteLocationRaw } from 'vue-router'
 import { z } from 'zod'
 import { errorKey, isStepExpiredError, recoveryNotReadyUntil } from '@/account'
 import type { RecoveryFactorPhase } from '@/components/RecoveryFactor'
+import { securityAnchor } from '@/components/SecurityPanel/anchor'
 import {
   AccountFlowCancelledError,
   type AccountStage,
@@ -304,6 +306,13 @@ export function useRecoverView() {
     }
   }
 
+  // ---------- шаг 5 после пути без второго фактора: предложить и смену ключа шифрования ----------
+  /** Настройки → Безопасность, сразу с открытой сменой ключа (она выдаст и новый Recovery Key) */
+  const rotateTo: RouteLocationRaw = {
+    name: 'settings-account',
+    hash: `#${securityAnchor('keyRotation')}`,
+  }
+
   onBeforeUnmount(() => {
     pending.value?.cancel()
     currentAuthKey.value = null
@@ -345,5 +354,7 @@ export function useRecoverView() {
     totpRef,
     startTotp,
     confirmTotp,
+    suggestRotation: computed(() => step.value === 'done' && totpRequired.value),
+    rotateTo,
   }
 }

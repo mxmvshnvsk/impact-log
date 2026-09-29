@@ -58,6 +58,7 @@ const DEVICE = [
   'account',
   'conflicts',
   'quarantine',
+  'pendingRotation',
   'prefs',
   'draft',
   'swCache',
@@ -74,6 +75,7 @@ const SERVER = [
   'account',
   'password',
   'keys',
+  'rotation',
   'recovery',
   'totp',
   'records',
@@ -94,7 +96,7 @@ const NEVER = [
 ] as const
 
 /** Честные ограничения: то, от чего модель не защищает (подробно — ADR-0006, «Модель угроз») */
-const LIMITS = ['webCode', 'noRotation', 'recoveryKey', 'knownDevice', 'revoke'] as const
+const LIMITS = ['webCode', 'rotation', 'recoveryKey', 'knownDevice', 'revoke'] as const
 
 const COOKIES = ['session', 'device'] as const
 
@@ -122,6 +124,7 @@ const CONTROL = [
   { key: 'wipe', soon: false },
   { key: 'delete', soon: false },
   { key: 'devices', soon: false },
+  { key: 'rotation', soon: false },
   { key: 'aiPrompt', soon: false },
   { key: 'ai', soon: false },
 ] as const

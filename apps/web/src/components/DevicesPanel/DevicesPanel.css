@@ -136,3 +136,10 @@
     grid-column: 3;
   }
 }
+
+.devices__link {
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

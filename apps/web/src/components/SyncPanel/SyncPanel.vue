@@ -18,6 +18,7 @@
     <p class="sync-panel__lead">{{ t('sync.panel.description') }}</p>
 
     <p v-if="status === 'off'" class="sync-panel__muted">{{ t('sync.panel.off') }}</p>
+    <p v-else-if="status === 'paused'" class="sync-panel__muted">{{ t('sync.panel.paused') }}</p>
     <ul v-else class="sync-panel__facts">
       <li>{{ lastSync }}</li>
       <li>{{ pendingText }}</li>
@@ -39,7 +40,7 @@
       <template v-if="status === 'error' && retryText"> {{ retryText }}</template>
     </UiAlert>
 
-    <div v-if="status !== 'off' && status !== 'signed-out'" class="sync-panel__actions">
+    <div v-if="status !== 'off' && status !== 'signed-out' && status !== 'paused'" class="sync-panel__actions">
       <UiButton
         variant="secondary"
         size="sm"

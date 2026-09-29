@@ -19,7 +19,9 @@
 | TOTP-секрет | `v2:` + AES-256-GCM (тег 16 байт) ключом `HKDF(TOTP_ENCRYPTION_KEY, 'impact-log/v1/totp-secret')`, AAD = `users.id` |
 | Счётчик неудачных кодов 2FA | `totp_failed_count`, `totp_locked_until` (блокировка перебора) |
 | Отложенное восстановление | `recovery_started_at`, `recovery_available_at` (когда запущено и когда созреет) |
-| Объекты синхронизации | шифротекст ≤ 256 КиБ, версия, tombstone, `seq` |
+| Объекты синхронизации | шифротекст ≤ 256 КиБ, версия, tombstone, `seq`, эпоха ключа `key_epoch` |
+| Эпоха Master Key (ADR-0012) | `users.key_epoch` — с 1, +1 при каждой завершённой ротации MK |
+| Идущая ротация MK | `key_rotations`: конверты нового MK (непрозрачные), SHA-256 нового `recoveryAuthKey`, устройство-инициатор, целевая эпоха; `rotation_objects`: черновик — перешифрованные живые объекты до commit |
 | Устройства | зашифрованное название, SHA-256 секрета устройства, SHA-256 trust-токена, срок, `last_seen_at`, отзыв |
 | Аккаунт | `accountId` (12 символов Crockford Base32 из 60 случайных бит), логин, тариф |
 
@@ -63,8 +65,9 @@
 - CSRF: POST — только `application/json`; для всех изменяющих запросов `Origin` (если прислан) должен совпадать
   с хостом. PUT/PATCH/DELETE кросс-сайтово без preflight не отправить, поэтому Content-Type для них не требуется.
   Пустое JSON-тело трактуется как `{}`.
-- Ошибки: `{ error: { code, details? } }`, коды — `ERROR_CODES` из shared (`details` — только несекретное,
-  например `availableAt` у `RECOVERY_NOT_READY`). Неизвестный логин и неверный authKey
+- Ошибки: `{ error: { code, details? } }`, коды — `ERROR_CODES` из shared (`details` — только несекретное:
+  `availableAt` у `RECOVERY_NOT_READY`, идущая ротация у `ROTATION_IN_PROGRESS`, `{missing, stale}` у
+  `ROTATION_INCOMPLETE`). Неизвестный логин и неверный authKey
   неразличимы (`INVALID_CREDENTIALS`, для неизвестного логина — проверка Argon2id «вхолостую»).
 - Лимиты частоты → `429 RATE_LIMITED` (заголовок `Retry-After`):
   - по IP (ключ: IPv4 целиком, IPv6 — префикс /64, IPv4-mapped — как IPv4): prelogin 30/5 мин,
@@ -75,7 +78,9 @@
     любой, кто знает логин, мог бы запереть владельца; распределённому перебору мешают Argon2id на стороне
     атакующего и обязательная 2FA с блокировкой на пользователя. prelogin и recovery/begin — только по IP
     (соль для чужих логинов фальшивая, Recovery Key не подобрать);
-  - по пользователю: `/api/sync/*` — `SYNC_RATE_LIMIT_MAX` запросов в минуту (по умолчанию 120).
+  - по пользователю: `/api/sync/*` — `SYNC_RATE_LIMIT_MAX` запросов в минуту (по умолчанию 120);
+    `/api/keys/rotation/stage` и `/commit` — столько же, отдельным счётчиком;
+  - ротация MK: `/api/keys/rotation/start` и `/abort` — 10/15 мин с IP.
 - JSON с символом NUL (`\u0000`) в строке или ключе → `400 VALIDATION_ERROR` (Postgres не хранит NUL в text).
 - Логи: запрос — только метод, путь и усечённый IP; тела не логируются. Ошибки БД (`DrizzleQueryError`,
   `PostgresError`) — только имя, SQLSTATE (`code`), имя ограничения и кадры стека: без текста запроса,
@@ -100,25 +105,30 @@
 | `POST /api/auth/recovery/verify` | recovery | `{code}` → `{recoveryEnvelope}` | Путь A: код 2FA (блокировка перебора, защита от повтора, попытки сессии) → стадия `unlocked-totp` |
 | `POST /api/auth/recovery/delay` | recovery | — → `{availableAt}` | Путь C: запускает отсчёт `RECOVERY_DELAY_HOURS` (48 ч); идёт или созрел и не истёк — прежний срок |
 | `POST /api/auth/recovery/resume` | recovery | — → `{recoveryEnvelope}` | Путь C: `availableAt ≤ now ≤ availableAt + RECOVERY_READY_TTL_DAYS` → стадия `unlocked-delayed`. Рано → `403 RECOVERY_NOT_READY` с `details.availableAt`; не начато / истекло → `403 RECOVERY_NOT_READY` без `details` |
-| `POST /api/auth/recovery/complete` | recovery (unlocked) | `{authKey, kdf, salt, passwordEnvelope, deviceId?, deviceSecret?}` → `{user, deviceId, deviceSecret?}` | До verify/resume → `403 FORBIDDEN`. Новый пароль; все сессии удаляются, доверие устройств снимается, блокировка TOTP и отложенное восстановление снимаются; обычная (не 30-дневная) сессия, `via_recovery` — только после пути C |
+| `POST /api/auth/recovery/complete` | recovery (unlocked) | `{authKey, kdf, salt, passwordEnvelope, deviceId?, deviceSecret?}` → `{user, deviceId, deviceSecret?}` | До verify/resume → `403 FORBIDDEN`. Новый пароль; все сессии удаляются, доверие устройств снимается, блокировка TOTP и отложенное восстановление снимаются, идущая ротация MK отменяется; обычная (не 30-дневная) сессия, `via_recovery` — только после пути C |
 | `POST /api/auth/logout` | full | `{everywhere?}` → `{ok}` | `everywhere` — все сессии и доверие всех устройств |
 | `GET /api/auth/me` | full | → `{user, deviceId, recoveryPending}` | `deviceSecret` не отдаётся. `recoveryPending: {availableAt} \| null` — не null, пока отсчёт идёт или созрел и не истёк |
-| `GET /api/keys` | full | → `{envelopes: [{type, envelope, updatedAt}]}` | |
-| `POST /api/account/password` | full | `{currentAuthKey, authKey, kdf, salt, passwordEnvelope}` → `{ok}` | Остальные сессии удаляются, отложенное восстановление снимается |
-| `POST /api/account/recovery-key` | full | `{currentAuthKey, recoveryEnvelope, recoveryAuthKey}` → `{ok}` | Старый Recovery Key сразу перестаёт работать; начатые им восстановления и сбросы 2FA (recovery- и totp-reset-сессии) удаляются, отложенное восстановление снимается |
+| `GET /api/keys` | full | → `{envelopes: [{type, envelope, updatedAt}], keyEpoch, rotation}` | Конверты и `keyEpoch` — одним снимком (одной эпохи). `rotation: {targetEpoch, startedAt, deviceId, staged} \| null` — идущая ротация MK |
+| `POST /api/keys/rotation/start` | full | `{currentAuthKey, passwordEnvelope, recoveryEnvelope, recoveryAuthKey}` → `{targetEpoch, startedAt, deviceId, staged}` | Ротация MK (ниже). Неверный `currentAuthKey` → `403 INVALID_CREDENTIALS`; уже идёт → `409 ROTATION_IN_PROGRESS` (`details` — идущая ротация) |
+| `POST /api/keys/rotation/stage` | full, устройство-инициатор | `{objects: [{objectId, version, ciphertext}]}` (1–200) → `{results: [{objectId, status: staged\|rejected}], staged}` | Тело ≤ 8 МиБ. Нет ротации → `409 NO_ROTATION`; другое устройство → `403 FORBIDDEN` |
+| `POST /api/keys/rotation/commit` | full, устройство-инициатор | — → `{keyEpoch}` | Черновик неполон → `409 ROTATION_INCOMPLETE`, `details: {missing, stale}`; нет ротации → `409 NO_ROTATION`; другое устройство → `403 FORBIDDEN`. Остальные сессии удаляются |
+| `POST /api/keys/rotation/abort` | full | инициатор — без тела; другое устройство — `{currentAuthKey}` → `{ok}` | Без ключа / неверный с другого устройства → `403 INVALID_CREDENTIALS`; ротации нет → `ok` |
+| `POST /api/account/password` | full | `{currentAuthKey, authKey, kdf, salt, passwordEnvelope}` → `{ok}` | Остальные сессии удаляются, отложенное восстановление снимается, идущая ротация MK отменяется |
+| `POST /api/account/recovery-key` | full | `{currentAuthKey, recoveryEnvelope, recoveryAuthKey}` → `{ok}` | Старый Recovery Key сразу перестаёт работать; начатые им восстановления и сбросы 2FA (recovery- и totp-reset-сессии) удаляются, отложенное восстановление снимается, идущая ротация MK отменяется |
 | `POST /api/account/recovery/cancel` | full | — → `{ok}` | Снимает отложенное восстановление, удаляет recovery- и totp-reset-сессии пользователя. Без повторного подтверждения (действие только защитное) |
 | `POST /api/account/totp/start` | full | `{currentAuthKey, code?}` → `{otpauthUri, secret}` | `code` — текущий код 2FA (блокировка перебора, защита от повтора); без него — `400 INVALID_CODE`, кроме сессии после отложенного восстановления (путь C, `via_recovery`). Новый секрет ждёт подтверждения, старый пока работает |
 | `POST /api/account/totp/confirm` | full | `{code}` → `{ok}` | Код по новому секрету; остальные сессии удаляются, у текущей снимается `via_recovery` (без кода — только один перевыпуск) |
 | `POST /api/account/delete` | full | `{currentAuthKey, code}` → `{ok}` | Удаляет всё каскадом, сбрасывает cookie |
 | `GET /api/devices` | full | → `{devices: [{deviceId, encryptedLabel, trusted, createdAt, lastSeenAt, current}]}` | Только не отозванные |
 | `PATCH /api/devices/:deviceId` | full | `{encryptedLabel}` → `{ok}` | Чужое / несуществующее / отозванное → `NOT_FOUND` |
-| `DELETE /api/devices/:deviceId` | full | → `{ok}` | Отзыв: сессии устройства удаляются, доверие снимается. Текущее → `FORBIDDEN` (для него есть logout) |
+| `DELETE /api/devices/:deviceId` | full | → `{ok}` | Отзыв: сессии устройства удаляются, доверие снимается; если устройство начало ротацию MK, она отменяется. Текущее → `FORBIDDEN` (для него есть logout) |
 | `GET /api/entitlements` | full | → `{plan, profile, usage: {activeImpacts, devices, storageBytes, objects}}` | `profile = resolveEntitlements({planId: plan})` |
 | `GET /api/sync/pull?cursor&limit` | full + `X-Impact-Account` | → `{changes, cursor, hasMore}` | См. ниже |
 | `POST /api/sync/push` | full + `X-Impact-Account` | `{changes}` → `{results}` | Тело ≤ 8 МиБ, иначе `413 PAYLOAD_TOO_LARGE` |
 | `POST /api/region/resolve` | — | `{login}` → `{region, apiBaseUrl, ttlSeconds}` | Одинаково для любых логинов |
 
-Повторное подтверждение в `/api/account/*`: неверный `currentAuthKey` → **403** `INVALID_CREDENTIALS`
+Повторное подтверждение в `/api/account/*` и `/api/keys/rotation/start` (и `abort` не с устройства-инициатора):
+неверный `currentAuthKey` → **403** `INVALID_CREDENTIALS`
 (не 401: сессия жива, клиент не должен разлогиниваться). Неверный / отсутствующий код → 400 `INVALID_CODE`.
 
 ## Восстановление доступа (ADR-0008 §8)
@@ -137,16 +147,43 @@ Recovery Key + ещё один фактор; без второго фактор�
   окне `[availableAt, availableAt + RECOVERY_READY_TTL_DAYS]` (7 дней), дальше — как не начатое (`begin` → `none`,
   периодическая уборка обнуляет поля). Пока оно идёт или созрело, `GET /api/auth/me` на вошедших устройствах отдаёт
   `recoveryPending`, и владелец может отменить (`POST /api/account/recovery/cancel`).
-- Снимается: отменой, завершением пути A или C, сбросом 2FA (B), сменой пароля, перевыпуском Recovery Key, удалением
-  аккаунта. Обычный вход и перевыпуск 2FA — не снимают. Отмена, смена пароля и перевыпуск ключа удаляют и
+- Снимается: отменой, завершением пути A или C, сбросом 2FA (B), сменой пароля, перевыпуском Recovery Key, ротацией
+  MK (commit), удалением аккаунта. Обычный вход и перевыпуск 2FA — не снимают. Отмена, смена пароля и перевыпуск ключа удаляют и
   незавершённые recovery-/totp-reset-сессии, поэтому уже выданная стадия `unlocked-*` тоже теряется.
 - Стадии recovery-сессии: `verify` и `resume` работают в любой стадии (`resume` не понижает `unlocked-totp`);
   `complete` — только из `unlocked-*`, одноразовый (сессия удаляется в той же транзакции).
 - Время отложенного восстановления — часы приложения (как сроки сессий).
 
+## Ротация Master Key (ADR-0012)
+
+Новый MK, все живые объекты перешифровываются им (свежие DEK), новый password-конверт (тот же пароль, соль и
+KDF → тот же `authKey`) и новый Recovery Key. Шифротексты новой эпохи копятся в черновике и подменяют живые
+объекты только атомарным commit — аккаунт никогда не бывает «наполовину перешифрованным».
+
+1. `start` (любое устройство, `currentAuthKey`) → ротация с `targetEpoch = keyEpoch + 1`; инициатор — устройство
+   сессии. Одна ротация на аккаунт. Конверты нового MK и хеш нового `recoveryAuthKey` лежат в `key_rotations` и до
+   commit ни на что не влияют.
+2. `stage` (только инициатор): каждый объект должен быть **живым** объектом пользователя, шифротекст — не больше
+   `2 × живой + 4 КиБ` → upsert в черновик (`version` — версия, с которой делалась перешифровка) → `staged`;
+   иначе `rejected`. Повтор `objectId` заменяет запись черновика.
+3. `commit` (только инициатор), одна транзакция под блокировкой строки пользователя: у каждого живого объекта
+   должна быть запись черновика с его текущей версией, иначе `409 ROTATION_INCOMPLETE { missing, stale }` (до 1000
+   id в каждом списке; ничего не меняется — клиент делает pull, дошифровывает и повторяет). Иначе: шифротексты
+   черновика → живые объекты (`key_epoch = target`, новые `seq`, **версии прежние**, tombstone'ы не трогаются,
+   квоты не применяются), конверты и `recovery_auth_hash` ротации → текущие, `users.key_epoch = target`, ротация и
+   черновик удалены, **все другие сессии** удалены (в том числе recovery/totp-reset), отложенное восстановление
+   снято. «Запомнить этот компьютер» сохраняется.
+4. `abort`: с инициатора — без тела, с другого устройства — `{currentAuthKey}`. Удаляет ротацию и черновик.
+
+Ротация **отменяется автоматически** при смене пароля, перевыпуске Recovery Key, `recovery/complete` и отзыве
+устройства-инициатора. Пока ротация идёт, push и pull работают как обычно у всех устройств (старым ключом) —
+устаревший черновик ловит commit (`stale`). stage и commit принимают необязательный `X-Impact-Account`: прислан
+и не совпал с пользователем сессии → `409 ACCOUNT_MISMATCH`.
+
 ## Синхронизация
 
-Объект — `(objectId, kind, version, ciphertext | null, deleted, seq)`; `kind` пока только `impact`.
+Объект — `(objectId, kind, version, ciphertext | null, deleted, seq, keyEpoch)`; `kind` пока только `impact`,
+`keyEpoch` — эпоха MK шифротекста (ADR-0012; у tombstone — эпоха аккаунта на момент удаления).
 Каждая запись объекта получает `seq = nextval('object_seq')` — монотонный курсор.
 
 **Заголовок `X-Impact-Account`** (`SYNC_ACCOUNT_HEADER`): каждый запрос `/api/sync/*` несёт публичный
@@ -163,10 +200,13 @@ Recovery Key + ещё один фактор; без второго фактор�
 
 **push**: изменения применяются по порядку в одной транзакции; пуши одного пользователя сериализуются
 (`SELECT … FROM users … FOR UPDATE`), поэтому `seq` внутри пользователя выдаются в порядке коммитов и pull
-не «перепрыгивает» незакоммиченное. Для каждого изменения `{objectId, kind, baseVersion, ciphertext}`:
+не «перепрыгивает» незакоммиченное. Для каждого изменения `{objectId, kind, baseVersion, ciphertext, keyEpoch}`
+(`keyEpoch` не прислан — 1):
 
 | Условие | Результат |
 | --- | --- |
+| `keyEpoch` больше эпохи аккаунта (будущие эпохи — только через черновик ротации) | `rejected INVALID` |
+| `ciphertext ≠ null` и `keyEpoch` меньше эпохи аккаунта | `rejected STALE_KEY` — клиент перешифровывает хранилище новым MK |
 | объекта нет и `baseVersion > 0` | `rejected INVALID` |
 | объекта нет и `ciphertext = null` (tombstone «из ничего») | `rejected INVALID` |
 | объект есть, но другого `kind` | `rejected INVALID` |
@@ -175,7 +215,9 @@ Recovery Key + ещё один фактор; без второго фактор�
 | новый живой объект сверх `maxObjects` или рост байт сверх `maxStorageBytes` | `rejected QUOTA_EXCEEDED` |
 | иначе | `accepted {version: прежняя + 1, seq}` |
 
-`ciphertext: null` — удаление (tombstone, `deleted: true`); удалить можно только существующий объект.
+`ciphertext: null` — удаление (tombstone, `deleted: true`); удалить можно только существующий объект. Tombstone
+со старой эпохой принимается (ключа в нём нет) и записывается с эпохой аккаунта; принятый шифротекст хранится с
+`keyEpoch` изменения. Pull и `conflict.server` отдают `keyEpoch` объекта.
 Квоты (`canCreateImpact`, `canStoreObjects` из shared):
 
 - `maxActiveImpacts` считает активные (не удалённые) impact и ограничивает **только создание** (включая
@@ -229,6 +271,9 @@ Recovery Key + ещё один фактор; без второго фактор�
   `sessions.recovery_stage` (стадия recovery-сессии; `null` у старых = `key`), `sessions.totp_pending_secret`
   (новый секрет в `totp-reset`-сессии). Новый вид сессии `totp-reset` — в колонке `text`, миграция не нужна.
   Recovery-сессии, начатые до 0004, завершить нельзя (стадия `key`) — начать заново.
+- `0005_key_rotation` (ADR-0012): `users.key_epoch` и `objects.key_epoch` (`integer not null default 1` —
+  существующие данные получают эпоху 1), таблицы `key_rotations` (идущая ротация MK) и `rotation_objects`
+  (её черновик, внешний ключ на `key_rotations` с каскадом). Данные не переносятся.
 - E2E: при запущенном API (`TRUST_PROXY=true`, чтобы «пользователи» скрипта шли с разных IP) и чистой БД —
   `cd apps/api && node scripts/e2e.mjs` (переменные `API_URL`, `DATABASE_URL` — по умолчанию локальные;
   `API_LOG_FILE` — лог API этого прогона, по умолчанию `/tmp/api.log`: проверяется, что в нём нет секретов

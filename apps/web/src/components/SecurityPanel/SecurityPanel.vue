@@ -16,7 +16,7 @@
             </dl>
           </div>
           <UiButton
-            v-if="active !== row.key"
+            v-if="!expanded(row.key)"
             size="sm"
             variant="secondary"
             class="security__row-action"
@@ -26,9 +26,10 @@
           </UiButton>
         </div>
         <UiAlert v-if="done === row.key" tone="success">{{ t(`account.security.${row.key}.done`) }}</UiAlert>
-        <div v-if="active === row.key" class="security__row-body">
+        <div v-if="expanded(row.key)" class="security__row-body">
           <ChangePasswordForm v-if="row.key === 'password'" @done="finish('password')" @cancel="close" />
           <RecoveryKeyRotation v-else-if="row.key === 'recoveryKey'" @done="finish('recoveryKey')" @cancel="close" />
+          <KeyRotation v-else-if="row.key === 'keyRotation'" @close="close" />
           <TotpRotation v-else @done="finish('totp')" @cancel="close" />
         </div>
       </li>
@@ -39,6 +40,7 @@
 <script setup lang="ts">
 import { ShieldCheck } from 'lucide-vue-next'
 import { ChangePasswordForm } from '@/components/ChangePasswordForm'
+import { KeyRotation } from '@/components/KeyRotation'
 import { RecoveryKeyRotation } from '@/components/RecoveryKeyRotation'
 import { SettingsSection } from '@/components/SettingsSection'
 import { TotpRotation } from '@/components/TotpRotation'
@@ -46,7 +48,7 @@ import { UiAlert } from '@/ui/UiAlert'
 import { UiButton } from '@/ui/UiButton'
 import { useSecurityPanel } from './useSecurityPanel'
 
-const { t, rows, scheme, anchor, active, done, open, close, finish } = useSecurityPanel()
+const { t, rows, scheme, anchor, active, done, expanded, open, close, finish } = useSecurityPanel()
 </script>
 
 <style scoped src="./SecurityPanel.css"></style>

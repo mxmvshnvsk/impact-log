@@ -44,7 +44,7 @@
       <SettingsSection
         v-if="mode === 'signed-out'"
         :title="t('account.signedOut.title')"
-        :lead="t('account.signedOut.text')"
+        :lead="signedOutText"
         :icon="LogIn"
         tone="warning"
       >
@@ -143,6 +143,7 @@ import { useSettingsAccountView } from './useSettingsAccountView'
 
 const {
   t,
+  signedOutText,
   mode,
   account,
   accountId,

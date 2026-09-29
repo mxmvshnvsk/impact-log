@@ -12,6 +12,7 @@ import { type DeviceRow, devices } from '../../db/schema'
 import { AppError } from '../../lib/errors'
 import { fullSessionOf, requireSession } from '../../plugins/session'
 import { deleteDeviceSessions } from '../auth/sessions'
+import { cancelRotationOfDevice } from '../keys/rotationStore'
 
 type Options = { db: Database }
 
@@ -73,7 +74,10 @@ export const devicesRoutes: FastifyPluginAsyncZod<Options> = async (app, { db })
     },
   )
 
-  /** Отзыв: устройство скрывается, его сессии удаляются, «доверие» снимается. Текущее — только через logout */
+  /**
+   * Отзыв: устройство скрывается, его сессии удаляются, «доверие» снимается. Текущее — только через logout.
+   * Если устройство начало ротацию MK, она отменяется: завершить её больше некому (ADR-0012)
+   */
   app.delete(
     '/:deviceId',
     { schema: { params: paramsSchema, response: { 200: okResponseSchema } } },
@@ -95,6 +99,7 @@ export const devicesRoutes: FastifyPluginAsyncZod<Options> = async (app, { db })
           .returning({ id: devices.id })
         if (!revoked) throw new AppError('NOT_FOUND', 404)
         await deleteDeviceSessions(tx, deviceId)
+        await cancelRotationOfDevice(tx, session.user.id, deviceId)
       })
       return { ok: true } as const
     },

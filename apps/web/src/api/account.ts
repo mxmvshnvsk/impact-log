@@ -2,10 +2,16 @@ import {
   type ChangePasswordRequest,
   devicesResponseSchema,
   entitlementsResponseSchema,
+  keyRotationSchema,
   keysResponseSchema,
   okResponseSchema,
   type RotateRecoveryKeyRequest,
+  type RotationStageRequest,
+  type RotationStartRequest,
   registerStartResponseSchema,
+  rotationCommitResponseSchema,
+  rotationStageResponseSchema,
+  SYNC_ACCOUNT_HEADER,
 } from '@impact-log/shared'
 import { post, request } from './http'
 
@@ -32,6 +38,36 @@ export const accountApi = {
   deleteAccount: (body: { currentAuthKey: string; code: string }) =>
     post('/account/delete', okResponseSchema, body),
   entitlements: () => request('/entitlements', entitlementsResponseSchema),
+}
+
+/**
+ * Ротация Master Key (ADR-0012): start → stage… → commit (или abort). Черновик и commit — только с
+ * устройства-инициатора; accountId (X-Impact-Account) — сверка, что ротацию завершает хранилище того же
+ * аккаунта, что и сессия.
+ */
+export const keyRotationApi = {
+  start: (body: RotationStartRequest) => post('/keys/rotation/start', keyRotationSchema, body),
+  stage: (objects: RotationStageRequest['objects'], accountId: string) =>
+    post(
+      '/keys/rotation/stage',
+      rotationStageResponseSchema,
+      { objects },
+      {
+        [SYNC_ACCOUNT_HEADER]: accountId,
+      },
+    ),
+  commit: (accountId: string) =>
+    post(
+      '/keys/rotation/commit',
+      rotationCommitResponseSchema,
+      {},
+      {
+        [SYNC_ACCOUNT_HEADER]: accountId,
+      },
+    ),
+  /** С устройства-инициатора — без подтверждения; с другого — currentAuthKey текущего пароля */
+  abort: (currentAuthKey?: string) =>
+    post('/keys/rotation/abort', okResponseSchema, currentAuthKey ? { currentAuthKey } : {}),
 }
 
 /** Устройства аккаунта: названия зашифрованы MK на клиенте */

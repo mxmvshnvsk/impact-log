@@ -10,11 +10,14 @@ import { errorCode, httpStatus } from './types'
  * — ошибки сети и 5xx → экспоненциальный backoff до 5 минут; 401 → 'signed-out', цикл останавливается
  *   (данные остаются локально) до следующего start(); 409 ACCOUNT_MISMATCH (сессия другого аккаунта) →
  *   'error' без повторов, данные не трогаем; VAULT_CHANGED (другая вкладка сменила MK) → onVaultChanged;
+ *   KEY_CHANGED (MK аккаунта сменили на другом устройстве, ADR-0012) → 'signed-out' c lastError KEY_CHANGED:
+ *   данные не трогаем, после входа хранилище перейдёт на новый ключ и start() продолжит;
  * — вкладки: синхронизирует одна — владелец Web Lock 'impact-log-sync' (без Web Locks — каждая сама),
  *   остальные получают её состояние и просят синхронизацию через BroadcastChannel.
  * Без window/document/navigator (node) триггеры окна и блокировка просто не подключаются.
  */
-export type SyncStatus = 'off' | 'idle' | 'syncing' | 'offline' | 'signed-out' | 'error'
+/** paused — остановлена на время ротации ключа (ADR-0012) во всех вкладках; продолжится start() */
+export type SyncStatus = 'off' | 'idle' | 'syncing' | 'offline' | 'signed-out' | 'error' | 'paused'
 
 export type SyncSnapshot = {
   status: SyncStatus
@@ -74,6 +77,7 @@ type Message =
   | { type: 'done'; id: string }
   | { type: 'start' }
   | { type: 'stop' }
+  | { type: 'pause' }
 
 const INITIAL: SyncSnapshot = {
   status: 'off',
@@ -103,7 +107,7 @@ export class SyncRuntime {
   private active = false
   /** 401 / сессия другого аккаунта: ждём нового входа (start) */
   private halted = false
-  private haltReason: 'signed-out' | 'account-mismatch' | null = null
+  private haltReason: 'signed-out' | 'account-mismatch' | 'key-changed' | null = null
   private leader = false
   private lock: Promise<boolean> | null = null
   private releaseLock: (() => void) | null = null
@@ -185,6 +189,19 @@ export class SyncRuntime {
   /** Выключить (выход из аккаунта): локальные данные остаются, состояние — 'off' */
   stop(announce = true): void {
     if (announce) this.post({ type: 'stop' })
+    this.halt('off')
+  }
+
+  /**
+   * Приостановить во всех вкладках (ротация ключа): как stop, но состояние — 'paused'. Счётчики и время
+   * последней синхронизации остаются видны; продолжает start()
+   */
+  pause(announce = true): void {
+    if (announce) this.post({ type: 'pause' })
+    this.halt('paused')
+  }
+
+  private halt(status: 'off' | 'paused'): void {
     this.active = false
     this.halted = false
     this.haltReason = null
@@ -192,7 +209,7 @@ export class SyncRuntime {
     this.unbind()
     if (this.releaseLock) this.releaseLock()
     else this.leader = false
-    this.patch({ ...INITIAL })
+    this.patch(status === 'off' ? { ...INITIAL } : { status, lastError: null, retryAt: null })
   }
 
   /** Сессии нет (401 при старте, «выйти везде»): циклы не идут до следующего start() */
@@ -307,6 +324,15 @@ export class SyncRuntime {
       this.clearRetry()
       console.warn('[sync] session belongs to another account, sync stopped')
       await this.refreshCounts({ status: 'error', lastError: code, retryAt: null })
+      return
+    }
+    if (code === 'KEY_CHANGED') {
+      // MK аккаунта сменили на другом устройстве: этим ключом синхронизироваться нельзя до нового входа
+      this.halted = true
+      this.haltReason = 'key-changed'
+      this.clearRetry()
+      console.warn('[sync] account key changed on another device, sync stopped')
+      await this.refreshCounts({ status: 'signed-out', lastError: code, retryAt: null })
       return
     }
     if (code === 'VAULT_CHANGED') {
@@ -509,6 +535,9 @@ export class SyncRuntime {
         break
       case 'stop':
         if (this.active) this.stop(false)
+        break
+      case 'pause':
+        if (this.active) this.pause(false)
         break
     }
   }

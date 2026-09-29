@@ -1,0 +1,97 @@
+/*
+ * Смена ключа шифрования — над содержимым любой страницы приложения (как предупреждение об отложенном
+ * восстановлении). mobile: иконка + текст, кнопки ниже; tablet+: кнопки справа.
+ */
+.rotation-banner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-lg);
+  background: var(--color-warning-soft);
+}
+
+.rotation-banner--running,
+.rotation-banner--notice {
+  border-color: var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+.rotation-banner--failed {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.rotation-banner--done {
+  border-color: var(--color-border);
+  background: var(--color-success-soft);
+}
+
+.rotation-banner__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-warning-text);
+}
+
+.rotation-banner--running .rotation-banner__icon,
+.rotation-banner--done .rotation-banner__icon {
+  color: var(--color-accent-strong);
+}
+
+.rotation-banner--failed .rotation-banner__icon {
+  color: var(--color-danger);
+}
+
+.rotation-banner--notice .rotation-banner__icon {
+  color: var(--color-text-secondary);
+}
+
+.rotation-banner__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.rotation-banner__title {
+  padding-top: var(--space-2);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+}
+
+.rotation-banner__text {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+.rotation-banner__progress {
+  margin-top: var(--space-2);
+}
+
+.rotation-banner__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@media (--tablet) {
+  .rotation-banner {
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+  }
+
+  .rotation-banner__actions {
+    grid-column: 3;
+    align-self: center;
+    flex-wrap: nowrap;
+  }
+}

@@ -112,8 +112,16 @@ export function useSettingsAccountView() {
     }
   }
 
+  /** Почему нужно войти снова: ключ шифрования сменили на другом устройстве — или сессия закончилась */
+  const signedOutText = computed(() =>
+    sync.lastError.value === 'KEY_CHANGED'
+      ? t('account.signedOut.keyChanged')
+      : t('account.signedOut.text'),
+  )
+
   return {
     t,
+    signedOutText,
     mode: accountFlow.mode,
     account,
     accountId,

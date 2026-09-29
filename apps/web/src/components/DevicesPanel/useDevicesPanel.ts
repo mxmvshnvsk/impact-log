@@ -2,6 +2,7 @@ import type { Device } from '@impact-log/shared'
 import { Laptop, Monitor, Smartphone, Tablet } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, ref, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
+import type { RouteLocationRaw } from 'vue-router'
 import {
   DEVICE_LABEL_MAX,
   decryptDeviceLabel,
@@ -10,6 +11,7 @@ import {
   isSignedOutError,
 } from '@/account'
 import { devicesApi } from '@/api/account'
+import { securityAnchor } from '@/components/SecurityPanel/anchor'
 import { useAccount } from '@/composables/useAccount'
 import { useSession } from '@/composables/useSession'
 
@@ -39,6 +41,12 @@ export function useDevicesPanel() {
   const loadError = ref<string | null>(null)
   const notice = ref<string | null>(null)
   const actionError = ref<string | null>(null)
+  /** После отзыва: отозванное устройство могло сохранить MK — предложить смену ключа (ADR-0012) */
+  const rotateHint = computed(() => notice.value === 'account.devices.revoked')
+  const rotateTo: RouteLocationRaw = {
+    name: 'settings-account',
+    hash: `#${securityAnchor('keyRotation')}`,
+  }
 
   const dateFormat = computed(
     () => new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }),
@@ -186,5 +194,7 @@ export function useDevicesPanel() {
     confirmRevoke,
     notice,
     actionError,
+    rotateHint,
+    rotateTo,
   }
 }

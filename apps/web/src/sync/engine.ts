@@ -33,6 +33,11 @@ const CHANGE_OVERHEAD = 200
 const MIN_PUSH_BYTES = 64 * 1024
 
 export type EngineOptions = {
+  /**
+   * Эпоха ключа локального хранилища (ADR-0012). Объект более новой эпохи в pull значит, что MK аккаунта
+   * сменили на другом устройстве: цикл останавливается (KeyEpochError), ничего не применяя.
+   */
+  keyEpoch?: () => number
   pullLimit?: number
   pushMaxChanges?: number
   pushMaxBytes?: number
@@ -82,6 +87,19 @@ export class SyncAbortedError extends Error {
   constructor() {
     super('SYNC_ABORTED')
     this.name = 'SyncAbortedError'
+  }
+}
+
+/**
+ * Ключ аккаунта сменили на другом устройстве (ротация MK, ADR-0012): pull принёс объект более новой эпохи
+ * или push отклонён STALE_KEY. Локальные данные не трогаем — после входа хранилище перейдёт на новый MK
+ * и синхронизация продолжится с того же места.
+ */
+export class KeyEpochError extends Error {
+  readonly code = 'KEY_CHANGED'
+  constructor() {
+    super('KEY_CHANGED')
+    this.name = 'KeyEpochError'
   }
 }
 
@@ -288,6 +306,12 @@ export class SyncEngine {
   }
 
   private async applyRemote(changes: readonly ServerObject[], epoch: number): Promise<Outcome> {
+    // Страница с объектом новой эпохи не применяется целиком (курсор не двигается): после перехода на новый
+    // MK её заберёт следующий pull
+    const localEpoch = this.options.keyEpoch?.()
+    if (localEpoch !== undefined && changes.some((change) => change.keyEpoch > localEpoch)) {
+      throw new KeyEpochError()
+    }
     // Внутри страницы объект встречается один раз, но на всякий случай берём последнее состояние
     const latest = new Map<string, ServerObject>()
     for (const change of changes) {
@@ -502,14 +526,18 @@ export class SyncEngine {
     epoch: number,
   ): Promise<Outcome> {
     const sent = new Map(batch.map((object) => [object.objectId, object]))
+    const localEpoch = this.options.keyEpoch?.()
+    const newerEpoch = (server: ServerObject) =>
+      localEpoch !== undefined && server.keyEpoch > localEpoch
     const verdicts = new Map<string, Verdict>()
     for (const result of results) {
-      if (result.status !== 'conflict') continue
+      if (result.status !== 'conflict' || newerEpoch(result.server)) continue
       verdicts.set(result.objectId, await this.compare(sent.get(result.objectId), result.server))
     }
     const outcome: Outcome = { applied: 0, conflicts: 0, merged: 0, freed: 0 }
     const updates = new Map<string, Updater>()
     const now = this.now().toISOString()
+    let staleKey = false
 
     for (const result of results) {
       const original = sent.get(result.objectId)
@@ -546,12 +574,20 @@ export class SyncEngine {
         })
       } else if (result.status === 'conflict') {
         const server = result.server
+        // Серверная ветка — под новым MK аккаунта, этим ключом её не открыть: как STALE_KEY
+        if (newerEpoch(server)) {
+          staleKey = true
+          continue
+        }
         updates.set(id, (current, conflict) =>
           this.decideRemote(server, current, conflict, verdicts.get(id), outcome, true),
         )
       } else if (result.code === 'QUOTA_EXCEEDED') {
         report.quotaRejected++
         this.quotaBlocked.add(id)
+      } else if (result.code === 'STALE_KEY') {
+        // Шифротекст старой эпохи: объект не трогаем (останется dirty и уйдёт новым ключом после входа)
+        staleKey = true
       } else {
         report.invalid++
         if (original.deleted === 1) {
@@ -570,6 +606,7 @@ export class SyncEngine {
       }
     }
     await this.applyGuarded(epoch, updates)
+    if (staleKey) throw new KeyEpochError()
     return outcome
   }
 

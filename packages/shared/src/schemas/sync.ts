@@ -33,8 +33,13 @@ export const pushChangeSchema = z.object({
    * которого на сервере нет, отклоняется (rejected INVALID)
    */
   ciphertext: z.string().min(1).max(MAX_OBJECT_CIPHERTEXT).nullable(),
+  /**
+   * Эпоха ключа, которым зашифрован ciphertext (ADR-0012). Нет поля — 1 (клиенты до ротации).
+   * Эпоха меньше текущей эпохи аккаунта → rejected STALE_KEY (клиент перешифровывает новым MK).
+   */
+  keyEpoch: z.number().int().positive().default(1),
 })
-export type PushChange = z.infer<typeof pushChangeSchema>
+export type PushChange = z.input<typeof pushChangeSchema>
 
 export const pushRequestSchema = z.object({
   changes: z.array(pushChangeSchema).min(1).max(MAX_PUSH_CHANGES),
@@ -49,6 +54,8 @@ export const serverObjectSchema = z.object({
   deleted: z.boolean(),
   /** Порядковый номер изменения (монотонный) — курсор для pull */
   seq: z.number().int().positive(),
+  /** Эпоха ключа шифротекста (ADR-0012); у tombstone — эпоха на момент удаления */
+  keyEpoch: z.number().int().positive(),
 })
 export type ServerObject = z.infer<typeof serverObjectSchema>
 
@@ -57,7 +64,8 @@ export type ServerObject = z.infer<typeof serverObjectSchema>
  * (maxStorageBytes) или число живых объектов (maxObjects); ограничивается только рост.
  * INVALID — baseVersion > 0 или tombstone у несуществующего объекта, смена kind.
  */
-export const PUSH_REJECT_CODES = ['QUOTA_EXCEEDED', 'INVALID'] as const
+/** STALE_KEY — шифротекст старой эпохи ключа: аккаунт уже перешёл на новый MK (ADR-0012) */
+export const PUSH_REJECT_CODES = ['QUOTA_EXCEEDED', 'INVALID', 'STALE_KEY'] as const
 
 export const pushResultSchema = z.discriminatedUnion('status', [
   z.object({

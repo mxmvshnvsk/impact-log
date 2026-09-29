@@ -115,6 +115,13 @@
         :login="form.values.login"
         @mood="mascot.react"
       />
+      <!-- без второго фактора ключ мог быть не только у вас: смена ключа шифрования заодно выдаст новый Recovery Key -->
+      <div v-if="suggestRotation" class="recover__rotate">
+        <p class="recover__rotate-text">{{ t('auth.recover.rotateSuggest') }}</p>
+        <UiButton variant="secondary" :to="rotateTo">
+          <RefreshCcwDot :size="16" aria-hidden="true" />{{ t('auth.recover.rotateAction') }}
+        </UiButton>
+      </div>
       <UiButton size="lg" block :to="{ name: 'dashboard' }">
         {{ t('auth.recover.finish') }}<ArrowRight :size="18" aria-hidden="true" />
       </UiButton>
@@ -129,7 +136,7 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowRight } from 'lucide-vue-next'
+import { ArrowRight, RefreshCcwDot } from 'lucide-vue-next'
 import { AuthCard } from '@/components/AuthCard'
 import { CryptoProgress } from '@/components/CryptoProgress'
 import { MergeDialog } from '@/components/MergeDialog'
@@ -178,6 +185,8 @@ const {
   totpRef,
   startTotp,
   confirmTotp,
+  suggestRotation,
+  rotateTo,
 } = useRecoverView()
 </script>
 

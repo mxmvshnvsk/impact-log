@@ -25,6 +25,10 @@ export const ERROR_CODES = [
   'WRONG_REGION',
   // синхронизация: заголовок X-Impact-Account не совпадает с пользователем сессии (409)
   'ACCOUNT_MISMATCH',
+  // ротация ключа (ADR-0012), все — 409
+  'ROTATION_IN_PROGRESS',
+  'ROTATION_INCOMPLETE',
+  'NO_ROTATION',
 ] as const
 
 export const errorCodeSchema = z.enum(ERROR_CODES)

@@ -1,5 +1,6 @@
 import {
   decryptObject,
+  encryptObject,
   generateMasterKey,
   importAeadKey,
   parseEnvelope,
@@ -9,10 +10,18 @@ import {
   wrapMasterKey,
 } from '@impact-log/core/crypto'
 import type { KdfParams } from '@impact-log/shared'
-import { database, destroyDatabase, type LocalObject, type QuarantineRecord, readMeta } from './db'
+import {
+  type ConflictRecord,
+  database,
+  destroyDatabase,
+  type LocalObject,
+  type QuarantineRecord,
+  readMeta,
+} from './db'
 import {
   clearMasterKey,
   masterKeyBytes,
+  masterKeyFingerprint,
   masterKeyId,
   setMasterKey,
   VaultChangedError,
@@ -34,6 +43,23 @@ export type VaultAccount = {
   deviceId: string
   /** Секрет устройства (выдаётся сервером при создании устройства) — предъявляется вместе с deviceId */
   deviceSecret?: string
+  /**
+   * Эпоха ключа аккаунта (ADR-0012), под которым сейчас хранилище: уходит с каждым push, а pull объекта
+   * более новой эпохи останавливает синхронизацию (ключ сменили на другом устройстве). Нет поля — 1.
+   */
+  keyEpoch?: number
+}
+
+/**
+ * Незавершённая ротация MK, начатая на этом устройстве (ADR-0012): новый MK обёрнут ключом устройства —
+ * так же, как основной, — чтобы продолжить после перезагрузки без пароля (конверты уже на сервере).
+ * Удаляется, как только ротация завершена (в той же транзакции, что и переход на новый MK) или отменена.
+ */
+export type PendingRotation = {
+  targetEpoch: number
+  startedAt: string
+  /** Сериализованный конверт нового MK типа device (под тем же ключом устройства, что и основной) */
+  deviceEnvelope: string
 }
 
 /**
@@ -58,6 +84,12 @@ export type VaultRecord = {
   mkId?: string
   account: VaultAccount | null
   kdfPin?: KdfPin
+  pendingRotation?: PendingRotation
+}
+
+/** Эпоха ключа, под которым хранилище (1 — хранилища, созданные до ротаций) */
+export function vaultKeyEpoch(record: Pick<VaultRecord, 'account'> | null | undefined): number {
+  return record?.account?.keyEpoch ?? 1
 }
 
 /** Хранилище на устройстве уже есть (например, не открылось из-за сбоя) — создавать поверх нельзя */
@@ -314,8 +346,10 @@ export function adoptMasterKey(next: Uint8Array, options: AdoptOptions = {}): Pr
           options.discardLocal === true,
         )
         const { deviceKey, envelope } = await sealForDevice(next)
+        // Черновик ротации прежнего MK новому ключу не нужен (и обёрнут прежним ключом устройства)
+        const { pendingRotation: _dropped, ...rest } = record
         const updated: VaultRecord = {
-          ...record,
+          ...rest,
           deviceEnvelope: envelope,
           mkId: nextId,
           account: options.account === undefined ? record.account : options.account,
@@ -375,6 +409,270 @@ export function adoptMasterKey(next: Uint8Array, options: AdoptOptions = {}): Pr
     } finally {
       previous.fill(0)
     }
+  })
+}
+
+/* ------------------------------------------------------- ротация MK (ADR-0012) */
+
+export type RekeyOptions = VaultBinding
+
+export type RekeyResult = { record: VaultRecord; rekeyed: number; quarantined: number }
+
+/** Серверная ветка конфликта — чтобы сверить снимок с базой в момент записи */
+const conflictFingerprintOf = (conflict: ConflictRecord) =>
+  `${conflict.server.version}|${conflict.server.deleted}|${conflict.server.ciphertext ?? ''}`
+
+/**
+ * Перешифровка одного шифротекста новым MK: расшифровать прежним → зашифровать новым со СВЕЖИМ DEK
+ * (переобёртка DEK не годится — прежний DEK мог утечь вместе с устройством). Уже открывающийся новым MK —
+ * как есть; не открывающийся ни тем, ни другим — null.
+ */
+async function reencrypt(
+  previous: CryptoKey,
+  next: CryptoKey,
+  ref: { objectId: string; kind: string },
+  ciphertext: string,
+): Promise<string | null> {
+  let plaintext: Uint8Array
+  try {
+    plaintext = await decryptObject(previous, ref, ciphertext)
+  } catch {
+    try {
+      ;(await decryptObject(next, ref, ciphertext)).fill(0)
+      return ciphertext
+    } catch {
+      return null
+    }
+  }
+  try {
+    return await encryptObject(next, ref, plaintext)
+  } finally {
+    plaintext.fill(0)
+  }
+}
+
+type ReencryptPlan = {
+  objects: LocalObject[]
+  conflicts: ConflictRecord[]
+  quarantine: QuarantineRecord[]
+  objectSnapshot: Map<string, string>
+  conflictSnapshot: Map<string, string>
+}
+
+async function planReencrypt(
+  objects: LocalObject[],
+  conflicts: ConflictRecord[],
+  previous: CryptoKey,
+  next: CryptoKey,
+  previousId: string,
+): Promise<ReencryptPlan> {
+  const plan: ReencryptPlan = {
+    objects: [],
+    conflicts: [],
+    quarantine: [],
+    objectSnapshot: new Map(objects.map((object) => [object.objectId, fingerprintOf(object)])),
+    conflictSnapshot: new Map(
+      conflicts.map((conflict) => [conflict.objectId, conflictFingerprintOf(conflict)]),
+    ),
+  }
+  const now = new Date().toISOString()
+  for (const object of objects) {
+    // tombstone (удаление ещё не отправлено) шифротекста не содержит — остаётся как есть
+    if (object.deleted === 1 || object.ciphertext === null) continue
+    const ciphertext = await reencrypt(
+      previous,
+      next,
+      { objectId: object.objectId, kind: object.kind },
+      object.ciphertext,
+    )
+    if (ciphertext === null) {
+      plan.quarantine.push({
+        objectId: object.objectId,
+        object,
+        reason: 'rekey-undecryptable',
+        keyId: previousId,
+        quarantinedAt: now,
+      })
+      continue
+    }
+    // Версия, dirty и время правки — прежние: для сервера это тот же объект (в отличие от adopt)
+    plan.objects.push({ ...object, ciphertext })
+  }
+  for (const conflict of conflicts) {
+    const { ciphertext: serverCipher, deleted } = conflict.server
+    if (deleted || serverCipher === null) continue
+    // Не расшифровалась серверная ветка — она и так показывается как «не удалось расшифровать»
+    const ciphertext = await reencrypt(
+      previous,
+      next,
+      { objectId: conflict.objectId, kind: conflict.kind },
+      serverCipher,
+    )
+    if (ciphertext !== null && ciphertext !== serverCipher) {
+      plan.conflicts.push({ ...conflict, server: { ...conflict.server, ciphertext } })
+    }
+  }
+  return plan
+}
+
+/**
+ * «Тот же аккаунт, новый ключ» (ротация MK, ADR-0012): хранилище переходит на новый MK аккаунта, оставаясь
+ * привязанным к нему. В отличие от adoptMasterKey версии объектов, dirty-флаги и курсор синхронизации
+ * сохраняются — неотправленные правки уйдут на сервер уже новой эпохой. Всё считается заранее
+ * (перешифровка каждого живого объекта и серверных веток конфликтов со свежими DEK, карантин
+ * нерасшифровываемого, новый ключ устройства и конверт), затем ОДНА транзакция; черновик ротации в ней же
+ * удаляется. MK в памяти меняется только после tx.done.
+ */
+export function rekeyMasterKey(
+  next: Uint8Array,
+  keyEpoch: number,
+  options: RekeyOptions = {},
+): Promise<RekeyResult> {
+  return withRekeyLock(async () => {
+    const previous = masterKeyBytes()
+    try {
+      const db = await database()
+      const [previousId, nextId, previousKey, nextKey] = await Promise.all([
+        masterKeyId(previous),
+        masterKeyId(next),
+        importAeadKey(previous),
+        importAeadKey(next),
+      ])
+      for (let attempt = 1; ; attempt++) {
+        const record = await readMeta<VaultRecord>('vault')
+        if (!record || (record.mkId && record.mkId !== previousId)) throw new VaultChangedError()
+        const [objects, conflicts] = await Promise.all([
+          db.getAll('objects'),
+          db.getAll('conflicts'),
+        ])
+        const plan = await planReencrypt(objects, conflicts, previousKey, nextKey, previousId)
+        const { deviceKey, envelope } = await sealForDevice(next)
+        const account = options.account === undefined ? record.account : options.account
+        const { pendingRotation: _done, ...rest } = record
+        const updated: VaultRecord = {
+          ...rest,
+          deviceEnvelope: envelope,
+          mkId: nextId,
+          account: account ? { ...account, keyEpoch } : null,
+          ...(options.kdfPin ? { kdfPin: options.kdfPin } : {}),
+        }
+
+        const tx = db.transaction(['objects', 'conflicts', 'meta', 'quarantine'], 'readwrite')
+        let changed = false
+        try {
+          const objectStore = tx.objectStore('objects')
+          const conflictStore = tx.objectStore('conflicts')
+          const meta = tx.objectStore('meta')
+          const [currentObjects, currentConflicts, currentRecord] = await Promise.all([
+            objectStore.getAll(),
+            conflictStore.getAll(),
+            meta.get('vault') as Promise<VaultRecord | undefined>,
+          ])
+          changed =
+            currentObjects.length !== plan.objectSnapshot.size ||
+            currentObjects.some(
+              (object) => plan.objectSnapshot.get(object.objectId) !== fingerprintOf(object),
+            ) ||
+            currentConflicts.length !== plan.conflictSnapshot.size ||
+            currentConflicts.some(
+              (conflict) =>
+                plan.conflictSnapshot.get(conflict.objectId) !== conflictFingerprintOf(conflict),
+            ) ||
+            currentRecord?.deviceEnvelope !== record.deviceEnvelope
+          if (changed) throw new VaultChangedError()
+          const requests: Promise<unknown>[] = []
+          const track = (request: Promise<unknown>) => {
+            request.catch(() => undefined)
+            requests.push(request)
+          }
+          const quarantine = tx.objectStore('quarantine')
+          for (const item of plan.quarantine) {
+            track(objectStore.delete(item.objectId))
+            track(quarantine.put(item))
+          }
+          for (const object of plan.objects) track(objectStore.put(object))
+          for (const conflict of plan.conflicts) track(conflictStore.put(conflict))
+          track(meta.put(deviceKey, 'deviceKey'))
+          track(meta.put(updated, 'vault'))
+          // meta.sync (курсор) не трогаем: pull продолжится с того же места
+          await Promise.all(requests)
+        } catch (error) {
+          try {
+            tx.abort()
+          } catch {
+            // транзакция уже завершилась
+          }
+          await tx.done.catch(() => undefined)
+          if (changed && attempt < REKEY_ATTEMPTS) continue
+          throw error
+        }
+        await tx.done
+        await setMasterKey(next)
+        return {
+          record: updated,
+          rekeyed: plan.objects.length,
+          quarantined: plan.quarantine.length,
+        }
+      }
+    } finally {
+      previous.fill(0)
+    }
+  })
+}
+
+/**
+ * Сохранить черновик ротации: новый MK — под ключом устройства (тем же, что и основной MK). Хранилище
+ * должно быть под MK этой вкладки; если за время обёртки ключ устройства сменился — VaultChangedError.
+ */
+export async function savePendingRotation(
+  masterKey: Uint8Array,
+  draft: { targetEpoch: number; startedAt: string },
+): Promise<VaultRecord> {
+  const { record, deviceKey } = await readVaultMeta()
+  if (!record || !deviceKey) throw new VaultChangedError()
+  if (record.mkId && record.mkId !== masterKeyFingerprint()) throw new VaultChangedError()
+  const envelope = serializeEnvelope(
+    await wrapMasterKey(masterKey, deviceKey, {
+      type: 'device',
+      kdf: { id: 'none' },
+      salt: new Uint8Array(0),
+    }),
+  )
+  const tx = (await database()).transaction('meta', 'readwrite')
+  const current = (await tx.store.get('vault')) as VaultRecord | undefined
+  if (!current || current.deviceEnvelope !== record.deviceEnvelope) {
+    tx.abort()
+    await tx.done.catch(() => undefined)
+    throw new VaultChangedError()
+  }
+  const next: VaultRecord = {
+    ...current,
+    pendingRotation: { ...draft, deviceEnvelope: envelope },
+  }
+  await tx.store.put(next, 'vault')
+  await tx.done
+  return next
+}
+
+/** Черновик ротации с развёрнутым новым MK (вызывающий обнуляет masterKey). null — черновика нет */
+export async function loadPendingRotation(): Promise<{
+  targetEpoch: number
+  startedAt: string
+  masterKey: Uint8Array
+} | null> {
+  const { record, deviceKey } = await readVaultMeta()
+  const pending = record?.pendingRotation
+  if (!pending || !deviceKey) return null
+  const masterKey = await unwrapMasterKey(parseEnvelope(pending.deviceEnvelope), deviceKey)
+  return { targetEpoch: pending.targetEpoch, startedAt: pending.startedAt, masterKey }
+}
+
+/** Удалить черновик ротации (отменена, не началась или завершена) */
+export function clearPendingRotation(): Promise<VaultRecord> {
+  return updateVaultRecord((current) => {
+    if (!current.pendingRotation) return current
+    const { pendingRotation: _removed, ...rest } = current
+    return rest
   })
 }
 

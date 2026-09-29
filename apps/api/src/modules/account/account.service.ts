@@ -12,6 +12,7 @@ import { deleteOtherSessions, deleteRecoverySessions } from '../auth/sessions'
 import { generateTotpKey, totpEnrollment, verifyTotp } from '../auth/totp'
 import { reserveTotpAttempt, TOTP_SUCCESS_RESET } from '../auth/totpGuard'
 import { putEnvelope } from '../keys/envelopes'
+import { cancelRotation } from '../keys/rotationStore'
 
 type Deps = { db: Database; cipher: Cipher }
 
@@ -40,7 +41,8 @@ export function createAccountService({ db, cipher }: Deps) {
 
   /**
    * Смена пароля: новый authKey/KDF/соль и новый конверт того же MK; остальные сессии завершаются
-   * (в том числе незавершённые восстановления), отложенное восстановление снимается — владелец в строю
+   * (в том числе незавершённые восстановления), отложенное восстановление снимается — владелец в строю.
+   * Идущая ротация MK отменяется: её password-конверт сделан KEK'ом старого пароля (ADR-0012)
    */
   async function changePassword(current: FullSession, input: ChangePasswordRequest) {
     await reauthenticate(current, input.currentAuthKey)
@@ -52,13 +54,15 @@ export function createAccountService({ db, cipher }: Deps) {
         .where(eq(users.id, current.user.id))
       await putEnvelope(tx, current.user.id, 'password', input.passwordEnvelope)
       await deleteOtherSessions(tx, current.user.id, current.id)
+      await cancelRotation(tx, current.user.id)
     })
   }
 
   /**
    * Перевыпуск Recovery Key: старый перестаёт работать сразу — в том числе уже начатые им
    * восстановления и сбросы 2FA (recovery- и totp-reset-сессии удаляются в той же транзакции) и
-   * отложенное восстановление
+   * отложенное восстановление. Идущая ротация MK отменяется: commit поставил бы Recovery Key, выпущенный
+   * до этого перевыпуска (ADR-0012)
    */
   async function rotateRecoveryKey(current: FullSession, input: RotateRecoveryKeyRequest) {
     await reauthenticate(current, input.currentAuthKey)
@@ -72,6 +76,7 @@ export function createAccountService({ db, cipher }: Deps) {
         .where(eq(users.id, current.user.id))
       await putEnvelope(tx, current.user.id, 'recovery', input.recoveryEnvelope)
       await deleteRecoverySessions(tx, current.user.id)
+      await cancelRotation(tx, current.user.id)
     })
   }
 

@@ -4,7 +4,7 @@
 Решения и их обоснования — в ADR (`docs/adr`), контракты HTTP — в [docs/api.md](api.md), UI —
 в [docs/design-system.md](design-system.md), PWA и офлайн — в [docs/pwa.md](pwa.md), деплой — в
 [docs/deploy.md](deploy.md). Состояние — на 2026-09-29: local-first + E2EE после двух раундов усиления
-безопасности.
+безопасности, с ротацией Master Key ([ADR-0012](adr/0012-key-rotation.md)).
 
 ## Главное в трёх абзацах
 
@@ -51,7 +51,7 @@ flowchart LR
   subgraph Server["Сервер (VPS, Docker)"]
     Caddy["Caddy<br/>TLS, SPA, CSP, прокси /api"]
     Api["apps/api (Fastify 5)<br/>auth · account · keys · devices<br/>entitlements · sync · region"]
-    Pg[("PostgreSQL 17<br/>users · key_envelopes · devices<br/>sessions · objects")]
+    Pg[("PostgreSQL 17<br/>users · key_envelopes · devices<br/>sessions · objects<br/>key_rotations · rotation_objects")]
     Caddy --> Api --> Pg
   end
 
@@ -66,7 +66,8 @@ flowchart LR
 | логин, `accountId`, тариф, TOTP-секрет (зашифрован ключом из env) | пароль (приходит `authKey`), MK, DEK, Recovery Key |
 | хеш `authKey`, SHA-256 от `recoveryAuthKey`, секрета устройства и trust-токена | сами эти значения |
 | конверты MK `password` и `recovery` (непрозрачные строки) | device-конверт и ключ устройства (только на устройстве) |
-| объекты: `objectId`, вид, версия, размер, время, `seq`, флаг удаления | заголовки, описания, оценки, метки, категории, метрики, даты событий, evidence |
+| объекты: `objectId`, вид, версия, размер, время, `seq`, флаг удаления, эпоха ключа | заголовки, описания, оценки, метки, категории, метрики, даты событий, evidence |
+| идущая ротация MK: конверты нового MK, хеш нового `recoveryAuthKey`, черновик перешифрованных объектов | новый MK и новый Recovery Key |
 | устройства: зашифрованное название, `last_seen_at`, доверие, отзыв | черновики из клиентов захвата (они во фрагменте URL) |
 | усечённые IP в логах, объём и время синхронизации | аналитику и отчёты (считаются на клиенте) |
 
@@ -135,7 +136,8 @@ sequenceDiagram
 сервер отвечает `409 ACCOUNT_MISMATCH`, и синхронизация останавливается, не смешивая данные. Сервер
 отвечает по каждому изменению: `accepted` (новая версия), `conflict` (серверная ветка — клиент хранит обе,
 пользователь выбирает «моя / с сервера / обе»), `rejected` (`QUOTA_EXCEEDED` — лимиты тарифа и хранилища,
-`INVALID`). Лимит частоты — на пользователя. Подробно — [ADR-0007](adr/0007-sync.md).
+`INVALID`, `STALE_KEY` — шифротекст старой эпохи ключа после ротации MK). Лимит частоты — на пользователя.
+Подробно — [ADR-0007](adr/0007-sync.md).
 
 ### 3. Подключение синхронизации (регистрация)
 
@@ -173,7 +175,42 @@ Recovery Key (`ILRK1-…`) + ещё один фактор ([ADR-0008](adr/0008-a
 
 [ADR-0006](adr/0006-crypto.md) §6.
 
-### 6. Захват из расширения, CLI или VS Code
+### 6. Ротация Master Key
+
+Новый MK аккаунта, все живые объекты перешифрованы им (свежие DEK), новый Recovery Key; пароль прежний
+([ADR-0012](adr/0012-key-rotation.md)). Зачем: после отзыва устройства или утечки пароля / Recovery Kit старый MK
+(и DEK, которые он открывал) не должен открывать ничего на сервере.
+
+```mermaid
+sequenceDiagram
+  participant I as Устройство-инициатор
+  participant S as API
+  participant O as Другое устройство
+  Note over I: пароль → проверка по текущему конверту<br/>MK' + новый Recovery Kit (сохранить до start)<br/>MK' — локально под ключом устройства
+  I->>S: POST /keys/rotation/start {currentAuthKey, конверты MK', recoveryAuthKey'}
+  S-->>I: {targetEpoch: N+1, deviceId, staged: 0}
+  loop пачками по 200
+    I->>S: GET /sync/pull …
+    Note over I: расшифровать старым MK → зашифровать MK' (свежий DEK)
+    I->>S: POST /keys/rotation/stage {objects: [{objectId, version, ciphertext}]}
+  end
+  O->>S: POST /sync/push (старым ключом, как обычно)
+  I->>S: POST /keys/rotation/commit
+  S-->>I: 409 ROTATION_INCOMPLETE {missing, stale} → pull, дошифровка, stage (до 5 раз)
+  I->>S: POST /keys/rotation/commit
+  Note over S: одна транзакция: объекты ← черновик (версии прежние, новые seq, keyEpoch N+1),<br/>конверты и Recovery Key ← ротации, другие сессии удалены
+  S-->>I: {keyEpoch: N+1}
+  Note over I: локальная атомарная перешифровка хранилища MK',<br/>названия устройств, синхронизация дальше
+  O->>S: любой запрос
+  S-->>O: 401 → вход (пароль прежний)
+  Note over O: GET /keys: тот же аккаунт, эпоха выше →<br/>молча перешифровать хранилище MK' (правки сохраняются)
+```
+
+До commit всё на сервере — под старым MK (черновик лежит отдельно, `abort` его выбрасывает); commit подменяет
+всё разом. Шифротекст старой эпохи в push → `STALE_KEY`. Смена пароля, перевыпуск Recovery Key, восстановление
+доступа и отзыв устройства-инициатора отменяют идущую ротацию.
+
+### 7. Захват из расширения, CLI или VS Code
 
 ```mermaid
 sequenceDiagram
@@ -213,8 +250,9 @@ sequenceDiagram
 | Маршруты и доступ (`vault` / `guest` / `any`) | `apps/web/src/router/index.ts` |
 | HTTP-клиент | `apps/web/src/api/*` |
 | Сигналы между вкладками | `apps/web/src/utils/vaultChannel.ts` |
-| Схема БД и миграции | `apps/api/src/db/schema.ts`, `apps/api/drizzle/*.sql` (`0002_e2ee.sql` — переход на E2EE, `0003_hardening.sql` — секрет устройства, блокировка TOTP, `via_recovery`) |
+| Схема БД и миграции | `apps/api/src/db/schema.ts`, `apps/api/drizzle/*.sql` (`0002_e2ee.sql` — переход на E2EE, `0003_hardening.sql` — секрет устройства, блокировка TOTP, `via_recovery`, `0004_recovery_factors.sql` — восстановление со вторым фактором, `0005_key_rotation.sql` — эпохи ключа и ротация MK) |
 | Модули API | `apps/api/src/modules/{auth,account,keys,devices,entitlements,sync,region}` |
+| Ротация Master Key на сервере: start / stage / commit / abort, автоотмена | `apps/api/src/modules/keys/{keys.routes,rotation.service,rotationStore}.ts` |
 | Сессии и cookie, CSRF | `apps/api/src/plugins/{session,csrf}.ts` |
 | Лимиты частоты (по IP с IPv6 /64, по паре «логин + IP», по пользователю), логи без SQL-параметров | `apps/api/src/lib/{rateLimit,logging}.ts`, `apps/api/src/utils/ip.ts` |
 | Серверная криптография (хеш `authKey`, TOTP v2, блокировка перебора TOTP, секрет устройства, токены, Account ID) | `apps/api/src/modules/auth/{authKey,totp,totpGuard,prelogin}.ts`, `apps/api/src/lib/crypto.ts` |
@@ -289,6 +327,8 @@ pnpm --filter impact-log-vscode build                # apps/vscode-extension/dis
 | Объект | Зашифрованная единица синхронизации (`objectId`, `kind`, `version`, шифротекст) |
 | Tombstone | Объект-удаление (`deleted`, шифротекста нет) |
 | `seq` | Монотонный номер изменения на сервере — курсор pull |
+| Эпоха ключа (`keyEpoch`) | Номер MK аккаунта (с 1, +1 за каждую ротацию); у каждого объекта — эпоха его шифротекста |
+| Ротация MK | Новый MK и Recovery Key, все живые объекты перешифрованы; черновик на сервере + атомарный commit (ADR-0012) |
 | ImpactDraft | Черновик записи от клиента захвата; становится `Impact` после подтверждения |
 | Entitlements | Профиль возможностей тарифа (PILOT / FREE / PRO): лимиты и capabilities |
 
@@ -307,3 +347,4 @@ pnpm --filter impact-log-vscode build                # apps/vscode-extension/dis
 | [0009](adr/0009-entitlements.md) | Тарифы как данные, квоты, пилот |
 | [0010](adr/0010-capture-protocol.md) | Протокол захвата и клиенты Chrome / CLI / VS Code |
 | [0011](adr/0011-region-ready.md) | Готовность к регионам: Account ID и резолвинг endpoint |
+| [0012](adr/0012-key-rotation.md) | Ротация Master Key: эпохи, черновик и атомарный commit, другие устройства |

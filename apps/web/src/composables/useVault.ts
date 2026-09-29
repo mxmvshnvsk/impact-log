@@ -4,14 +4,20 @@ import {
   type AdoptOptions,
   type AdoptResult,
   adoptMasterKey as adoptVaultMasterKey,
+  clearPendingRotation as clearVaultPendingRotation,
   createVault,
   destroyVault,
   type KdfPin,
   loadVault,
+  type RekeyOptions,
+  type RekeyResult,
+  rekeyMasterKey as rekeyVaultMasterKey,
+  savePendingRotation as saveVaultPendingRotation,
   updateVaultRecord,
   type VaultAccount,
   type VaultBinding,
   type VaultRecord,
+  vaultKeyEpoch,
 } from '@/vault'
 import { reloadImpacts, resetImpacts } from './useImpacts'
 
@@ -124,6 +130,37 @@ export function useVault() {
     return result
   }
 
+  /**
+   * Ротация MK (ADR-0012): хранилище того же аккаунта переходит на новый MK, версии и неотправленные
+   * правки сохраняются. Другие вкладки держат в памяти прежний MK — они перезагрузятся по сигналу.
+   */
+  async function rekeyMasterKey(
+    masterKey: Uint8Array,
+    keyEpoch: number,
+    options: RekeyOptions = {},
+  ): Promise<RekeyResult> {
+    requireVault()
+    const result = await rekeyVaultMasterKey(masterKey, keyEpoch, options)
+    record.value = result.record
+    broadcast({ type: 'vault-changed' })
+    await reloadImpacts()
+    return result
+  }
+
+  /** Черновик ротации этого устройства: новый MK — под ключом устройства */
+  async function savePendingRotation(
+    masterKey: Uint8Array,
+    draft: { targetEpoch: number; startedAt: string },
+  ): Promise<void> {
+    requireVault()
+    record.value = await saveVaultPendingRotation(masterKey, draft)
+  }
+
+  async function clearPendingRotation(): Promise<void> {
+    if (!record.value?.pendingRotation) return
+    record.value = await clearVaultPendingRotation()
+  }
+
   return {
     status: readonly(status),
     info: computed<VaultInfo | null>(() =>
@@ -137,6 +174,13 @@ export function useVault() {
     ),
     account: computed(() => record.value?.account ?? null),
     kdfPin: computed(() => record.value?.kdfPin ?? null),
+    /** Эпоха ключа, под которым хранилище (ADR-0012) */
+    keyEpoch: computed(() => vaultKeyEpoch(record.value)),
+    /** Незавершённая ротация, начатая на этом устройстве (без самого ключа) */
+    pendingRotation: computed(() => {
+      const pending = record.value?.pendingRotation
+      return pending ? { targetEpoch: pending.targetEpoch, startedAt: pending.startedAt } : null
+    }),
     hasVault: computed(() => status.value === 'ready'),
     create,
     destroy,
@@ -144,5 +188,8 @@ export function useVault() {
     bind,
     setKdfPin,
     adoptMasterKey,
+    rekeyMasterKey,
+    savePendingRotation,
+    clearPendingRotation,
   }
 }

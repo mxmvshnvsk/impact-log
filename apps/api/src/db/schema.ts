@@ -55,7 +55,7 @@ export const users = pgTable('users', {
    * Отложенное восстановление (Recovery Key без пароля и без 2FA, ADR-0008 §8, путь C): когда запущен
    * отсчёт и когда он истекает (started + RECOVERY_DELAY_HOURS). Доступно RECOVERY_READY_TTL_DAYS после
    * созревания, потом считается несостоявшимся. Снимается отменой, завершением восстановления, сбросом 2FA
-   * по Recovery Key, сменой пароля и перевыпуском Recovery Key; истёкшее — уборкой.
+   * по Recovery Key, сменой пароля, перевыпуском Recovery Key и ротацией MK (ADR-0012); истёкшее — уборкой.
    */
   recoveryStartedAt: timestamp('recovery_started_at', { withTimezone: true }),
   recoveryAvailableAt: timestamp('recovery_available_at', { withTimezone: true }),
@@ -65,6 +65,11 @@ export const users = pgTable('users', {
     .default('pending'),
   /** Коммерческое состояние (PLAN_IDS) → профиль возможностей через resolveEntitlements */
   plan: text('plan').$type<PlanId>().notNull().default('PILOT'),
+  /**
+   * Эпоха Master Key (ADR-0012): с 1, +1 при каждой завершённой ротации MK. Конверты в key_envelopes и
+   * recovery_auth_hash — всегда текущей эпохи; push шифротекста старой эпохи отклоняется (STALE_KEY)
+   */
+  keyEpoch: integer('key_epoch').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   activatedAt: timestamp('activated_at', { withTimezone: true }),
 })
@@ -174,6 +179,8 @@ export const objects = pgTable(
     ciphertext: text('ciphertext'),
     deleted: boolean('deleted').notNull().default(false),
     seq: bigint('seq', { mode: 'number' }).notNull(),
+    /** Эпоха MK шифротекста (ADR-0012); у tombstone — эпоха аккаунта на момент удаления */
+    keyEpoch: integer('key_epoch').notNull().default(1),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -182,12 +189,55 @@ export const objects = pgTable(
   ],
 )
 
+/**
+ * Идущая ротация Master Key (ADR-0012), не больше одной на пользователя. Конверты НОВОГО MK и хеш нового
+ * recoveryAuthKey лежат здесь до commit и только им переносятся в key_envelopes / users — до этого вход,
+ * восстановление и синхронизация работают на прежнем MK. Начать, дополнять черновик и завершить может
+ * только устройство-инициатор (device_id); отменить — оно же или любое другое с currentAuthKey.
+ */
+export const keyRotations = pgTable('key_rotations', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  /** users.key_epoch + 1 на момент start */
+  targetEpoch: integer('target_epoch').notNull(),
+  deviceId: uuid('device_id')
+    .notNull()
+    .references(() => devices.id, { onDelete: 'cascade' }),
+  /** Непрозрачные конверты нового MK — сервер их не разбирает */
+  passwordEnvelope: text('password_envelope').notNull(),
+  recoveryEnvelope: text('recovery_envelope').notNull(),
+  /** hex SHA-256 от нового recoveryAuthKey (как users.recovery_auth_hash) */
+  recoveryAuthHash: text('recovery_auth_hash').notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+/**
+ * Черновик ротации: шифротексты живых объектов под новым MK, по одному на объект. version — версия живого
+ * объекта, с которой делалась перешифровка (commit требует совпадения). Внешний ключ — на саму ротацию:
+ * черновик без ротации не существует, отмена/commit удаляют его каскадом.
+ */
+export const rotationObjects = pgTable(
+  'rotation_objects',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => keyRotations.userId, { onDelete: 'cascade' }),
+    objectId: uuid('object_id').notNull(),
+    version: integer('version').notNull(),
+    ciphertext: text('ciphertext').notNull(),
+    stagedAt: timestamp('staged_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.objectId] })],
+)
+
 export type UserRow = typeof users.$inferSelect
 export type DeviceRow = typeof devices.$inferSelect
 export type SessionRow = typeof sessions.$inferSelect
 export type SessionKind = SessionRow['kind']
 export type RecoveryStage = NonNullable<SessionRow['recoveryStage']>
 export type ObjectRow = typeof objects.$inferSelect
+export type KeyRotationRow = typeof keyRotations.$inferSelect
 
 /** now() на стороне БД — чтобы не зависеть от часов приложения */
 export const dbNow = sql`now()`

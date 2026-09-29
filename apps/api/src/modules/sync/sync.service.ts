@@ -30,6 +30,7 @@ function toServerObject(row: ObjectRow): ServerObject {
     ciphertext: row.ciphertext,
     deleted: row.deleted,
     seq: row.seq,
+    keyEpoch: row.keyEpoch,
   }
 }
 
@@ -89,12 +90,17 @@ export function createSyncService({ db }: Deps) {
    * Применяет изменения по порядку в одной транзакции. Пуши одного пользователя сериализуются
    * блокировкой его строки в users: так seq внутри пользователя выдаются в порядке коммитов,
    * и pull по курсору не может «перепрыгнуть» ещё не закоммиченное изменение. Та же блокировка
-   * делает точными счётчики квот внутри транзакции.
+   * делает точными счётчики квот внутри транзакции и сериализует push с commit'ом ротации MK.
+   *
+   * Эпоха ключа (ADR-0012): keyEpoch изменения больше эпохи аккаунта → INVALID (шифротексты будущей эпохи
+   * попадают на сервер только через черновик ротации); шифротекст старой эпохи → STALE_KEY (клиент сначала
+   * перешифровывает хранилище новым MK). Tombstone ключа не содержит — его старая эпоха не отклоняется, а
+   * записывается эпоха аккаунта.
    */
   async function push(userId: string, changes: PushChange[]): Promise<PushResult[]> {
     return db.transaction(async (tx) => {
       const [owner] = await tx
-        .select({ plan: users.plan })
+        .select({ plan: users.plan, keyEpoch: users.keyEpoch })
         .from(users)
         .where(eq(users.id, userId))
         .for('update')
@@ -108,6 +114,16 @@ export function createSyncService({ db }: Deps) {
 
       for (const change of changes) {
         const { objectId } = change
+        const keyEpoch = change.keyEpoch ?? 1
+        if (keyEpoch > owner.keyEpoch) {
+          results.push({ objectId, status: 'rejected', code: 'INVALID' })
+          continue
+        }
+        if (change.ciphertext !== null && keyEpoch < owner.keyEpoch) {
+          results.push({ objectId, status: 'rejected', code: 'STALE_KEY' })
+          continue
+        }
+
         const [existing] = await tx
           .select()
           .from(objects)
@@ -172,6 +188,7 @@ export function createSyncService({ db }: Deps) {
           version: (existing?.version ?? 0) + 1,
           ciphertext: change.ciphertext,
           deleted: change.ciphertext === null,
+          keyEpoch: change.ciphertext === null ? owner.keyEpoch : keyEpoch,
           seq: sql<number>`nextval('object_seq')`,
           updatedAt: sql`now()`,
         }

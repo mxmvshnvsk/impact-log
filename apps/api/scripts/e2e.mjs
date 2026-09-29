@@ -246,6 +246,22 @@ const sessionRow = async (client) => {
 const unlockTotp = (login) =>
   sql`update users set totp_locked_until = now() - interval '1 second' where login = ${login}`
 
+/**
+ * Запрос с телом больше bodyLimit: сервер может ответить 413 и закрыть соединение раньше, чем клиент допишет
+ * тело, — тогда fetch падает с EPIPE/ECONNRESET. Это тот же отказ, только увиденный со стороны транспорта.
+ */
+async function oversized(promise) {
+  try {
+    return await promise
+  } catch (error) {
+    const code = error?.cause?.code
+    if (code === 'EPIPE' || code === 'ECONNRESET' || code === 'UND_ERR_SOCKET') {
+      return { status: 413, json: { error: { code: 'PAYLOAD_TOO_LARGE' } }, transport: code }
+    }
+    throw error
+  }
+}
+
 let r
 
 // ---------------------------------------------------------------------------------------------
@@ -1291,7 +1307,7 @@ check('push без изменений → 400', isError(r, 400, 'VALIDATION_ERRO
 r = await push([{ ...impact(randomUUID(), 0, 'x'), kind: 'note' }])
 check('push с неизвестным kind → 400', isError(r, 400, 'VALIDATION_ERROR'), r)
 const big = 'a'.repeat(256 * 1024)
-r = await push(Array.from({ length: 40 }, () => impact(randomUUID(), 0, big)))
+r = await oversized(push(Array.from({ length: 40 }, () => impact(randomUUID(), 0, big))))
 check('push > 8 МиБ → 413 PAYLOAD_TOO_LARGE', isError(r, 413, 'PAYLOAD_TOO_LARGE'), r)
 r = await guest.get('/sync/pull')
 check('pull без сессии → 401', r.status === 401, r)
@@ -1812,6 +1828,474 @@ check(
 )
 r = await l1.pull(0, 1)
 check('лимит — на пользователя: другой пользователь синхронизируется', r.status === 200, r)
+
+// ---------------------------------------------------------------------------------------------
+section('ротация Master Key: черновик, commit, эпохи (rita)')
+const rt1 = new Client()
+const rita = await register(rt1, 'rita', { remember: true })
+const ritaAccount = rita.user.accountId
+r = await rt1.get('/keys')
+check(
+  'GET /keys → keyEpoch 1, rotation null, конверты регистрации',
+  r.status === 200 &&
+    r.json.keyEpoch === 1 &&
+    r.json.rotation === null &&
+    envelopeOf(r, 'password') === rita.passwordEnvelope &&
+    envelopeOf(r, 'recovery') === rita.recoveryEnvelope,
+  r,
+)
+const rt2 = new Client()
+r = await rt2.post('/auth/login', { login: 'rita', authKey: rita.authKey })
+r = await rt2.post('/auth/login/verify', { code: await rita.totp.next() })
+check(
+  'второе устройство rita (вход с кодом)',
+  r.status === 200 && r.json.deviceId !== rita.deviceId,
+  r,
+)
+rt2.account = ritaAccount
+// Ещё одна сессия на первом (доверенном) устройстве — без кода
+const rt1b = rt1.clone()
+rt1b.cookies.delete('il_session')
+r = await rt1b.post('/auth/login', { login: 'rita', authKey: rita.authKey })
+check(
+  'вторая сессия на доверенном устройстве → done',
+  r.json?.next === 'done' && r.json.deviceId === rita.deviceId,
+  r,
+)
+
+const [ritaA, ritaB, ritaC, ritaD] = Array.from({ length: 4 }, () => randomUUID())
+r = await rt1.push([
+  impact(ritaA, 0, 'ct:ra:v1'),
+  impact(ritaB, 0, 'ct:rb:v1'),
+  impact(ritaC, 0, 'ct:rc:v1'),
+  impact(ritaD, 0, 'ct:rd:v1'),
+])
+const ritaCreated = r.json?.results?.every((x) => x.status === 'accepted')
+r = await rt1.push([impact(ritaA, 1, 'ct:ra:v2'), impact(ritaC, 1, null)])
+check(
+  'объекты rita: 4 созданы, один обновлён, один удалён (tombstone)',
+  ritaCreated && r.json?.results?.every((x) => x.status === 'accepted'),
+  r,
+)
+r = await rt1.pull()
+const ritaBefore = new Map((r.json?.changes ?? []).map((o) => [o.objectId, o]))
+check(
+  'pull отдаёт keyEpoch 1 у каждого объекта (и у tombstone)',
+  ritaBefore.size === 4 && [...ritaBefore.values()].every((o) => o.keyEpoch === 1),
+  r.json,
+)
+r = await rt1.push([{ ...impact(randomUUID(), 0, 'ct:future'), keyEpoch: 2 }])
+check(
+  'push с keyEpoch выше эпохи аккаунта → rejected INVALID',
+  r.json?.results?.[0]?.status === 'rejected' && r.json.results[0].code === 'INVALID',
+  r,
+)
+
+const ritaRotation = {
+  currentAuthKey: rita.authKey,
+  passwordEnvelope: envelope('rita-password-e2'),
+  recoveryEnvelope: envelope('rita-recovery-e2'),
+  recoveryAuthKey: newKey(),
+}
+r = await rt1.post('/keys/rotation/start', { ...ritaRotation, currentAuthKey: newKey() })
+check(
+  'start с неверным currentAuthKey → 403 INVALID_CREDENTIALS',
+  isError(r, 403, 'INVALID_CREDENTIALS'),
+  r,
+)
+r = await rt1.post('/keys/rotation/start', ritaRotation)
+check(
+  'start → {targetEpoch 2, устройство-инициатор, staged 0, startedAt}',
+  r.status === 200 &&
+    r.json.targetEpoch === 2 &&
+    r.json.deviceId === rita.deviceId &&
+    r.json.staged === 0 &&
+    !Number.isNaN(Date.parse(r.json.startedAt)),
+  r,
+)
+r = await rt2.post('/keys/rotation/start', { ...ritaRotation, recoveryAuthKey: newKey() })
+check(
+  'второй start → 409 ROTATION_IN_PROGRESS, details — идущая ротация',
+  isError(r, 409, 'ROTATION_IN_PROGRESS') &&
+    r.json.error.details?.targetEpoch === 2 &&
+    r.json.error.details.deviceId === rita.deviceId &&
+    r.json.error.details.staged === 0,
+  r,
+)
+r = await rt2.get('/keys')
+check(
+  'GET /keys во время ротации: прежние конверты и эпоха + rotation',
+  r.status === 200 &&
+    r.json.keyEpoch === 1 &&
+    envelopeOf(r, 'password') === rita.passwordEnvelope &&
+    envelopeOf(r, 'recovery') === rita.recoveryEnvelope &&
+    r.json.rotation?.targetEpoch === 2 &&
+    r.json.rotation.deviceId === rita.deviceId,
+  r,
+)
+
+// Отложенное восстановление старым Recovery Key — commit должен его снять
+const ritaDelayed = new Client()
+r = await ritaDelayed.post('/auth/recovery/begin', {
+  login: 'rita',
+  recoveryAuthKey: rita.recoveryAuthKey,
+})
+r = await ritaDelayed.post('/auth/recovery/delay')
+check(
+  'отложенное восстановление запущено старым Recovery Key',
+  r.status === 200 && typeof r.json.availableAt === 'string',
+  r,
+)
+
+const draft = (objectId, version, text) => ({ objectId, version, ciphertext: secret(text) })
+const ritaVersion = (id) => ritaBefore.get(id)?.version
+r = await rt2.post('/keys/rotation/stage', {
+  objects: [draft(ritaA, ritaVersion(ritaA), 'ct2:ra')],
+})
+check('stage не с устройства-инициатора → 403 FORBIDDEN', isError(r, 403, 'FORBIDDEN'), r)
+r = await rt1.post(
+  '/keys/rotation/stage',
+  { objects: [draft(ritaA, ritaVersion(ritaA), 'ct2:ra')] },
+  { 'x-impact-account': aliceAccount },
+)
+check(
+  'stage с чужим X-Impact-Account → 409 ACCOUNT_MISMATCH',
+  isError(r, 409, 'ACCOUNT_MISMATCH'),
+  r,
+)
+r = await rt1.post('/keys/rotation/stage', { objects: [] })
+check('stage без объектов → 400', isError(r, 400, 'VALIDATION_ERROR'), r)
+r = await oversized(
+  rt1.post('/keys/rotation/stage', {
+    objects: Array.from({ length: 40 }, () => ({
+      objectId: randomUUID(),
+      version: 1,
+      ciphertext: 'a'.repeat(256 * KiB),
+    })),
+  }),
+)
+check('stage > 8 МиБ → 413 PAYLOAD_TOO_LARGE', isError(r, 413, 'PAYLOAD_TOO_LARGE'), r)
+r = await rt1.post(
+  '/keys/rotation/stage',
+  {
+    objects: [
+      draft(ritaA, ritaVersion(ritaA), 'ct2:ra'),
+      draft(randomUUID(), 1, 'ct2:ghost'),
+      draft(ritaC, ritaVersion(ritaC), 'ct2:rc'),
+      draft(ritaB, ritaVersion(ritaB), `ct2:rb:${'x'.repeat(8 * KiB)}`),
+    ],
+  },
+  { 'x-impact-account': ritaAccount },
+)
+check(
+  'stage: живой → staged; несуществующий, удалённый и сильно больше живого → rejected; staged = 1',
+  r.status === 200 &&
+    r.json.results.map((x) => x.status).join() === 'staged,rejected,rejected,rejected' &&
+    r.json.results[0].objectId === ritaA &&
+    r.json.staged === 1,
+  r,
+)
+r = await rt1.post('/keys/rotation/commit')
+const incomplete1 = r.json?.error?.details
+check(
+  'commit без полного черновика → 409 ROTATION_INCOMPLETE, missing — живые без черновика',
+  isError(r, 409, 'ROTATION_INCOMPLETE') &&
+    [...(incomplete1?.missing ?? [])].sort().join() === [ritaB, ritaD].sort().join() &&
+    incomplete1.stale.length === 0,
+  r,
+)
+r = await rt1.post('/keys/rotation/stage', {
+  objects: [draft(ritaB, ritaVersion(ritaB), 'ct2:rb'), draft(ritaD, ritaVersion(ritaD), 'ct2:rd')],
+})
+check('дошифровка → staged 3', r.status === 200 && r.json.staged === 3, r)
+r = await rt2.push([impact(ritaD, ritaVersion(ritaD), 'ct:rd:v2')])
+check(
+  'во время ротации другое устройство правит объект старым ключом → accepted',
+  r.json?.results?.[0]?.status === 'accepted' && r.json.results[0].version === 2,
+  r,
+)
+r = await rt2.post('/keys/rotation/commit')
+check('commit не с устройства-инициатора → 403 FORBIDDEN', isError(r, 403, 'FORBIDDEN'), r)
+r = await rt1.post('/keys/rotation/commit')
+check(
+  'commit после правки на другом устройстве → 409 ROTATION_INCOMPLETE, stale',
+  isError(r, 409, 'ROTATION_INCOMPLETE') &&
+    r.json.error.details.stale.join() === ritaD &&
+    r.json.error.details.missing.length === 0,
+  r,
+)
+r = await rt1.get('/keys')
+check(
+  'неудачный commit ничего не изменил: эпоха 1, ротация со staged 3',
+  r.json?.keyEpoch === 1 &&
+    envelopeOf(r, 'password') === rita.passwordEnvelope &&
+    r.json.rotation?.staged === 3,
+  r,
+)
+r = await rt1.post('/keys/rotation/stage', { objects: [draft(ritaD, 2, 'ct2:rd:v2')] })
+check('дошифровка новой версии → staged', r.json?.results?.[0]?.status === 'staged', r)
+r = await rt1.post('/keys/rotation/commit')
+check('commit → keyEpoch 2', r.status === 200 && r.json.keyEpoch === 2, r)
+
+r = await rt1.pull()
+const ritaAfter = new Map((r.json?.changes ?? []).map((o) => [o.objectId, o]))
+const after = (id) => ritaAfter.get(id) ?? {}
+check(
+  'pull: новые шифротексты, прежние версии, keyEpoch 2, новые seq',
+  after(ritaA).ciphertext === 'ct2:ra' &&
+    after(ritaA).version === 2 &&
+    after(ritaB).ciphertext === 'ct2:rb' &&
+    after(ritaB).version === 1 &&
+    after(ritaD).ciphertext === 'ct2:rd:v2' &&
+    after(ritaD).version === 2 &&
+    [ritaA, ritaB, ritaD].every(
+      (id) => after(id).keyEpoch === 2 && after(id).seq > ritaBefore.get(id).seq,
+    ),
+  r.json,
+)
+check(
+  'tombstone не тронут: keyEpoch 1, тот же seq',
+  after(ritaC).deleted === true &&
+    after(ritaC).keyEpoch === 1 &&
+    after(ritaC).seq === ritaBefore.get(ritaC).seq &&
+    after(ritaC).version === ritaVersion(ritaC),
+  after(ritaC),
+)
+r = await rt2.get('/auth/me')
+check('сессия другого устройства после commit → 401', r.status === 401, r)
+r = await rt1b.get('/auth/me')
+check('другая сессия того же устройства → 401', r.status === 401, r)
+r = await rt1.get('/auth/me')
+check(
+  'текущая сессия жива, отложенное восстановление снято',
+  r.status === 200 && r.json.recoveryPending === null,
+  r,
+)
+check(
+  'в БД recovery_available_at снят',
+  (await userRow('rita'))?.recovery_available_at === null,
+  await userRow('rita'),
+)
+r = await ritaDelayed.post('/auth/recovery/resume')
+check('recovery-сессия старого ключа удалена commit’ом → 401', r.status === 401, r)
+r = await rt1.get('/keys')
+check(
+  'GET /keys → конверты ротации, keyEpoch 2, rotation null',
+  r.json?.keyEpoch === 2 &&
+    r.json.rotation === null &&
+    envelopeOf(r, 'password') === ritaRotation.passwordEnvelope &&
+    envelopeOf(r, 'recovery') === ritaRotation.recoveryEnvelope,
+  r,
+)
+const rt1c = rt1.clone()
+rt1c.cookies.delete('il_session')
+r = await rt1c.post('/auth/login', { login: 'rita', authKey: rita.authKey })
+check(
+  'вход тем же authKey работает («Запомнить компьютер» сохранено → done)',
+  r.json?.next === 'done',
+  r,
+)
+r = await new Client().post('/auth/login', { login: 'rita', authKey: rita.authKey })
+check(
+  'вход тем же authKey с нового устройства → second-factor',
+  r.json?.next === 'second-factor',
+  r,
+)
+r = await rt1c.get('/keys')
+check(
+  'после входа GET /keys → новые конверты и keyEpoch 2',
+  r.json?.keyEpoch === 2 && envelopeOf(r, 'password') === ritaRotation.passwordEnvelope,
+  r,
+)
+r = await new Client().post('/auth/recovery/begin', {
+  login: 'rita',
+  recoveryAuthKey: rita.recoveryAuthKey,
+})
+check('старый Recovery Key → recovery/begin 401', isError(r, 401, 'INVALID_CREDENTIALS'), r)
+r = await new Client().post('/auth/recovery/begin', {
+  login: 'rita',
+  recoveryAuthKey: ritaRotation.recoveryAuthKey,
+})
+check(
+  'новый Recovery Key → recovery/begin ok',
+  r.status === 200 && r.json.delayed.status === 'none',
+  r,
+)
+
+r = await rt1.push([{ ...impact(ritaA, 2, 'ct:ra:stale'), keyEpoch: 1 }])
+check(
+  'push с keyEpoch 1 после ротации → rejected STALE_KEY',
+  r.json?.results?.[0]?.status === 'rejected' && r.json.results[0].code === 'STALE_KEY',
+  r,
+)
+r = await rt1.push([impact(ritaA, 2, 'ct:ra:no-epoch')])
+check('push без keyEpoch (= 1) → STALE_KEY', r.json?.results?.[0]?.code === 'STALE_KEY', r)
+r = await rt1.push([{ ...impact(ritaA, 2, 'ct:ra:future'), keyEpoch: 3 }])
+check('push с keyEpoch 3 → rejected INVALID', r.json?.results?.[0]?.code === 'INVALID', r)
+r = await rt1.push([{ ...impact(ritaA, 2, 'ct3:ra'), keyEpoch: 2 }])
+check(
+  'push с keyEpoch 2 → accepted',
+  r.json?.results?.[0]?.status === 'accepted' && r.json.results[0].version === 3,
+  r,
+)
+r = await rt1.push([{ ...impact(ritaA, 2, 'ct3:ra:conflict'), keyEpoch: 2 }])
+check(
+  'conflict отдаёт серверную ветку с её keyEpoch',
+  r.json?.results?.[0]?.status === 'conflict' && r.json.results[0].server.keyEpoch === 2,
+  r,
+)
+r = await rt1.push([{ ...impact(ritaB, 1, null), keyEpoch: 1 }])
+check(
+  'tombstone со старой эпохой принимается (ключа в нём нет)',
+  r.json?.results?.[0]?.status === 'accepted',
+  r,
+)
+r = await rt1.pull(after(ritaD).seq)
+check(
+  '…и хранится с эпохой аккаунта',
+  r.json?.changes?.find((o) => o.objectId === ritaB)?.keyEpoch === 2,
+  r.json,
+)
+r = await rt1.post('/keys/rotation/commit')
+check('повторный commit → 409 NO_ROTATION', isError(r, 409, 'NO_ROTATION'), r)
+
+// ---------------------------------------------------------------------------------------------
+section('ротация: отмена, автоотмена, пустой аккаунт (sam)')
+const st1 = new Client()
+const sam = await register(st1, 'sam')
+const st2 = new Client()
+r = await st2.post('/auth/login', { login: 'sam', authKey: sam.authKey })
+r = await st2.post('/auth/login/verify', { code: await sam.totp.next() })
+const samDevice2 = r.json?.deviceId
+check('второе устройство sam', r.status === 200 && samDevice2 !== sam.deviceId, r)
+let samAuthKey = sam.authKey
+const samRotation = () => ({
+  currentAuthKey: samAuthKey,
+  passwordEnvelope: envelope('sam-password-rotated'),
+  recoveryEnvelope: envelope('sam-recovery-rotated'),
+  recoveryAuthKey: newKey(),
+})
+const samRotationState = async () => (await st1.get('/keys')).json?.rotation
+r = await st1.post('/keys/rotation/abort')
+check('abort без ротации → ok', r.status === 200 && r.json.ok === true, r)
+r = await st1.post('/keys/rotation/start', samRotation())
+check('start (sam) → ok', r.status === 200 && r.json.targetEpoch === 2, r)
+r = await st1.post('/keys/rotation/abort')
+check(
+  'abort с устройства-инициатора без тела → ok, ротации нет',
+  r.status === 200 && (await samRotationState()) === null,
+  r,
+)
+r = await st1.post('/keys/rotation/start', samRotation())
+r = await st2.post('/keys/rotation/abort')
+check(
+  'abort с другого устройства без currentAuthKey → 403 INVALID_CREDENTIALS',
+  isError(r, 403, 'INVALID_CREDENTIALS'),
+  r,
+)
+r = await st2.post('/keys/rotation/abort', { currentAuthKey: newKey() })
+check(
+  'abort с другого устройства с неверным currentAuthKey → 403',
+  isError(r, 403, 'INVALID_CREDENTIALS') && (await samRotationState()) !== null,
+  r,
+)
+r = await st2.post('/keys/rotation/abort', { currentAuthKey: sam.authKey })
+check(
+  'abort с другого устройства с currentAuthKey → ok, ротации нет',
+  r.status === 200 && (await samRotationState()) === null,
+  r,
+)
+r = await st1.post('/keys/rotation/stage', {
+  objects: [{ objectId: randomUUID(), version: 1, ciphertext: 'ct2:none' }],
+})
+check('stage без ротации → 409 NO_ROTATION', isError(r, 409, 'NO_ROTATION'), r)
+r = await st1.post('/keys/rotation/commit')
+check('commit без ротации → 409 NO_ROTATION', isError(r, 409, 'NO_ROTATION'), r)
+
+r = await st1.post('/keys/rotation/start', samRotation())
+r = await st1.post('/account/recovery-key', {
+  currentAuthKey: samAuthKey,
+  recoveryEnvelope: envelope('sam-recovery-2'),
+  recoveryAuthKey: newKey(),
+})
+check(
+  'перевыпуск Recovery Key отменяет ротацию',
+  r.status === 200 && (await samRotationState()) === null,
+  r,
+)
+r = await st2.post('/keys/rotation/start', samRotation())
+check('start со второго устройства', r.json?.deviceId === samDevice2, r)
+r = await st1.call('DELETE', `/devices/${samDevice2}`)
+check(
+  'отзыв устройства-инициатора отменяет ротацию',
+  r.status === 200 && (await samRotationState()) === null,
+  r,
+)
+r = await st1.post('/keys/rotation/start', samRotation())
+const samPassword = {
+  authKey: newKey(),
+  kdf: KDF,
+  salt: newSalt(),
+  passwordEnvelope: envelope('sam-password-2'),
+}
+r = await st1.post('/account/password', { currentAuthKey: samAuthKey, ...samPassword })
+samAuthKey = samPassword.authKey
+check('смена пароля отменяет ротацию', r.status === 200 && (await samRotationState()) === null, r)
+const samFinal = samRotation()
+r = await st1.post('/keys/rotation/start', samFinal)
+check('start после смены пароля (новый authKey)', r.status === 200 && r.json.targetEpoch === 2, r)
+r = await st1.post('/keys/rotation/commit')
+check(
+  'ротация пустого аккаунта → commit ok, keyEpoch 2',
+  r.status === 200 && r.json.keyEpoch === 2,
+  r,
+)
+r = await st1.get('/keys')
+check(
+  'GET /keys → конверты ротации, keyEpoch 2',
+  r.json?.keyEpoch === 2 &&
+    r.json.rotation === null &&
+    envelopeOf(r, 'password') === samFinal.passwordEnvelope &&
+    envelopeOf(r, 'recovery') === samFinal.recoveryEnvelope,
+  r,
+)
+
+// ---------------------------------------------------------------------------------------------
+section('ротация: автоотмена восстановлением доступа (tom)')
+const tt1 = new Client()
+const tom = await register(tt1, 'tom')
+r = await tt1.post('/keys/rotation/start', {
+  currentAuthKey: tom.authKey,
+  passwordEnvelope: envelope('tom-password-rotated'),
+  recoveryEnvelope: envelope('tom-recovery-rotated'),
+  recoveryAuthKey: newKey(),
+})
+check('start (tom) → ok', r.status === 200, r)
+const tr = new Client()
+r = await tr.post('/auth/recovery/begin', { login: 'tom', recoveryAuthKey: tom.recoveryAuthKey })
+r = await tr.post('/auth/recovery/verify', { code: await tom.totp.next() })
+check('восстановление: begin + код 2FA → конверт', typeof r.json?.recoveryEnvelope === 'string', r)
+r = await tr.post('/auth/recovery/complete', {
+  authKey: newKey(),
+  kdf: KDF,
+  salt: newSalt(),
+  passwordEnvelope: envelope('tom-password-recovered'),
+  deviceId: tom.deviceId,
+  deviceSecret: tom.deviceSecret,
+})
+check(
+  'recovery/complete на устройстве-инициаторе',
+  r.status === 200 && r.json.deviceId === tom.deviceId,
+  r,
+)
+r = await tr.get('/keys')
+check(
+  'восстановление отменило ротацию (rotation null, эпоха 1)',
+  r.json?.rotation === null && r.json.keyEpoch === 1,
+  r,
+)
+r = await tr.post('/keys/rotation/commit')
+check('commit после восстановления → 409 NO_ROTATION', isError(r, 409, 'NO_ROTATION'), r)
 
 // ---------------------------------------------------------------------------------------------
 section('регион, лимиты, health')

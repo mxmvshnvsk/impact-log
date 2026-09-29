@@ -1,4 +1,4 @@
-import { CloudAlert, CloudCheck, CloudOff, LogIn, RefreshCw } from 'lucide-vue-next'
+import { CloudAlert, CloudCheck, CloudOff, LogIn, RefreshCcwDot, RefreshCw } from 'lucide-vue-next'
 import { type Component, computed, onScopeDispose, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useEntitlements } from '@/composables/useEntitlements'
@@ -11,6 +11,7 @@ const KNOWN_ERRORS = new Set([
   'VAULT_LOCKED',
   'RATE_LIMITED',
   'ACCOUNT_MISMATCH',
+  'KEY_CHANGED',
 ])
 
 /** Панель синхронизации в настройках аккаунта: статус, очередь, квота, ошибки, «Синхронизировать сейчас» */
@@ -51,6 +52,8 @@ export function useSyncPanel() {
         return CloudOff
       case 'signed-out':
         return LogIn
+      case 'paused':
+        return RefreshCcwDot
       case 'error':
         return CloudAlert
       default:
@@ -103,7 +106,9 @@ export function useSyncPanel() {
     }
   })
 
-  const canSync = computed(() => status.value !== 'off' && status.value !== 'signed-out')
+  const canSync = computed(
+    () => status.value !== 'off' && status.value !== 'signed-out' && status.value !== 'paused',
+  )
 
   async function syncNow() {
     manual.value = true

@@ -85,6 +85,7 @@ curl -s https://impact-log.com/api/health
 | `0002_e2ee` | **Удаляет** старые таблицы (`users`, `sessions`, `recovery_codes`, `trusted_devices`) со всеми данными и создаёт схему local-first + E2EE: `users`, `key_envelopes`, `devices`, `sessions`, `objects`, последовательность `object_seq`. Проходит и поверх 0000–0001, и на пустой базе |
 | `0003_hardening` | Добавляет `devices.secret_hash`, `sessions.via_recovery`, `users.totp_failed_count`, `users.totp_locked_until` |
 | `0004_recovery_factors` | Восстановление «Recovery Key + второй фактор»: `users.recovery_started_at`, `users.recovery_available_at`, `sessions.recovery_stage`, `sessions.totp_pending_secret` |
+| `0005_key_rotation` | Ротация Master Key (ADR-0012): `users.key_epoch` и `objects.key_epoch` (`not null default 1` — существующие аккаунты и объекты получают эпоху 1), таблицы `key_rotations` и `rotation_objects`. Данные не переносятся, действий не требуется |
 
 **TOTP-секреты — формат v2** (`v2:` + AES-256-GCM, ключ из HKDF, AAD = id пользователя): секреты старого
 формата сервер не читает, и такие аккаунты не смогут войти — их нужно создать заново. На проде аккаунтов,

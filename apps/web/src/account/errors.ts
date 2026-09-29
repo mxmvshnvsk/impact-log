@@ -7,7 +7,7 @@ import {
   VaultUnavailableError,
 } from '@/vault'
 import { KdfError } from './kdf'
-import { KdfLimitError, WrongPasswordError } from './keys'
+import { KdfLimitError, KeyMismatchError, WrongPasswordError } from './keys'
 
 /** Где случилась ошибка — один и тот же код API значит разное в разных сценариях */
 export type ErrorContext = 'login' | 'reauth' | 'recovery'
@@ -31,6 +31,7 @@ export function errorKey(error: unknown, context?: ErrorContext): string {
       : 'errors.RECOVERY_KEY_FORMAT'
   }
   if (error instanceof WrongPasswordError) return 'errors.WRONG_PASSWORD'
+  if (error instanceof KeyMismatchError) return 'errors.ROTATION_KEY_MISMATCH'
   if (error instanceof CryptoError) {
     return context === 'recovery' ? 'errors.RECOVERY_INVALID' : 'errors.DECRYPT_FAILED'
   }

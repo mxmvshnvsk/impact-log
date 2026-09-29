@@ -70,6 +70,10 @@
       </li>
     </ul>
     <UiAlert v-if="notice" tone="success">{{ t(notice) }}</UiAlert>
+    <UiAlert v-if="rotateHint" tone="info">
+      {{ t('account.devices.rotateHint') }}
+      <RouterLink :to="rotateTo" class="devices__link">{{ t('account.devices.rotateAction') }}</RouterLink>
+    </UiAlert>
     <UiAlert v-if="actionError" tone="danger">{{ t(actionError) }}</UiAlert>
 
     <UiDialog
@@ -88,6 +92,7 @@
 
 <script setup lang="ts">
 import { MonitorSmartphone, Pencil, ShieldCheck, Unplug } from 'lucide-vue-next'
+import { RouterLink } from 'vue-router'
 import { SettingsSection } from '@/components/SettingsSection'
 import { UiAlert } from '@/ui/UiAlert'
 import { UiButton } from '@/ui/UiButton'
@@ -117,6 +122,8 @@ const {
   confirmRevoke,
   notice,
   actionError,
+  rotateHint,
+  rotateTo,
 } = useDevicesPanel()
 </script>
 

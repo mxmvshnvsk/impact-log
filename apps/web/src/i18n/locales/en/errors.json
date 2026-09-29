@@ -27,5 +27,11 @@
   "ACCOUNT_MISMATCH": "The session in this browser belongs to another account — sign in again",
   "KDF_LIMIT": "The server sent password protection settings that are too heavy — sign-in stopped to protect your browser",
   "VAULT_CHANGED": "The vault was changed in another tab — reload the page",
-  "VAULT_EXISTS": "This device already has a vault, but it failed to open. Reload the page; we won’t create a new one over it so your entries aren’t lost"
+  "VAULT_EXISTS": "This device already has a vault, but it failed to open. Reload the page; we won’t create a new one over it so your entries aren’t lost",
+  "ROTATION_IN_PROGRESS": "A key change is already in progress — it was started on another device",
+  "ROTATION_INCOMPLETE": "Couldn’t re-encrypt all entries: they’re being changed on another device. Try again a bit later",
+  "NO_ROTATION": "There’s no key change anymore — it was cancelled",
+  "ROTATION_KEY_MISMATCH": "This device’s key doesn’t match your account’s key — sign out and back in, then try again",
+  "ROTATION_UNDECRYPTABLE": "Some entries on the server can’t be opened with your account key — the key change stopped so they aren’t lost. Cancel it: your data hasn’t changed",
+  "ROTATION_OTHER_TAB": "A key change is already running in another tab"
 }

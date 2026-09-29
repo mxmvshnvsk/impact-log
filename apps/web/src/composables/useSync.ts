@@ -5,6 +5,7 @@ import {
   type ConflictView,
   createCodec,
   type ResolveChoice,
+  SyncAbortedError,
   SyncEngine,
   SyncRuntime,
   type SyncSnapshot,
@@ -35,8 +36,14 @@ async function refreshScreens() {
 }
 
 /** Каждый запрос синхронизации несёт Account ID хранилища (X-Impact-Account) — сверка с сессией на сервере */
-const syncApi = createSyncApi(() => vault.account.value?.accountId ?? null)
-const engine = new SyncEngine(idbSyncStore, syncApi, createCodec(masterCryptoKey))
+const syncApi = createSyncApi(
+  () => vault.account.value?.accountId ?? null,
+  () => vault.keyEpoch.value,
+)
+const engine = new SyncEngine(idbSyncStore, syncApi, createCodec(masterCryptoKey), {
+  // Объект более новой эпохи ключа — MK аккаунта сменили на другом устройстве (ADR-0012)
+  keyEpoch: () => vault.keyEpoch.value,
+})
 
 const runtime = new SyncRuntime({
   engine,
@@ -121,6 +128,9 @@ export function bootstrapAccount(): Promise<void> {
       runtime.markSignedOut()
       return
     }
+    // Незавершённая ротация ключа этого устройства: прежним ключом синхронизироваться, возможно, уже нельзя
+    // (commit прошёл) — решает сверка ротации (useKeyRotation.inspect), она же запустит синхронизацию
+    if (vault.pendingRotation.value) return
     // 'unknown' — сеть недоступна: работаем локально, синхронизация сама попробует позже
     await runtime.start()
   })().catch((error) => {
@@ -142,6 +152,19 @@ async function resolveConflict(objectId: string, choice: ResolveChoice): Promise
   await refreshConflictIds()
 }
 
+async function runCycle(): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const report = await engine.sync()
+      if (report.localChanged) await refreshScreens()
+      return
+    } catch (error) {
+      // Цикл оборвал reset (start/stop из другой вкладки) — просто повторяем
+      if (!(error instanceof SyncAbortedError) || attempt >= 3) throw error
+    }
+  }
+}
+
 export function useSync() {
   return {
     status: computed<SyncStatus>(() => snapshot.value.status),
@@ -156,7 +179,16 @@ export function useSync() {
     usage: computed(() => snapshot.value.usage),
     start: () => runtime.start(),
     stop: () => runtime.stop(),
+    /** Остановить во всех вкладках на время ротации ключа (статус 'paused'); продолжить — start() */
+    pause: () => runtime.pause(),
     syncNow: () => runtime.syncNow(),
+    /**
+     * Один цикл движка напрямую, с ошибками (ротация ключа: синхронизация приостановлена, а отправить
+     * неотправленное и забрать свежее нужно, и узнать о сбое — тоже)
+     */
+    runCycle,
+    /** Страница pull как есть, без применения к хранилищу (проверка шифротекстов новой эпохи) */
+    peek: (cursor: number, limit: number) => syncApi.pull(cursor, limit),
     listConflicts: (): Promise<ConflictView[]> => engine.listConflicts(),
     resolveConflict,
   }

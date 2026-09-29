@@ -20,6 +20,7 @@ import { createAuthService } from './modules/auth/auth.service'
 import { devicesRoutes } from './modules/devices/devices.routes'
 import { entitlementsRoutes } from './modules/entitlements/entitlements.routes'
 import { keysRoutes } from './modules/keys/keys.routes'
+import { createRotationService } from './modules/keys/rotation.service'
 import { regionRoutes } from './modules/region/region.routes'
 import { syncRoutes } from './modules/sync/sync.routes'
 import { createSyncService } from './modules/sync/sync.service'
@@ -103,7 +104,8 @@ export async function buildApp({ config, db, ping }: Deps) {
   await app.register(helmet)
   await app.register(cookie)
   // Ключ лимитов по IP: IPv6 — по префиксу /64 (utils/ip.ts). Лимиты по логину и пользователю —
-  // отдельные счётчики (lib/rateLimit.ts → perLoginRateLimit, modules/sync/sync.routes.ts)
+  // отдельные счётчики
+  // (lib/rateLimit.ts → perLoginRateLimit, modules/sync/sync.routes.ts, modules/keys/keys.routes.ts)
   await app.register(rateLimit, {
     global: false,
     keyGenerator: (request) => rateLimitKey(request.ip),
@@ -145,10 +147,15 @@ export async function buildApp({ config, db, ping }: Deps) {
   })
   const account = createAccountService({ db, cipher })
   const sync = createSyncService({ db })
+  const rotation = createRotationService({ db })
 
   await app.register(healthRoutes, { prefix: '/api', ping, version: config.APP_VERSION })
   await app.register(authRoutes, { prefix: '/api/auth', auth })
-  await app.register(keysRoutes, { prefix: '/api/keys', db })
+  await app.register(keysRoutes, {
+    prefix: '/api/keys',
+    rotation,
+    rateLimitMax: config.SYNC_RATE_LIMIT_MAX,
+  })
   await app.register(accountRoutes, { prefix: '/api/account', account })
   await app.register(devicesRoutes, { prefix: '/api/devices', db })
   await app.register(entitlementsRoutes, { prefix: '/api/entitlements', db })
