@@ -39,7 +39,7 @@ export function useLandingView() {
     })),
   )
 
-  /* «Начать без регистрации»: новое зашифрованное хранилище на этом устройстве → журнал */
+  /* «Начать без синхронизации»: новое зашифрованное хранилище на этом устройстве → журнал */
   const starting = ref(false)
   const startError = ref(false)
   const unavailable = computed(() => vault.status.value === 'unavailable')

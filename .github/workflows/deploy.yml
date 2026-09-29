@@ -77,7 +77,11 @@ jobs:
         run: |
           ssh "$TARGET" "set -e
             cd /opt/impact-log
-            git pull --ff-only
+            # Клон на сервере — зеркало main без локальных правок (.env в .gitignore и не затрагивается).
+            # reset, а не pull --ff-only: переживает переписанную историю и ставит ровно тот коммит,
+            # под который собраны образы (IMAGE_TAG).
+            git fetch --prune origin main
+            git reset --hard $IMAGE_TAG
             export IMAGE_TAG=$IMAGE_TAG
             docker compose pull
             docker compose up -d --remove-orphans

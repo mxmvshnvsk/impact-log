@@ -294,7 +294,7 @@ export function useLoginView() {
     currentAuthKey.value = null
   })
 
-  /** «Начать без регистрации»: локальное хранилище на этом устройстве */
+  /** «Начать без синхронизации»: локальное хранилище на этом устройстве */
   async function startLocal() {
     try {
       await vault.create()

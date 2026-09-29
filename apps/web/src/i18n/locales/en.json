@@ -198,7 +198,7 @@
       "lead": "Jot down what you did and what it led to. Everything is stored and encrypted on your device, and when your performance review comes, you’ll already have a summary of results and artifacts."
     },
     "cta": {
-      "start": "Start without sign-up",
+      "start": "Start without sync",
       "login": "Sign in",
       "noteLocal": "No email, no password — entries stay on your device",
       "noteLogin": "Already syncing? Sign in to pull your entries",

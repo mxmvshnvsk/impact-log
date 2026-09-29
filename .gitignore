@@ -10,3 +10,4 @@ coverage/
 .transfer/
 .private/
 apps/vscode-extension/LICENSE
+/apps/chrome-extension/store/*.zip

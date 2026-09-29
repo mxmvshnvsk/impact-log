@@ -4,7 +4,8 @@
 1. `check` — Biome, typecheck, тесты `@impact-log/core`, сборка;
 2. `images` — Docker-образы `impact-log-api` и `impact-log-web` (Caddy + статика) → `ghcr.io/<owner>/…`,
    теги `<git sha>` и `latest`;
-3. `deploy` — по SSH на сервер: `git pull --ff-only`, `docker compose pull`, `docker compose up -d --remove-orphans`.
+3. `deploy` — по SSH на сервер: `git fetch` + `git reset --hard <sha коммита>` (клон на сервере — зеркало `main`,
+   локальных правок там не держим; `.env` не затрагивается), `docker compose pull`, `docker compose up -d --remove-orphans`.
    Перед стартом api одноразовый сервис `migrate` применяет миграции БД (`node dist/migrate.js`).
 
 Сервисы (`docker-compose.yml`): `caddy` (образ `impact-log-web`: TLS, SPA, прокси `/api`), `api`, `migrate`,
