@@ -4,6 +4,10 @@
       <span class="app-footer__brand">© {{ year }} impact log</span>
       <nav class="app-footer__links" :aria-label="t('footer.label')">
         <RouterLink :to="{ name: 'principles' }">{{ t('nav.principles') }}</RouterLink>
+        <a :href="chromeUrl" target="_blank" rel="noopener noreferrer" class="app-footer__external">
+          {{ t('footer.chrome') }}<ExternalLink :size="12" aria-hidden="true" />
+          <span class="sr-only">{{ t('footer.newTab') }}</span>
+        </a>
         <a :href="sourceUrl" target="_blank" rel="noopener noreferrer" class="app-footer__external">
           {{ t('footer.source') }}<ExternalLink :size="12" aria-hidden="true" />
           <span class="sr-only">{{ t('footer.newTab') }}</span>
@@ -22,7 +26,7 @@ import { ApiStatus } from '@/components/ApiStatus'
 import { useAppFooter } from './useAppFooter'
 
 defineProps<{ compact?: boolean }>()
-const { t, year, sourceUrl } = useAppFooter()
+const { t, year, sourceUrl, chromeUrl } = useAppFooter()
 </script>
 
 <style scoped src="./AppFooter.css"></style>

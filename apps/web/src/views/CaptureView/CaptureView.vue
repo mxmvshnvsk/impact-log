@@ -23,6 +23,10 @@
           <UiButton :to="hasVault ? { name: 'dashboard' } : { name: 'landing' }" variant="secondary">
             {{ hasVault ? t('capture.toJournal') : t('capture.toLanding') }}
           </UiButton>
+          <UiButton :href="chromeUrl" target="_blank" rel="noopener noreferrer" variant="ghost">
+            {{ t('common.installChrome') }}<ExternalLink :size="16" aria-hidden="true" />
+            <span class="sr-only">{{ t('footer.newTab') }}</span>
+          </UiButton>
         </div>
       </div>
     </UiCard>
@@ -135,6 +139,7 @@ const {
   allowSaveAgain,
   save,
   cancel,
+  chromeUrl,
 } = c
 </script>
 

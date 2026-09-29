@@ -1,11 +1,12 @@
 <template>
   <component
-    :is="to ? RouterLink : 'button'"
+    :is="to ? RouterLink : href ? 'a' : 'button'"
     :to="to"
-    :type="to ? undefined : type"
+    :href="to ? undefined : href"
+    :type="to || href ? undefined : type"
     class="ui-button"
     :class="[`ui-button--${variant}`, `ui-button--${size}`, { 'ui-button--block': block, 'ui-button--loading': loading }]"
-    :disabled="to ? undefined : disabled || loading"
+    :disabled="to || href ? undefined : disabled || loading"
     :aria-busy="loading || undefined"
   >
     <UiSpinner v-if="loading" class="ui-button__spinner" :size="16" />
@@ -23,6 +24,8 @@ withDefaults(
     size?: 'sm' | 'md' | 'lg'
     type?: 'button' | 'submit'
     to?: RouteLocationRaw
+    /** Обычная ссылка (например, внешняя); target/rel передаются атрибутами */
+    href?: string
     block?: boolean
     loading?: boolean
     disabled?: boolean
