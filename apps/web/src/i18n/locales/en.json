@@ -11,7 +11,10 @@
     "remove": "Remove",
     "retry": "Retry",
     "optional": "optional",
-    "installChrome": "Install for Chrome"
+    "install": {
+      "chrome": "Install for Chrome",
+      "vscode": "Install for VS Code"
+    }
   },
   "nav": {
     "label": "Sections",
@@ -33,7 +36,10 @@
   "footer": {
     "label": "Links",
     "source": "Source code",
-    "chrome": "Chrome extension",
+    "extension": {
+      "chrome": "Chrome extension",
+      "vscode": "VS Code extension"
+    },
     "newTab": "(opens in a new tab)"
   },
   "ui": {

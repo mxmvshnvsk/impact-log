@@ -167,8 +167,11 @@
   gap: var(--space-2);
 }
 
-/* ссылка прижата к низу карточки — карточки в ряду одной высоты */
-.landing__card-link {
+/* ссылки прижаты к низу карточки — карточки в ряду одной высоты */
+.landing__card-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
   margin-top: auto;
   padding-top: var(--space-2);
 }

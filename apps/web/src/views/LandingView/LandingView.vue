@@ -77,16 +77,19 @@
             <span v-if="item.soon" class="landing__soon">{{ t('nav.soon') }}</span>
           </h3>
           <p class="landing__text">{{ t(`landing.features.items.${item.key}.text`) }}</p>
-          <a
-            v-if="item.key === 'capture'"
-            :href="chromeUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="landing__link landing__card-link"
-          >
-            {{ t('common.installChrome') }}<ExternalLink :size="16" aria-hidden="true" />
-            <span class="sr-only">{{ t('footer.newTab') }}</span>
-          </a>
+          <div v-if="item.key === 'capture' && extensionLinks.length" class="landing__card-links">
+            <a
+              v-for="link in extensionLinks"
+              :key="link.key"
+              :href="link.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="landing__link"
+            >
+              {{ t(`common.install.${link.key}`) }}<ExternalLink :size="16" aria-hidden="true" />
+              <span class="sr-only">{{ t('footer.newTab') }}</span>
+            </a>
+          </div>
         </UiCard>
       </div>
     </section>
@@ -136,8 +139,8 @@ import { UiEyebrow } from '@/ui/UiEyebrow'
 import { useLandingView } from './useLandingView'
 
 const l = useLandingView()
-const { t, isMobile, mascot, examples, pains, steps, features, privacy, sourceUrl, chromeUrl } = l
-const { starting, startError, unavailable, start } = l
+const { t, isMobile, mascot, examples, pains, steps, features, privacy } = l
+const { sourceUrl, extensionLinks, starting, startError, unavailable, start } = l
 </script>
 
 <style scoped src="./LandingView.css"></style>

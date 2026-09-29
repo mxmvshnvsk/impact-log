@@ -11,7 +11,10 @@
     "remove": "Убрать",
     "retry": "Повторить",
     "optional": "необязательно",
-    "installChrome": "Установить для Chrome"
+    "install": {
+      "chrome": "Установить для Chrome",
+      "vscode": "Установить для VS Code"
+    }
   },
   "nav": {
     "label": "Разделы",
@@ -33,7 +36,10 @@
   "footer": {
     "label": "Ссылки",
     "source": "Исходный код",
-    "chrome": "Расширение для Chrome",
+    "extension": {
+      "chrome": "Расширение для Chrome",
+      "vscode": "Расширение для VS Code"
+    },
     "newTab": "(откроется в новой вкладке)"
   },
   "ui": {

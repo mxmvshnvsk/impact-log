@@ -10,7 +10,7 @@ import { useI18n } from 'vue-i18n'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useImpacts } from '@/composables/useImpacts'
 import { useVault } from '@/composables/useVault'
-import { CHROME_WEB_STORE_URL } from '@/constants/links'
+import { EXTENSION_LINKS } from '@/constants/links'
 import {
   clearHandoffFromUrl,
   clearStashedDraft,
@@ -199,6 +199,6 @@ export function useCaptureView() {
     headerLead,
     save,
     cancel,
-    chromeUrl: CHROME_WEB_STORE_URL,
+    extensionLinks: EXTENSION_LINKS,
   }
 }

@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import { useMascot } from '@/composables/useMascot'
 import { useVault } from '@/composables/useVault'
-import { CHROME_WEB_STORE_URL, SOURCE_URL } from '@/constants/links'
+import { EXTENSION_LINKS, SOURCE_URL } from '@/constants/links'
 
 const PAINS = ['memory', 'small', 'impact'] as const
 const STEPS = ['write', 'organize', 'summary'] as const
@@ -70,7 +70,7 @@ export function useLandingView() {
     features: FEATURES,
     privacy: PRIVACY,
     sourceUrl: SOURCE_URL,
-    chromeUrl: CHROME_WEB_STORE_URL,
+    extensionLinks: EXTENSION_LINKS,
     starting,
     startError,
     unavailable,
