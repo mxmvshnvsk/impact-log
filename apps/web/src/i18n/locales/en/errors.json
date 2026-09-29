@@ -25,5 +25,6 @@
   "VAULT_LOCKED": "The vault is locked — reload the page",
   "ACCOUNT_MISMATCH": "The session in this browser belongs to another account — sign in again",
   "KDF_LIMIT": "The server sent password protection settings that are too heavy — sign-in stopped to protect your browser",
-  "VAULT_CHANGED": "The vault was changed in another tab — reload the page"
+  "VAULT_CHANGED": "The vault was changed in another tab — reload the page",
+  "VAULT_EXISTS": "This device already has a vault, but it failed to open. Reload the page; we won’t create a new one over it so your entries aren’t lost"
 }

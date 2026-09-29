@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import { rateLimitKey } from '../utils/ip'
 import { AppError } from './errors'
 
 const MINUTE = 60_000
@@ -12,10 +13,10 @@ export function rateLimit(max: number, minutes: number) {
 }
 
 /**
- * Дополнительный лимит по логину из тела (preHandler — тело уже разобрано и логин нормализован zod).
- * Считаются все запросы с этим логином с любых IP: перебор по одному аккаунту не размазать по адресам.
- * У каждого вызова свой счётчик (свой store), так что маршруты друг другу не мешают.
- * В логи ключ (логин) не попадает: плагин ничего не пишет.
+ * Дополнительный лимит по паре «логин + IP (IPv6 — /64)» (preHandler — тело уже разобрано zod).
+ * Ключ намеренно включает адрес: глобальный счётчик по одному логину позволил бы любому, кто знает логин,
+ * заблокировать вход владельцу. Распределённый перебор пароля упирается в Argon2id на стороне атакующего
+ * и в обязательную 2FA с блокировкой на пользователя (totpGuard). В логи ключ не попадает.
  */
 export function perLoginRateLimit(
   app: Pick<FastifyInstance, 'createRateLimit'>,
@@ -26,7 +27,7 @@ export function perLoginRateLimit(
     max,
     timeWindow: minutes * MINUTE,
     keyGenerator: (request: FastifyRequest) =>
-      `login:${String((request.body as { login?: unknown } | undefined)?.login)}`,
+      `login:${String((request.body as { login?: unknown } | undefined)?.login)}|${rateLimitKey(request.ip)}`,
     // Запас LRU: поток «чужих» логинов не должен быстро вытеснять счётчики настоящих
     cache: 20_000,
   } as Parameters<FastifyInstance['createRateLimit']>[0])

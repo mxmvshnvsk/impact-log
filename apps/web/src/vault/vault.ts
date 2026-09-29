@@ -60,6 +60,13 @@ export type VaultRecord = {
   kdfPin?: KdfPin
 }
 
+/** Хранилище на устройстве уже есть (например, не открылось из-за сбоя) — создавать поверх нельзя */
+export class VaultExistsError extends Error {
+  constructor() {
+    super('VAULT_EXISTS')
+  }
+}
+
 export class VaultUnavailableError extends Error {
   constructor(cause?: unknown) {
     super('VAULT_UNAVAILABLE', { cause })
@@ -84,13 +91,22 @@ async function sealForDevice(
   return { deviceKey, envelope: serializeEnvelope(envelope) }
 }
 
-/** Открывает хранилище устройства: null — хранилища нет */
-export async function loadVault(): Promise<VaultRecord | null> {
+async function readVaultMeta(): Promise<{ record?: VaultRecord; deviceKey?: CryptoKey }> {
+  // Запись и ключ устройства — одной транзакцией: смена MK в другой вкладке не вклинится между чтениями
+  const tx = (await database()).transaction('meta', 'readonly')
+  const [record, deviceKey] = await Promise.all([
+    tx.store.get('vault') as Promise<VaultRecord | undefined>,
+    tx.store.get('deviceKey') as Promise<CryptoKey | undefined>,
+    tx.done,
+  ])
+  return { record, deviceKey }
+}
+
+async function openVault(): Promise<VaultRecord | null> {
   let record: VaultRecord | undefined
   let deviceKey: CryptoKey | undefined
   try {
-    record = await readMeta<VaultRecord>('vault')
-    deviceKey = await readMeta<CryptoKey>('deviceKey')
+    ;({ record, deviceKey } = await readVaultMeta())
   } catch (error) {
     throw new VaultUnavailableError(error)
   }
@@ -107,6 +123,16 @@ export async function loadVault(): Promise<VaultRecord | null> {
     masterKey.fill(0)
   }
   return record
+}
+
+/** Открывает хранилище устройства: null — хранилища нет. Одна повторная попытка — на случай гонки/сбоя чтения */
+export async function loadVault(): Promise<VaultRecord | null> {
+  try {
+    return await openVault()
+  } catch {
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    return openVault()
+  }
 }
 
 async function stampKeyId(record: VaultRecord, keyId: string): Promise<VaultRecord> {
@@ -144,8 +170,14 @@ export async function createVault(
     account: binding.account ?? null,
     ...(binding.kdfPin ? { kdfPin: binding.kdfPin } : {}),
   }
-  // Ключ устройства и конверт — одной транзакцией: не бывает конверта без ключа и наоборот
+  // Ключ устройства и конверт — одной транзакцией: не бывает конверта без ключа и наоборот.
+  // Существующее хранилище никогда не перезаписываем: иначе прежний MK (и все записи) пропал бы навсегда
   const tx = db.transaction('meta', 'readwrite')
+  if (await tx.store.get('vault')) {
+    tx.abort()
+    await tx.done.catch(() => {})
+    throw new VaultExistsError()
+  }
   await Promise.all([
     tx.store.put(deviceKey, 'deviceKey'),
     tx.store.put(record, 'vault'),

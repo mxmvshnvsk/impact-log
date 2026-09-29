@@ -30,7 +30,13 @@ import { authApi } from '@/api/auth'
 import { ApiError } from '@/api/http'
 import { i18n } from '@/i18n'
 import { broadcast } from '@/utils/vaultChannel'
-import { countActive, type KdfPin, masterKeyBytes, type VaultAccount } from '@/vault'
+import {
+  countActive,
+  type KdfPin,
+  masterKeyBytes,
+  type VaultAccount,
+  VaultUnavailableError,
+} from '@/vault'
 import { useEntitlements } from './useEntitlements'
 import { useSession } from './useSession'
 import { useSync } from './useSync'
@@ -207,6 +213,9 @@ export function useAccount() {
     login: string,
     decide: MergeDecider | 'merge' | undefined,
   ): Promise<AdoptionPlan> {
+    // Хранилище есть, но не открылось (сбой) — не создаём новое поверх: прежний MK пропал бы навсегда
+    if (vault.status.value === 'unavailable')
+      throw new VaultUnavailableError('vault present but not opened')
     if (!vault.hasVault.value) return 'create'
     const local = masterKeyBytes()
     const same = sameKey(local, masterKey)

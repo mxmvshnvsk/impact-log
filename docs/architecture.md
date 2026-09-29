@@ -207,7 +207,7 @@ sequenceDiagram
 | Схема БД и миграции | `apps/api/src/db/schema.ts`, `apps/api/drizzle/*.sql` (`0002_e2ee.sql` — переход на E2EE, `0003_hardening.sql` — секрет устройства, блокировка TOTP, `via_recovery`) |
 | Модули API | `apps/api/src/modules/{auth,account,keys,devices,entitlements,sync,region}` |
 | Сессии и cookie, CSRF | `apps/api/src/plugins/{session,csrf}.ts` |
-| Лимиты частоты (по IP с IPv6 /64, по логину), логи без SQL-параметров | `apps/api/src/lib/{rateLimit,logging}.ts`, `apps/api/src/utils/ip.ts` |
+| Лимиты частоты (по IP с IPv6 /64, по паре «логин + IP», по пользователю), логи без SQL-параметров | `apps/api/src/lib/{rateLimit,logging}.ts`, `apps/api/src/utils/ip.ts` |
 | Серверная криптография (хеш `authKey`, TOTP v2, блокировка перебора TOTP, секрет устройства, токены, Account ID) | `apps/api/src/modules/auth/{authKey,totp,totpGuard,prelogin}.ts`, `apps/api/src/lib/crypto.ts` |
 | E2E-проверки: API и движок синхронизации против настоящего API | `apps/api/scripts/e2e.mjs`, `apps/web/scripts/sync-e2e.ts` |
 | Caddy: TLS, CSP, логи с усечёнными IP | `infra/caddy/Caddyfile` |

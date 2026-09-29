@@ -18,7 +18,7 @@ import {
   stashDraft,
 } from '@/utils/captureHandoff'
 import { hostOf, safeHref } from '@/utils/evidence'
-import { findCapture, rememberCapture } from '@/vault'
+import { findCapture, getObject, rememberCapture } from '@/vault'
 
 /** label: null — подпись из i18n (capture.fromWeb: «из веб-приложения»); названия продуктов не переводим */
 const SOURCES = {
@@ -40,7 +40,7 @@ export function useCaptureView() {
   const route = useRoute()
   const router = useRouter()
   const vault = useVault()
-  const { create, get } = useImpacts()
+  const { create } = useImpacts()
 
   const draft = shallowRef<ImpactDraft | null>(null)
   const invalid = ref(false)
@@ -82,9 +82,12 @@ export function useCaptureView() {
       saveAgain.value = false
       if (!draftId || !hasVault) return
       const objectId = await findCapture(draftId).catch(() => null)
+      // Проверяем по хранилищу, а не по списку в памяти: в новой вкладке он ещё не загружен.
       // Запись могли удалить — тогда черновик снова можно сохранить без вопросов
-      if (objectId && draft.value?.draftId === draftId && get(objectId))
+      const object = objectId ? await getObject(objectId).catch(() => undefined) : undefined
+      if (objectId && object?.deleted === 0 && draft.value?.draftId === draftId) {
         duplicateOf.value = objectId
+      }
     },
     { immediate: true },
   )

@@ -89,7 +89,7 @@
     <template v-if="!alreadySignedIn" #footer>
       {{ t('auth.login.noAccount') }}
       <RouterLink v-if="hasVault" :to="{ name: 'register' }">{{ t('auth.login.enableSync') }}</RouterLink>
-      <button v-else type="button" class="login__footer-button" @click="startLocal">
+      <button v-else-if="!vaultUnavailable" type="button" class="login__footer-button" @click="startLocal">
         {{ t('auth.login.startLocal') }}
       </button>
     </template>
@@ -116,6 +116,7 @@ const {
   alreadySignedIn,
   account,
   hasVault,
+  vaultUnavailable,
   eyebrow,
   title,
   subtitle,

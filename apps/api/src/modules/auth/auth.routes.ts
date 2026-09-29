@@ -33,15 +33,12 @@ function sessionBody(result: { user: UserRow; deviceId: string; deviceSecret?: s
 
 export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) => {
   // Лимиты по логину (сверх лимитов по IP): перебор одного аккаунта с множества адресов
-  const preloginPerLogin = perLoginRateLimit(app, 20, 15)
   const loginPerLogin = perLoginRateLimit(app, 10, 15)
-  const recoveryPerLogin = perLoginRateLimit(app, 5, 15)
 
   app.post(
     '/prelogin',
     {
       config: rateLimit(30, 5),
-      preHandler: preloginPerLogin,
       schema: { body: preloginRequestSchema, response: { 200: preloginResponseSchema } },
     },
     async (request) => auth.prelogin(request.body.login),
@@ -110,7 +107,6 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
     '/recovery/begin',
     {
       config: rateLimit(5, 15),
-      preHandler: recoveryPerLogin,
       schema: { body: recoveryBeginRequestSchema, response: { 200: recoveryBeginResponseSchema } },
     },
     async (request, reply) => {

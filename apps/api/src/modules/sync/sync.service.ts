@@ -13,7 +13,12 @@ import { and, asc, eq, gt, lte, sql } from 'drizzle-orm'
 import type { Database } from '../../db/client'
 import { type ObjectRow, objects, users } from '../../db/schema'
 import { AppError } from '../../lib/errors'
-import { countActiveImpacts, storageUsage } from '../entitlements/usage'
+import {
+  countActiveImpacts,
+  countObjectRows,
+  storageUsage,
+  TOMBSTONE_ROW_FACTOR,
+} from '../entitlements/usage'
 
 type Deps = { db: Database }
 
@@ -98,6 +103,7 @@ export function createSyncService({ db }: Deps) {
       /** Активные impact и объём хранилища — считаем лениво (один раз) и дальше ведём счётчики */
       let activeImpacts: number | null = null
       let storage: StorageUsage | null = null
+      let rows: number | null = null
       const results: PushResult[] = []
 
       for (const change of changes) {
@@ -150,6 +156,17 @@ export function createSyncService({ db }: Deps) {
           }
         }
 
+        // Новая строка (в т.ч. будущий tombstone) — под общим потолком строк, чтобы циклы
+        // «создать → удалить» не раздували БД: живые объекты ограничены maxObjects, все строки — вдвое больше
+        const maxObjects = profile.limits.maxObjects
+        if (!existing && maxObjects !== null) {
+          rows ??= await countObjectRows(tx, userId)
+          if (rows + 1 > maxObjects * TOMBSTONE_ROW_FACTOR) {
+            results.push({ objectId, status: 'rejected', code: 'QUOTA_EXCEEDED' })
+            continue
+          }
+        }
+
         const values = {
           kind: change.kind,
           version: (existing?.version ?? 0) + 1,
@@ -171,6 +188,7 @@ export function createSyncService({ db }: Deps) {
               .returning(returning)
         if (!written) throw new Error('Failed to write object')
 
+        if (rows !== null && !existing) rows += 1
         if (activeImpacts !== null) activeImpacts += impactDelta
         if (storage !== null) {
           storage.storageBytes += delta.addBytes

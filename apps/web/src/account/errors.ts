@@ -1,6 +1,11 @@
 import { CryptoError, RecoveryKeyError } from '@impact-log/core/crypto'
 import { ApiError } from '@/api/http'
-import { VaultChangedError, VaultLockedError, VaultUnavailableError } from '@/vault'
+import {
+  VaultChangedError,
+  VaultExistsError,
+  VaultLockedError,
+  VaultUnavailableError,
+} from '@/vault'
 import { KdfError } from './kdf'
 import { KdfLimitError, WrongPasswordError } from './keys'
 
@@ -33,6 +38,7 @@ export function errorKey(error: unknown, context?: ErrorContext): string {
   if (error instanceof KdfLimitError) return 'errors.KDF_LIMIT'
   if (error instanceof VaultChangedError) return 'errors.VAULT_CHANGED'
   if (error instanceof VaultUnavailableError) return 'errors.VAULT_UNAVAILABLE'
+  if (error instanceof VaultExistsError) return 'errors.VAULT_EXISTS'
   if (error instanceof VaultLockedError) return 'errors.VAULT_LOCKED'
   return 'errors.UNKNOWN_ERROR'
 }

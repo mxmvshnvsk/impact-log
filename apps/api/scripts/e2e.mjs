@@ -1051,19 +1051,28 @@ check(
 )
 
 // ---------------------------------------------------------------------------------------------
-section('лимиты частоты: по логину и по IPv6 /64')
+section('лимиты частоты: логин + IP и IPv6 /64')
 const perLogin = []
 for (let i = 0; i < 11; i++) {
   perLogin.push(await new Client().post('/auth/login', { login: 'henry', authKey: newKey() }))
 }
 check(
-  'login: 10 попыток на один логин с 10 разных IP → 401, 11-я → 429 RATE_LIMITED',
-  perLogin.slice(0, 10).every((x) => isError(x, 401, 'INVALID_CREDENTIALS')) &&
-    isError(perLogin[10], 429, 'RATE_LIMITED'),
+  'login: нет глобальной блокировки по логину — 11 попыток с разных IP → 401 (владельца не запереть)',
+  perLogin.every((x) => isError(x, 401, 'INVALID_CREDENTIALS')),
   perLogin.map((x) => x.status),
 )
+const henryIp = new Client()
+const sameIp = []
+for (let i = 0; i < 11; i++) {
+  sameIp.push(await henryIp.clone().post('/auth/login', { login: 'henry', authKey: newKey() }))
+}
+check(
+  'login: с одного IP — 10 попыток → 401, 11-я → 429',
+  sameIp.slice(0, 10).every((x) => x.status === 401) && isError(sameIp[10], 429, 'RATE_LIMITED'),
+  sameIp.map((x) => x.status),
+)
 r = await new Client().post('/auth/login', { login: 'henry2', authKey: newKey() })
-check('лимит по логину не задевает другие логины', isError(r, 401, 'INVALID_CREDENTIALS'), r)
+check('другой IP и логин не задеты', isError(r, 401, 'INVALID_CREDENTIALS'), r)
 const perLoginRecovery = []
 for (let i = 0; i < 6; i++) {
   perLoginRecovery.push(
@@ -1071,9 +1080,8 @@ for (let i = 0; i < 6; i++) {
   )
 }
 check(
-  'recovery/begin: 5 попыток на логин с разных IP → 401, 6-я → 429',
-  perLoginRecovery.slice(0, 5).every((x) => x.status === 401) &&
-    isError(perLoginRecovery[5], 429, 'RATE_LIMITED'),
+  'recovery/begin: лимита по логину нет (160-битный ключ не подобрать) — 6 попыток с разных IP → 401',
+  perLoginRecovery.every((x) => x.status === 401),
   perLoginRecovery.map((x) => x.status),
 )
 const perLoginPrelogin = []
@@ -1081,9 +1089,8 @@ for (let i = 0; i < 21; i++) {
   perLoginPrelogin.push(await new Client().post('/auth/prelogin', { login: 'henry' }))
 }
 check(
-  'prelogin: 20 запросов на логин с разных IP → 200, 21-й → 429',
-  perLoginPrelogin.slice(0, 20).every((x) => x.status === 200) &&
-    isError(perLoginPrelogin[20], 429, 'RATE_LIMITED'),
+  'prelogin: лимита по логину нет — 21 запрос с разных IP → 200',
+  perLoginPrelogin.every((x) => x.status === 200),
   perLoginPrelogin.map((x) => x.status),
 )
 const v6 = []
@@ -1235,6 +1242,28 @@ check(
 r = await j1.get('/entitlements')
 check('usage.objects = 100000', r.json?.usage.objects === 100_000, r.json?.usage)
 await sql`delete from objects where user_id = (select id from users where login = 'judy')`
+
+// ---------------------------------------------------------------------------------------------
+section("потолок строк с tombstone'ами: 2 × maxObjects (nina, FREE)")
+const n1 = new Client()
+await register(n1, 'nina')
+await sql`update users set plan = 'FREE' where login = 'nina'`
+await sql`insert into objects (user_id, object_id, kind, version, ciphertext, deleted, seq)
+  select u.id, gen_random_uuid(), 'impact', 2, null, true, nextval('object_seq')
+  from users u, generate_series(1, 1995) where u.login = 'nina'`
+const nIds = Array.from({ length: 6 }, () => randomUUID())
+r = await n1.push(nIds.map((id) => impact(id, 0, 'n')))
+check(
+  '1995 tombstone + 5 созданий = 2000 строк ok, 6-е → QUOTA_EXCEEDED (циклы «создать → удалить» не раздувают БД)',
+  r.json?.results?.slice(0, 5).every((x) => x.status === 'accepted') &&
+    r.json.results[5].code === 'QUOTA_EXCEEDED',
+  r.json?.results?.map((x) => x.code ?? x.status),
+)
+r = await n1.push([impact(nIds[0], 1, 'n-updated')])
+check('на потолке строк обновление → accepted', r.json?.results?.[0]?.status === 'accepted', r.json)
+r = await n1.get('/entitlements')
+check("usage.objects = 5 (tombstone'ы не считаются)", r.json?.usage.objects === 5, r.json?.usage)
+await sql`delete from objects where user_id = (select id from users where login = 'nina')`
 
 // ---------------------------------------------------------------------------------------------
 section('квота хранилища: байты (kate, FREE)')

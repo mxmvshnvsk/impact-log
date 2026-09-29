@@ -161,6 +161,10 @@ export function useRegisterView() {
       mascot.react('oops')
       if (cause instanceof ApiError && cause.code === 'LOGIN_TAKEN') {
         step.value = 'credentials'
+        // Код уже отправляли, а логин «занят» — скорее всего, сервер подтвердил регистрацию,
+        // но ответ не дошёл: подсказываем войти (записи при входе предложит объединить)
+        error.value = codeSubmitted ? 'auth.register.maybeCreated' : errorKey(cause)
+        return
       }
       error.value = errorKey(cause)
     } finally {
@@ -170,6 +174,8 @@ export function useRegisterView() {
   }
 
   // ---------- шаг 3: 2FA ----------
+  /** Код подтверждения хотя бы раз уходил на сервер (см. обработку LOGIN_TAKEN выше) */
+  let codeSubmitted = false
   const code = ref('')
   const remember = ref(false)
   const codeError = ref<string | null>(null)
@@ -191,6 +197,7 @@ export function useRegisterView() {
       return
     }
     busy.value = true
+    codeSubmitted = true
     try {
       // Хранилище переходит на MK нового аккаунта только здесь — после подтверждения кода
       await accountFlow.confirmRegistration(parsed.data, remember.value, prepared.value, report)

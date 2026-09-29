@@ -252,6 +252,7 @@ export function useLoginView() {
     alreadySignedIn,
     account,
     hasVault: vault.hasVault,
+    vaultUnavailable: computed(() => vault.status.value === 'unavailable'),
     eyebrow,
     title,
     subtitle,

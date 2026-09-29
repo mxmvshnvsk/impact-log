@@ -39,3 +39,14 @@ export async function storageUsage(db: Executor, userId: string): Promise<Storag
     .where(eq(objects.userId, userId))
   return { objects: row?.objects ?? 0, storageBytes: row?.storageBytes ?? 0 }
 }
+
+/**
+ * Все строки объектов пользователя, включая tombstone'ы. Лимит строк = 2 × maxObjects (TOMBSTONE_ROW_FACTOR):
+ * живые объекты считаются отдельно, а этот потолок не даёт раздувать БД циклами «создать → удалить».
+ */
+export const TOMBSTONE_ROW_FACTOR = 2
+
+export async function countObjectRows(db: Executor, userId: string): Promise<number> {
+  const [row] = await db.select({ value: count() }).from(objects).where(eq(objects.userId, userId))
+  return row?.value ?? 0
+}
