@@ -81,7 +81,7 @@ pnpm workspaces, TypeScript strict, Biome ([ADR-0002](adr/0002-stack.md)).
 | `packages/shared` | `@impact-log/shared` | Контракт клиент ↔ API: zod-схемы запросов и ответов (`schemas/auth`, `account`, `sync`, `health`), коды ошибок, entitlements (профили тарифов, резолвер, квота) | `zod` |
 | `apps/api` | `@impact-log/api` | HTTP API: Fastify 5 + Drizzle + PostgreSQL 17; аутентификация, конверты, устройства, синхронизация, тарифы, регион | shared |
 | `apps/web` | `@impact-log/web` | Канонический клиент: Vue 3 + Vite + vue-router + vue-i18n; хранилище в IndexedDB (`idb`), Markdown (`marked` + DOMPurify), экраны записей, аналитики, ревью, настроек, входа и восстановления | core, shared |
-| `apps/cli` | `@impact-log/cli` | Команда `impact`: `add`, `git`, `decode`, `config`; собирает черновик и открывает браузер | core |
+| `apps/cli` | `impact-log` (npm) | Команда `impact`: `add`, `git`, `decode`, `config`; собирает черновик и открывает браузер | core |
 | `apps/chrome-extension` | `@impact-log/chrome-extension` | Расширение Manifest V3: окно, контекстное меню, настройки | core |
 | `apps/vscode-extension` | `impact-log-vscode` | Команды «Capture impact / selection / last commit» | core |
 
@@ -302,7 +302,7 @@ PWA (service worker) работает только в production-сборке: `
 Клиенты захвата (подробно — README каждого):
 
 ```bash
-pnpm --filter @impact-log/cli build                  # apps/cli/dist/impact.js
+pnpm --filter impact-log build                       # apps/cli/dist/impact.js
 pnpm --filter @impact-log/chrome-extension build     # apps/chrome-extension/dist → «Загрузить распакованное»
 pnpm --filter impact-log-vscode build                # apps/vscode-extension/dist/extension.cjs
 ```

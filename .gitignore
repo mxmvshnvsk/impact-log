@@ -11,5 +11,6 @@ coverage/
 .private/
 docs/reports/
 apps/vscode-extension/LICENSE
+apps/cli/*.tgz
 /apps/chrome-extension/store/*.zip
 *.vsix

@@ -1,97 +1,118 @@
-# impact CLI
+# impact log CLI
 
-Быстрый захват записей в impact log из терминала. CLI **не ходит в API и ничего не хранит**:
-он собирает черновик (`ImpactDraft`, Capture Protocol) и открывает в браузере
-`<app-url>/capture#draft=<base64url>`. Страница `/capture` показывает форму с заполненными полями,
-вы проверяете и подтверждаете — запись шифруется и сохраняется в вашем impact log.
-
-## Установка
-
-Нужен Node.js ≥ 22.
+Capture what you did — and the impact it had — right from the terminal. `impact` builds a draft and
+opens it in your [impact log](https://impact-log.com): check it there and save. From a commit it takes
+the subject, the body and links to the commit and the branch.
 
 ```sh
-pnpm install
-pnpm --filter @impact-log/cli build      # → apps/cli/dist/impact.js (один файл, без зависимостей)
-cd apps/cli && npm link                  # команда `impact` в PATH
+npm install --global impact-log
+impact add "Sped up CI" -s 4 --link https://github.com/org/repo/pull/42 -m "Build time=12->4 min"
 ```
 
-Без `npm link` — симлинк или алиас:
+Or without installing: `npx impact-log add "Sped up CI"`. Requires Node.js 22 or newer.
+
+## Examples
 
 ```sh
-ln -s "$PWD/apps/cli/dist/impact.js" ~/.local/bin/impact
-# или
-alias impact="node $PWD/apps/cli/dist/impact.js"
-```
+# Everything with flags
+impact add "Sped up CI" -s 4 -c Performance -l ci \
+  --link https://github.com/org/repo/pull/42 -m "Build time=12->4 min"
 
-## Примеры
-
-```sh
-# Всё флагами
-impact add "Ускорил сборку" -s 4 -c Performance -l ci \
-  --link https://github.com/org/repo/pull/42 -m "Время сборки=12->4 мин"
-
-# Интерактивно: без заголовка в терминале impact спросит заголовок и оценку
+# Interactive: without a title in a terminal, impact asks for the title and the score
 impact add
 
-# Описание из stdin
-git log -1 --format=%b | impact add "Перевёл сервис на Node 22" --stdin
+# Description from stdin
+git log -1 --format=%b | impact add "Migrated the service to Node 22" --stdin
 
-# Из коммита: тема → заголовок, тело → описание, коммит и ветка → артефакты
+# From a commit: subject → title, body → description, commit and branch → artifacts
 impact git
 impact git --rev HEAD~2 -s 3 -l refactoring
 
-# Только ссылка / черновик в JSON (браузер не открывается)
-impact add "Разобрал инцидент" --print
-impact add "Разобрал инцидент" --json
+# Just the link or the draft as JSON (the browser is not opened)
+impact add "Led the incident review" --print
+impact add "Led the incident review" --json
 
-# Что лежит в ссылке захвата (офлайн, со схемной проверкой)
+# What's inside a capture link (offline, validated)
 impact decode "https://impact-log.com/capture#draft=eyJ…"
 ```
 
-Флаги `add`: `-s/--score 1..5`, `-c/--category` и `-l/--label` (повторяемые, можно через запятую),
-`--link <url>` (повторяемый; тип определяется автоматически: PR, задача, коммит, документ),
-`-m/--metric "Название=значение ед."` или `"Название=было->стало ед."`, `--date ГГГГ-ММ-ДД`,
-`-d/--description` или `--stdin`, `--print`, `--json`, `--no-open`, `--app-url`.
-Полная справка: `impact --help`, `impact add --help`, `impact git --help`.
+## Commands
 
-`impact git` понимает remote в форматах `git@host:org/repo.git`, `ssh://…`, `https://…` для GitHub
-(включая Enterprise и `ssh.github.com:443`), GitLab (включая self-hosted и подгруппы) и bitbucket.org.
-Если origin на другом хостинге — коммит попадает в запись без ссылки, по SHA. Ссылка на ветку ставится,
-только если у ветки есть upstream на том же remote.
+| Command | What it does |
+| --- | --- |
+| `impact add [title…]` | Capture what you did and its impact |
+| `impact git [--rev <rev>]` | Capture a commit (`HEAD` by default) |
+| `impact decode <link>` | Print the draft inside a capture link as JSON; `-` reads the link from stdin |
+| `impact config get \| set \| unset \| path` | Your impact log address (see below) |
 
-Коды выхода: `0` — успех, `1` — ошибка ввода (флаги, валидация, не git-репозиторий, черновик
-не помещается в ссылку), `2` — прочее (файл конфигурации, git упал).
+Options of `add` (and mostly of `git`):
 
-Язык сообщений — английский, русский при `LANG`/`LC_ALL`, начинающемся с `ru`.
+| Option | |
+| --- | --- |
+| `-s, --score <1-5>` | Impact: 1 small win … 5 key result of the year |
+| `-c, --category <name>` | Category, repeatable |
+| `-l, --label <name>` | Label, repeatable; commas work too: `-l ci,perf` |
+| `--link <url>` | PR, issue, commit or doc link, repeatable; the type is detected automatically |
+| `-m, --metric <spec>` | `"Label=value unit"` or `"Label=before->after unit"`, repeatable |
+| `--date <YYYY-MM-DD>` | When it happened (default: today; for `git` — the commit date) |
+| `-d, --description <text>`, `--stdin` | Description (Markdown) |
+| `--print`, `--json`, `--no-open` | Print the link or the draft instead of opening the browser |
+| `--app-url <url>` | impact log address for this run |
 
-## Конфигурация
+Full help: `impact --help`, `impact add --help`, `impact git --help`.
+
+`impact git` builds links when `origin` points to GitHub (including Enterprise), GitLab (including
+self-hosted and subgroups) or bitbucket.org; otherwise the commit is kept by its SHA. A branch link is
+added only if the branch has an upstream on the same remote.
+
+Exit codes: `0` — success, `1` — invalid input (flags, validation, not a git repository, the draft
+doesn't fit into a link), `2` — anything else (config file, git failed).
+
+## Configuration
 
 ```sh
-impact config set app-url http://localhost:5173   # локальная разработка
-impact config get                                  # действующее значение и его источник
+impact config set app-url http://localhost:5173   # e.g. a local impact log
+impact config get                                  # the effective value and where it comes from
 impact config unset app-url
 impact config path
 ```
 
-Файл: `$XDG_CONFIG_HOME/impact-log/config.json` (по умолчанию `~/.config/impact-log/config.json`),
-на Windows — `%APPDATA%\impact-log\config.json`. Права 600.
+The address is taken from `--app-url`, then `IMPACT_LOG_URL`, then the config file, and defaults to
+`https://impact-log.com`. Only `https://` is allowed (`http://` only for `localhost`). The config lives
+in `$XDG_CONFIG_HOME/impact-log/config.json` (`~/.config/impact-log/config.json`; on Windows
+`%APPDATA%\impact-log\config.json`) with permissions 600.
 
-Приоритет адреса: `--app-url` > переменная `IMPACT_LOG_URL` > конфиг > `https://impact-log.com`.
-Разрешён только `https://` (для `localhost`, `127.0.0.1`, `[::1]` и `*.localhost` — и `http://`), без
-логина/пароля в адресе, query и `#`. Хост — только латинские буквы, цифры, точки и дефисы (плюс порт;
-для localhost — ещё `[::1]`), путь — без спецсимволов (`A–Z a–z 0–9 . _ ~ / -`): `new URL` пропускает в
-имени хоста `&`, `"`, `(` и т.п., а адрес потом уходит внешней программе открытия браузера. Неподходящий
-адрес — ошибка ввода (код выхода 1).
+Messages are in English, or in Russian when `LANG`/`LC_ALL` starts with `ru`.
 
-## Приватность
+## Privacy
 
-- Никаких сетевых запросов и телеметрии. CLI только открывает ссылку в браузере: `open` (macOS),
-  `xdg-open` (Linux), `rundll32 url.dll,FileProtocolHandler <url>` (Windows) — без shell, URL отдельным
-  аргументом. Не `cmd /c start`: cmd разбирает строку сам, и `&`, `|`, `^` в URL стали бы командами.
-- Черновик лежит во **фрагменте** ссылки (после `#`) — браузер не отправляет его на сервер,
-  он не попадает в логи. Web-клиент читает его локально и шифрует запись после подтверждения.
-- Ссылка с черновиком может остаться в истории браузера (как любой URL), но не на сервере.
-- `impact git` читает только метаданные коммита через локальный `git`; логин/токен из https-remote
-  в ссылки не попадает. Локальные пути файлов в черновик не пишутся.
-- Длина ссылки ограничена `MAX_HANDOFF_LENGTH` (16 000 символов) — если описание не помещается,
-  CLI скажет сократить его.
+- No network requests and no telemetry. The CLI only opens a link in your browser (`open`, `xdg-open`
+  or `rundll32` on Windows — without a shell, the URL as a separate argument).
+- The draft travels in the link fragment (after `#`), which the browser never sends to a server. The link
+  may stay in your browser history, like any address.
+- `impact git` reads only commit metadata with your local `git`. Credentials from https remotes and local
+  file paths never end up in the draft.
+- impact log itself encrypts entries in your browser; with sync on, the server only gets ciphertext.
+  What is stored where: [impact-log.com/principles](https://impact-log.com/principles).
+
+## По-русски
+
+Записывайте, что сделали и какой был эффект, прямо из терминала: `impact add "Ускорил сборку" -s 4` или
+`impact git` для последнего коммита. Черновик откроется в impact log — проверьте и сохраните. CLI не
+делает сетевых запросов: черновик передаётся во фрагменте ссылки. Сообщения на русском, если `LANG`
+начинается с `ru`. Установка: `npm install --global impact-log`.
+
+## Development
+
+In the impact log monorepo:
+
+```sh
+pnpm install
+pnpm --filter impact-log build    # → apps/cli/dist/impact.js, one self-contained file
+pnpm --filter impact-log smoke    # the main scenarios against the built CLI
+node apps/cli/dist/impact.js --help
+```
+
+## License
+
+[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)

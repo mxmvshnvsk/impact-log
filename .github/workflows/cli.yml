@@ -1,0 +1,83 @@
+name: CLI
+
+# Релиз CLI в npm (пакет impact-log, команда impact).
+#   - тег cli-v<версия> → typecheck, пакет, смоук установленного пакета → npm publish;
+#   - ручной запуск → только пакет артефактом; с publish — ещё и публикация.
+# Версия — из apps/cli/package.json, тег обязан ей совпадать (npm не примет уже опубликованную версию).
+# Публикация без токенов — trusted publishing (OIDC). Разовая настройка: npmjs.com → пакет impact-log →
+# Settings → Trusted publishing → GitHub Actions: mxmvshnvsk / impact-log / cli.yml, окружение npm.
+# Trusted publisher настраивается у существующего пакета, поэтому первую версию публикуют вручную.
+
+on:
+  push:
+    tags: ['cli-v*']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish to npm
+        type: boolean
+        default: false
+
+concurrency:
+  group: cli
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./apps/cli/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "cli-v$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match apps/cli/package.json (expected cli-v$VERSION)"
+            exit 1
+          fi
+      - run: pnpm --filter impact-log typecheck
+      - run: pnpm --filter impact-log package
+      # тот же пакет, что уйдёт в npm: ставим его как пользователь и гоняем смоук против установленной команды
+      - name: Smoke test the package
+        env:
+          TARBALL: apps/cli/impact-log-${{ steps.version.outputs.version }}.tgz
+        run: |
+          npm install --global --prefix "$RUNNER_TEMP/impact" "$TARBALL"
+          IMPACT_BIN="$RUNNER_TEMP/impact/bin/impact" node apps/cli/scripts/smoke.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: impact-log-${{ steps.version.outputs.version }}
+          path: apps/cli/impact-log-${{ steps.version.outputs.version }}.tgz
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: github.ref_type == 'tag' || inputs.publish
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: impact-log-${{ needs.build.outputs.version }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      # trusted publishing — npm 11.5.1+
+      - run: npm install --global npm@^11.5.1
+      - name: Publish
+        env:
+          TARBALL: impact-log-${{ needs.build.outputs.version }}.tgz
+        run: npm publish "$TARBALL" --access public

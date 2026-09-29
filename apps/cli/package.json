@@ -1,10 +1,9 @@
 {
-  "name": "@impact-log/cli",
-  "private": true,
+  "name": "impact-log",
   "type": "module",
   "version": "0.1.0",
   "license": "AGPL-3.0-only",
-  "homepage": "https://github.com/mxmvshnvsk/impact-log/tree/main/apps/cli",
+  "homepage": "https://impact-log.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mxmvshnvsk/impact-log.git",
@@ -13,7 +12,18 @@
   "bugs": {
     "url": "https://github.com/mxmvshnvsk/impact-log/issues"
   },
-  "description": "impact log quick capture from the terminal: builds a draft and opens it in the web app",
+  "description": "Capture what you did and its impact from the terminal: drafts open in impact log, nothing is sent to a server",
+  "keywords": [
+    "impact",
+    "brag document",
+    "performance review",
+    "self-review",
+    "achievements",
+    "work log",
+    "career",
+    "cli",
+    "git"
+  ],
   "bin": {
     "impact": "./dist/impact.js"
   },
@@ -25,7 +35,9 @@
   },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke": "node scripts/smoke.mjs",
+    "package": "pnpm run build && node scripts/pack.mjs"
   },
   "devDependencies": {
     "@impact-log/core": "workspace:*",
