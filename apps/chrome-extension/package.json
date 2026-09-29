@@ -13,6 +13,7 @@
   "description": "impact log quick capture for Chrome (Manifest V3)",
   "scripts": {
     "build": "tsup && node scripts/copy-static.mjs",
+    "zip": "pnpm run build && mkdir -p store && rm -f store/impact-log-chrome-$npm_package_version.zip && cd dist && zip -qrX ../store/impact-log-chrome-$npm_package_version.zip . -x '*.DS_Store'",
     "icons": "node scripts/icons.mjs",
     "typecheck": "tsc --noEmit"
   },

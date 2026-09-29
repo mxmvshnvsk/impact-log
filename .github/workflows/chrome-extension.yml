@@ -1,0 +1,127 @@
+name: Chrome extension
+
+# Релиз расширения в Chrome Web Store (API v2).
+#   - тег chrome-v<версия> → сборка, zip, загрузка и отправка на проверку; после одобрения — публикация;
+#   - ручной запуск → только zip артефактом; с publish — тоже загрузка и отправка на проверку.
+# Версия берётся из apps/chrome-extension/package.json: тег обязан ей совпадать, а магазин не примет
+# версию, которую уже загружали. Разовая настройка Google Cloud — apps/chrome-extension/README.md.
+
+on:
+  push:
+    tags: ['chrome-v*']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Upload to Chrome Web Store and submit for review
+        type: boolean
+        default: false
+      staged:
+        description: After approval wait for a manual “Publish” in the dashboard
+        type: boolean
+        default: false
+
+concurrency:
+  group: chrome-extension
+  cancel-in-progress: false
+
+env:
+  EXTENSION_ID: jlgeedpgolalalfnecjcjhoflimbfpag
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./apps/chrome-extension/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "chrome-v$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match apps/chrome-extension/package.json (expected chrome-v$VERSION)"
+            exit 1
+          fi
+      - run: pnpm --filter @impact-log/chrome-extension typecheck
+      - run: pnpm --filter @impact-log/chrome-extension zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: impact-log-chrome-${{ steps.version.outputs.version }}
+          path: apps/chrome-extension/store/impact-log-chrome-${{ steps.version.outputs.version }}.zip
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: github.ref_type == 'tag' || inputs.publish
+    runs-on: ubuntu-latest
+    environment: chrome-web-store
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+      PUBLISH_TYPE: ${{ inputs.staged && 'STAGED_PUBLISH' || 'DEFAULT_PUBLISH' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: impact-log-chrome-${{ needs.build.outputs.version }}
+
+      # Workload Identity Federation: ключей нет, GitHub OIDC → access token сервисного аккаунта,
+      # который добавлен в кабинете Chrome Web Store (Account → Service account).
+      - id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          create_credentials_file: false
+
+      - name: Upload
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          set -euo pipefail
+          API=https://chromewebstore.googleapis.com
+          ITEM="publishers/$PUBLISHER_ID/items/$EXTENSION_ID"
+          curl -sS --fail-with-body -X POST -H "Authorization: Bearer $TOKEN" \
+            -T "impact-log-chrome-$VERSION.zip" "$API/upload/v2/$ITEM:upload" | tee upload.json
+          echo
+          STATE=$(jq -r '.uploadState // empty' upload.json)
+          # большая загрузка обрабатывается асинхронно — ждём до 5 минут
+          for _ in $(seq 30); do
+            case "$STATE" in IN_PROGRESS | UPLOAD_IN_PROGRESS) ;; *) break ;; esac
+            sleep 10
+            STATE=$(curl -sS --fail-with-body -H "Authorization: Bearer $TOKEN" "$API/v2/$ITEM:fetchStatus" \
+              | jq -r '.lastAsyncUploadState // empty')
+          done
+          if [ "$STATE" != SUCCEEDED ]; then
+            echo "::error::Upload failed: ${STATE:-no state}"
+            exit 1
+          fi
+
+      - name: Submit for review
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          set -euo pipefail
+          API=https://chromewebstore.googleapis.com
+          ITEM="publishers/$PUBLISHER_ID/items/$EXTENSION_ID"
+          curl -sS --fail-with-body -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+            -d "{\"publishType\":\"$PUBLISH_TYPE\"}" "$API/v2/$ITEM:publish" | tee publish.json
+          echo
+          jq -r '.warningInfo.warnings[]? | "::warning::\(.reason): \(.description)"' publish.json
+          {
+            echo "### Chrome Web Store: $VERSION"
+            echo "- Submission state: \`$(jq -r '.state // "unknown"' publish.json)\`"
+            echo "- Publish type: \`$PUBLISH_TYPE\`"
+            echo "- [Developer Dashboard](https://chrome.google.com/webstore/devconsole/$PUBLISHER_ID/$EXTENSION_ID/edit)"
+          } >> "$GITHUB_STEP_SUMMARY"

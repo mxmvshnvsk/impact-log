@@ -95,6 +95,9 @@
   (TLS, SPA, прокси `/api`); api и БД — только во внутренних docker-сетях (Docker обходит ufw!).
 - Деплой (`.github/workflows/deploy.yml`): push в `main` → проверки → образы api и web в GHCR → обновление
   на сервере по SSH. Миграции БД применяет одноразовый сервис `migrate` перед стартом api.
+- Релиз расширения Chrome (`.github/workflows/chrome-extension.yml`): тег `chrome-v<версия>` → zip → Chrome Web
+  Store API v2 (загрузка и отправка на проверку), доступ через Workload Identity Federation —
+  `apps/chrome-extension/README.md`.
 - Секреты: прод — `.env` на сервере (шаблон `.env.example`), CI — GitHub Secrets.
 - Прод-переменные api: `TOTP_ENCRYPTION_KEY` (обязательна, не менять после появления пользователей),
   `REGISTRATION_ENABLED`, `REGION`, `PUBLIC_API_BASE_URL`, `SYNC_RATE_LIMIT_MAX` — см. docs/deploy.md.

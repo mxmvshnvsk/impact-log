@@ -27,6 +27,7 @@
 pnpm install
 pnpm --filter @impact-log/chrome-extension build    # tsup + scripts/copy-static.mjs → apps/chrome-extension/dist
 pnpm --filter @impact-log/chrome-extension typecheck
+pnpm --filter @impact-log/chrome-extension zip          # сборка + store/impact-log-chrome-<версия>.zip (в .gitignore)
 ```
 
 `copy-static.mjs` копирует `static/` в `dist/`, ставит версию из `package.json` в manifest и проверяет
@@ -42,6 +43,69 @@ storage`, ключи локалей совпадают. При ошибке сб
 1. `chrome://extensions` → включить «Режим разработчика».
 2. «Загрузить распакованное расширение» → папка `apps/chrome-extension/dist`.
 3. После пересборки — кнопка «Обновить» на карточке расширения.
+
+## Публикация в Chrome Web Store
+
+Расширение: [`jlgeedpgolalalfnecjcjhoflimbfpag`](https://chromewebstore.google.com/detail/jlgeedpgolalalfnecjcjhoflimbfpag).
+Скриншоты и промо-плитки — в `store/`. Описание, картинки и ответы на вопросы о приватности меняются
+только в кабинете, через API — только пакет.
+
+### Выпуск версии
+
+1. Поднять `version` в `package.json` расширения — магазин не примет версию, которую уже загружали.
+2. Закоммитить и поставить тег `chrome-v<версия>`:
+
+   ```sh
+   git tag chrome-v0.1.1
+   git push origin main chrome-v0.1.1
+   ```
+
+3. `.github/workflows/chrome-extension.yml` проверит, что тег совпадает с версией, соберёт zip (он же —
+   артефакт запуска), загрузит его через Chrome Web Store API v2 и отправит на проверку. После одобрения
+   версия публикуется сама.
+
+Ручной запуск (Actions → Chrome extension → Run workflow, из ветки) по умолчанию только собирает zip.
+С `publish` — ещё и загружает и отправляет на проверку, с `staged` — после одобрения ждёт кнопки
+«Publish» в кабинете. Пока предыдущая версия на проверке, новая загрузка не пройдёт: дождитесь решения
+или отмените проверку в кабинете.
+
+### Разовая настройка доступа
+
+Ключей в GitHub нет: Actions получает токен сервисного аккаунта Google через Workload Identity
+Federation (OIDC), а сервисный аккаунт добавлен в кабинет разработчика.
+
+1. Google Cloud (любой свой проект, биллинг не нужен):
+
+   ```sh
+   PROJECT_ID=<проект>
+   REPO=mxmvshnvsk/impact-log
+   gcloud config set project "$PROJECT_ID"
+   gcloud services enable chromewebstore.googleapis.com iamcredentials.googleapis.com sts.googleapis.com
+   gcloud iam service-accounts create cws-publisher --display-name="Chrome Web Store publisher"
+   gcloud iam workload-identity-pools create github --location=global --display-name=GitHub
+   gcloud iam workload-identity-pools providers create-oidc impact-log \
+     --location=global --workload-identity-pool=github \
+     --issuer-uri=https://token.actions.githubusercontent.com \
+     --attribute-mapping=google.subject=assertion.sub,attribute.repository=assertion.repository \
+     --attribute-condition="assertion.repository=='$REPO'"
+   PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+   gcloud iam service-accounts add-iam-policy-binding "cws-publisher@$PROJECT_ID.iam.gserviceaccount.com" \
+     --role=roles/iam.workloadIdentityUser \
+     --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/$REPO"
+   ```
+
+2. Кабинет Chrome Web Store → Account → Service account: добавить `cws-publisher@<проект>.iam.gserviceaccount.com`
+   (у издателя может быть только один сервисный аккаунт).
+3. GitHub → Settings → Secrets and variables → Actions → **Variables**:
+
+   | Переменная | Значение |
+   | --- | --- |
+   | `CWS_PUBLISHER_ID` | ID издателя — первый UUID в адресе кабинета `…/devconsole/<ID издателя>/<ID расширения>/…` |
+   | `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github/providers/impact-log` |
+   | `GCP_SERVICE_ACCOUNT` | `cws-publisher@<проект>.iam.gserviceaccount.com` |
+
+4. По желанию: Settings → Environments → `chrome-web-store` (создаётся при первом запуске) — обязательное
+   подтверждение перед отправкой в магазин или разрешение только для тегов `chrome-v*`.
 
 ## Приватность и разрешения
 
