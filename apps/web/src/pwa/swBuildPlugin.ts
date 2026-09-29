@@ -18,9 +18,13 @@ export interface PwaServiceWorkerOptions {
   fileName?: string
 }
 
-/** Что не кладём в кеш: sourcemaps (наружу не отдаются), сам sw.js, служебные файлы (.vite/…, .DS_Store) */
+/**
+ * Что не кладём в кеш: sourcemaps (наружу не отдаются), сам sw.js, служебные файлы (.vite/…, .DS_Store)
+ * и media/ — картинки для витрин (README расширения VS Code в Marketplace), приложению они не нужны
+ */
 function isShellFile(fileName: string, swFileName: string): boolean {
   if (fileName === swFileName || fileName.endsWith('.map')) return false
+  if (fileName.startsWith('media/')) return false
   return !fileName.split('/').some((part) => part.startsWith('.'))
 }
 

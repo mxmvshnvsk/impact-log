@@ -12,3 +12,4 @@ coverage/
 docs/reports/
 apps/vscode-extension/LICENSE
 /apps/chrome-extension/store/*.zip
+*.vsix

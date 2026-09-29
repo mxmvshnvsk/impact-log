@@ -98,6 +98,8 @@
 - Релиз расширения Chrome (`.github/workflows/chrome-extension.yml`): тег `chrome-v<версия>` → zip → Chrome Web
   Store API v2 (загрузка и отправка на проверку), доступ через Workload Identity Federation —
   `apps/chrome-extension/README.md`.
+- Релиз расширения VS Code (`.github/workflows/vscode-extension.yml`): тег `vscode-v<версия>` → VSIX → VS Code
+  Marketplace (Microsoft Entra ID, без PAT) и Open VSX (токен); что нужно настроить — в шапке workflow.
 - Секреты: прод — `.env` на сервере (шаблон `.env.example`), CI — GitHub Secrets.
 - Прод-переменные api: `TOTP_ENCRYPTION_KEY` (обязательна, не менять после появления пользователей),
   `REGISTRATION_ENABLED`, `REGION`, `PUBLIC_API_BASE_URL`, `SYNC_RATE_LIMIT_MAX` — см. docs/deploy.md.

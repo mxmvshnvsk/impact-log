@@ -1,0 +1,138 @@
+name: VS Code extension
+
+# Релиз расширения VS Code.
+#   - тег vscode-v<версия> → сборка, смоук, VSIX → VS Code Marketplace (Microsoft Entra ID, без PAT)
+#     и Open VSX (если задан секрет OVSX_PAT);
+#   - ручной запуск → только VSIX артефактом; с publish — ещё и публикация;
+#     с whoami — только показать ID, который добавляют в издателя Marketplace (разовая настройка).
+# Версия — из apps/vscode-extension/package.json, тег обязан ей совпадать.
+# Разовая настройка:
+#   - Marketplace: user-assigned managed identity в Azure с федеративными учётными данными для окружения
+#     GitHub vscode-marketplace; её client ID и tenant ID — переменные AZURE_CLIENT_ID и AZURE_TENANT_ID;
+#     в издателе impact-log она участник с ролью Contributor (ID для Marketplace покажет запуск с whoami);
+#   - Open VSX: токен open-vsx.org — секрет OVSX_PAT в окружении open-vsx (без него шаг пропускается).
+
+on:
+  push:
+    tags: ['vscode-v*']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish to the VS Code Marketplace (and Open VSX if configured)
+        type: boolean
+        default: false
+      whoami:
+        description: Only print the Marketplace member ID of the Azure identity (one-time setup)
+        type: boolean
+        default: false
+
+concurrency:
+  group: vscode-extension
+  cancel-in-progress: false
+
+env:
+  VSCE_VERSION: 4.0.0
+  OVSX_VERSION: 1.2.0
+
+jobs:
+  build:
+    if: ${{ !inputs.whoami }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./apps/vscode-extension/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "vscode-v$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match apps/vscode-extension/package.json (expected vscode-v$VERSION)"
+            exit 1
+          fi
+      - run: pnpm --filter impact-log-vscode typecheck
+      - run: pnpm --filter impact-log-vscode build
+      - run: pnpm --filter impact-log-vscode smoke
+      # vsce сам соберёт бандл заново (vscode:prepublish) и упакует VSIX
+      - run: pnpm --filter impact-log-vscode package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: impact-log-vscode-${{ steps.version.outputs.version }}
+          path: apps/vscode-extension/impact-log-vscode-${{ steps.version.outputs.version }}.vsix
+          if-no-files-found: error
+
+  marketplace:
+    needs: build
+    if: github.ref_type == 'tag' || inputs.publish
+    runs-on: ubuntu-latest
+    environment: vscode-marketplace
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: impact-log-vscode-${{ needs.build.outputs.version }}
+      # Managed identity в Azure с федеративными учётными данными для этого окружения GitHub;
+      # в издателе Marketplace она добавлена участником (Contributor)
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      - name: Publish
+        env:
+          VSIX: impact-log-vscode-${{ needs.build.outputs.version }}.vsix
+        run: npx --yes "@vscode/vsce@$VSCE_VERSION" publish --packagePath "$VSIX" --azure-credential --skip-duplicate
+
+  open-vsx:
+    needs: build
+    if: github.ref_type == 'tag' || inputs.publish
+    runs-on: ubuntu-latest
+    environment: open-vsx
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: impact-log-vscode-${{ needs.build.outputs.version }}
+      - name: Publish
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          VSIX: impact-log-vscode-${{ needs.build.outputs.version }}.vsix
+        run: |
+          if [ -z "$OVSX_PAT" ]; then
+            echo "::notice::OVSX_PAT is not set — Open VSX skipped"
+            exit 0
+          fi
+          npx --yes "ovsx@$OVSX_VERSION" publish --packagePath "$VSIX" --skip-duplicate
+
+  whoami:
+    if: ${{ inputs.whoami }}
+    runs-on: ubuntu-latest
+    environment: vscode-marketplace
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      # 499b84ac-… — известный ID приложения Azure DevOps в Entra; profiles/me отдаёт тот ID,
+      # под которым Marketplace видит эту identity
+      - name: Marketplace member ID
+        run: |
+          ID=$(az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
+            --resource 499b84ac-1321-427f-aa17-267ca6975798 --query id -o tsv)
+          echo "Marketplace member ID: $ID"
+          {
+            echo "### Marketplace member ID"
+            echo "\`$ID\` — add it to the publisher (Members → Add, role Contributor)."
+          } >> "$GITHUB_STEP_SUMMARY"

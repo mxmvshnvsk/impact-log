@@ -6,7 +6,8 @@
   "private": true,
   "version": "0.1.0",
   "license": "AGPL-3.0-only",
-  "homepage": "https://github.com/mxmvshnvsk/impact-log/tree/main/apps/vscode-extension",
+  "pricing": "Free",
+  "homepage": "https://impact-log.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mxmvshnvsk/impact-log.git",
@@ -16,6 +17,10 @@
     "url": "https://github.com/mxmvshnvsk/impact-log/issues"
   },
   "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0f1f18",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -26,8 +31,13 @@
     "impact",
     "brag document",
     "performance review",
+    "self-review",
     "achievements",
-    "capture"
+    "accomplishments",
+    "work log",
+    "career",
+    "capture",
+    "permalink"
   ],
   "main": "./dist/extension.cjs",
   "l10n": "./l10n",
@@ -112,7 +122,8 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke.cjs",
-    "vscode:prepublish": "node -e \"require('node:fs').copyFileSync('../../LICENSE', 'LICENSE')\""
+    "vscode:prepublish": "pnpm run build && node -e \"require('node:fs').copyFileSync('../../LICENSE', 'LICENSE')\"",
+    "package": "pnpm dlx @vscode/vsce@4.0.0 package --no-dependencies"
   },
   "devDependencies": {
     "@impact-log/core": "workspace:*",

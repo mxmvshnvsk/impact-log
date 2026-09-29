@@ -1,80 +1,60 @@
-# impact log для VS Code
+# impact log for VS Code
 
-Быстрый захват записей в impact log из редактора. Расширение **не ходит в API и ничего не хранит**:
-собирает черновик (`ImpactDraft`, Capture Protocol) и открывает в браузере
-`<impactLog.appUrl>/capture#draft=<base64url>`. Там web-клиент показывает форму, вы подтверждаете —
-запись шифруется и сохраняется в вашем impact log.
+Capture what you did — and the impact it had — without leaving the editor. Select code, run a command,
+and a draft opens in your [impact log](https://impact-log.com) with the title, impact score, labels,
+a permalink to the exact lines, the commit and the branch already filled in. Review it there and save.
 
-## Команды
+![“Capture selection” in the editor context menu](https://impact-log.com/media/vscode/capture-selection.png)
 
-| Команда | Что делает |
-|---|---|
-| **impact log: Capture impact** (`impactLog.capture`) | Запись «с нуля». Если есть выделение — как «Capture selection»; иначе в артефакты попадает текущая ветка |
-| **impact log: Capture selection** (`impactLog.captureSelection`) | Также в контекстном меню редактора при выделении. Выделенный код → цитата (до ~2000 символов), постоянная ссылка на файл и строки (`/blob/<sha>/<path>#L10-L20`), ветка |
-| **impact log: Capture last commit** (`impactLog.captureCommit`) | Последний коммит (HEAD) репозитория активного файла: тема → заголовок, тело → описание, коммит и ветка → артефакты |
+## Commands
 
-Шаги: заголовок (предзаполнен первой строкой выделения или темой коммита) → влияние 1–5 → метки через
-запятую (необязательно). `Esc` на любом шаге — отмена.
+| Command | What it does |
+| --- | --- |
+| **impact log: Capture selection** | Also in the editor context menu. The selected code becomes a quote, plus a permalink to the file and lines (`…/blob/<sha>/<path>#L16-L27`) and the current branch. |
+| **impact log: Capture last commit** | The last commit of the active file's repository: subject → title, body → description, commit and branch → artifacts. |
+| **impact log: Capture impact** | A blank entry. With a selection it works like *Capture selection*, otherwise the current branch is attached. |
 
-Ссылки строятся, если `origin` на GitHub (включая Enterprise), GitLab (включая self-hosted) или bitbucket.org.
-Ссылка на строки ставится, только если файл не изменён относительно HEAD (иначе номера строк могут не
-совпасть — тогда ссылка на файл целиком). Коммит должен быть запушен, чтобы ссылка открывалась.
-Если черновик не помещается в ссылку (16 000 символов), цитата ужимается, о чём расширение скажет.
+Three quick steps: title (prefilled from the selection or the commit subject) → impact from 1 to 5 →
+labels (optional). `Esc` cancels at any step.
 
-## Настройки
+![Choosing the impact score](https://impact-log.com/media/vscode/impact-score.png)
 
-- `impactLog.appUrl` — адрес impact log, по умолчанию `https://impact-log.com`. Только `https://`
-  (для разработки — `http://localhost:5173`). Настройка только пользовательская (`scope: application`):
-  рабочая область не может перенаправить черновики на чужой адрес.
-- `impactLog.defaultScore` — влияние, выбранное по умолчанию (1–5, по умолчанию 3).
+The draft opens in the browser: check it and press **Save**. The entry keeps the link to the lines,
+the quote and the branch, so a year later you can still show exactly what you did.
 
-## Сборка и проверка
+![The saved entry in impact log](https://impact-log.com/media/vscode/entry.png)
 
-```sh
-pnpm install
-pnpm --filter impact-log-vscode build       # tsup → dist/extension.cjs (CommonJS, core внутри, vscode — external)
-pnpm --filter impact-log-vscode typecheck
-pnpm --filter impact-log-vscode smoke       # бандл с заглушкой vscode: 3 команды + сценарии во временном git-репо
-```
+Links are built when `origin` points to GitHub (including Enterprise), GitLab (including self-hosted)
+or bitbucket.org. A link to specific lines is used only if the file is unchanged against `HEAD`,
+otherwise the whole file is linked. Push the commit so that the link opens.
 
-## Установка
+## Settings
 
-**VSIX (нужна сеть для `npx`):**
+| Setting | Default | |
+| --- | --- | --- |
+| `impactLog.appUrl` | `https://impact-log.com` | Your impact log address. `https://` only (`http://localhost…` for development). User setting only — a workspace can't redirect your drafts. |
+| `impactLog.defaultScore` | `3` | Impact preselected when capturing, 1–5. |
 
-```sh
-cd apps/vscode-extension
-npx @vscode/vsce package --no-dependencies
-code --install-extension impact-log-vscode-0.1.0.vsix
-```
+## Privacy
 
-или в VS Code: Extensions → `…` → **Install from VSIX…**. `--no-dependencies` — всё уже собрано
-в один файл; `vscode:prepublish` сам запустит сборку.
+- The extension makes no network requests and has no telemetry. The draft travels only in the link
+  fragment (after `#`), which the browser never sends to a server.
+- Git runs locally and only reads metadata: repository root, `HEAD`, branch, remote, file path.
+  Credentials from https remotes and absolute file paths never end up in links.
+- In Restricted Mode git isn't used at all. The quote is only what you explicitly selected.
+- impact log itself encrypts entries in your browser; with sync on, the server only gets ciphertext.
+  What is stored where: [impact-log.com/principles](https://impact-log.com/principles).
 
-**Без сети** — скопировать собранное расширение в папку расширений и перезапустить VS Code:
+The interface follows VS Code's display language — English or Russian.
 
-```sh
-pnpm --filter impact-log-vscode build
-dest=~/.vscode/extensions/impact-log.impact-log-vscode-0.1.0
-mkdir -p "$dest"
-cp -R apps/vscode-extension/{package.json,package.nls.json,package.nls.ru.json,l10n,media,dist,README.md} "$dest"/
-```
+## По-русски
 
-(Windows: `%USERPROFILE%\.vscode\extensions\…`; для Insiders — `~/.vscode-insiders/extensions`.)
+Записывайте, что сделали и какой был эффект, прямо из редактора: выделите код и выберите
+**impact log: Capture selection** (есть в контекстном меню) или **Capture last commit**. Черновик с
+заголовком, оценкой влияния, метками, ссылкой на строки кода, коммитом и веткой откроется в impact log —
+проверьте и сохраните. Расширение не делает сетевых запросов: черновик передаётся во фрагменте ссылки.
+Интерфейс на русском, если VS Code на русском.
 
-Для отладки: открыть `apps/vscode-extension` в VS Code и запустить Extension Development Host
-(`F5`, конфигурация «Run Extension» из `.vscode/launch.json`, перед запуском собирает бандл).
+## License
 
-## Язык
-
-Команды и настройки — `package.nls.json` / `package.nls.ru.json`, сообщения — `vscode.l10n.t` +
-`l10n/bundle.l10n.ru.json`. Язык — как у VS Code (en / ru).
-
-## Приватность
-
-- Никаких сетевых запросов и телеметрии. Черновик передаётся только во **фрагменте** ссылки (после `#`),
-  который браузер не отправляет на сервер; открывается через `vscode.env.openExternal`.
-- Git вызывается локально (`execFile`, без shell) только для чтения метаданных: корень, HEAD, ветка,
-  remote, путь файла. Логин/токен из https-remote в ссылки не попадает, абсолютные пути файлов —
-  тоже (только путь от корня репозитория или рабочей области).
-- В Restricted Mode (недоверенная рабочая область) git не запускается вовсе.
-- Цитата — только то, что вы явно выделили.
+[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)
