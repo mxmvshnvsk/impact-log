@@ -87,9 +87,15 @@
         <UiEyebrow>{{ t('landing.privacy.eyebrow') }}</UiEyebrow>
         <h2 id="privacy-title" class="landing__h2">{{ t('landing.privacy.title') }}</h2>
         <p class="landing__text">{{ t('landing.privacy.text') }}</p>
-        <RouterLink :to="{ name: 'principles' }" class="landing__link">
-          {{ t('landing.privacy.link') }}<ArrowRight :size="16" aria-hidden="true" />
-        </RouterLink>
+        <div class="landing__links">
+          <RouterLink :to="{ name: 'principles' }" class="landing__link">
+            {{ t('landing.privacy.link') }}<ArrowRight :size="16" aria-hidden="true" />
+          </RouterLink>
+          <a :href="sourceUrl" target="_blank" rel="noopener noreferrer" class="landing__link">
+            {{ t('landing.privacy.source') }}<ExternalLink :size="16" aria-hidden="true" />
+            <span class="sr-only">{{ t('footer.newTab') }}</span>
+          </a>
+        </div>
       </div>
       <ul class="landing__checks">
         <li v-for="key in privacy" :key="key">
@@ -110,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowRight, Check } from 'lucide-vue-next'
+import { ArrowRight, Check, ExternalLink } from 'lucide-vue-next'
 import { AppMascot } from '@/components/AppMascot'
 import { EntryPreview } from '@/components/EntryPreview'
 import { UiAlert } from '@/ui/UiAlert'
@@ -120,7 +126,7 @@ import { UiEyebrow } from '@/ui/UiEyebrow'
 import { useLandingView } from './useLandingView'
 
 const l = useLandingView()
-const { t, isMobile, mascot, examples, pains, steps, features, privacy } = l
+const { t, isMobile, mascot, examples, pains, steps, features, privacy, sourceUrl } = l
 const { starting, startError, unavailable, start } = l
 </script>
 

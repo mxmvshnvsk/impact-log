@@ -1,9 +1,10 @@
 import { loginSchema, totpCodeSchema } from '@impact-log/shared'
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { z } from 'zod'
 import { errorKey, isStepExpiredError, type KdfChange } from '@/account'
+import type { RecoveryKeyLoginPhase } from '@/components/RecoveryKeyLogin'
 import {
   AccountFlowCancelledError,
   type AccountStage,
@@ -19,7 +20,11 @@ import { useZodForm } from '@/composables/useZodForm'
 import { safeRedirect } from '@/router'
 import { countActive } from '@/vault'
 
-type Step = 'credentials' | 'second-factor'
+/**
+ * credentials → second-factor (код 2FA) → вход; или second-factor → recovery-key (путь B: Recovery Key
+ * вместо кода, новая 2FA) → recovered (вход выполнен, предложить перевыпустить Recovery Key)
+ */
+type Step = 'credentials' | 'second-factor' | 'recovery-key' | 'recovered'
 
 /** Пароль на входе проверяет сервер (по authKey) — здесь только «не пустой» */
 const credentialsSchema = z.object({
@@ -45,23 +50,39 @@ export function useLoginView() {
   const expired = ref(false)
   /** Пользователь отказался в одном из диалогов — вход отменён, записи на устройстве не тронуты */
   const cancelled = ref(false)
+  /** Отказались уже после замены 2FA по Recovery Key — новая 2FA действует */
+  const cancelledAfterReset = ref(false)
   const busy = ref(false)
   const stage = ref<AccountStage | null>(null)
   /** Ключ i18n ошибки над кнопкой */
   const error = ref<string | null>(null)
   const passwordRef = ref<{ focus: () => void } | null>(null)
-  let pending: PendingSecondFactor | null = null
+  /** Вход после пароля (ждёт второй фактор) — в замыкании KEK; shallow: наружу только методы */
+  const pending = shallowRef<PendingSecondFactor | null>(null)
+  const recoveryPhase = ref<RecoveryKeyLoginPhase>('key')
+  /** authKey пароля после входа по Recovery Key — перевыпуск ключа без повторного ввода пароля */
+  const currentAuthKey = ref<string | null>(null)
 
-  const eyebrow = computed(() =>
-    step.value === 'credentials' ? t('auth.login.eyebrow') : t('auth.secondFactor.eyebrow'),
-  )
+  const eyebrow = computed(() => {
+    if (step.value === 'credentials') return t('auth.login.eyebrow')
+    if (step.value === 'second-factor') return t('auth.secondFactor.eyebrow')
+    return t('auth.recoveryLogin.eyebrow')
+  })
   const title = computed(() => {
     if (alreadySignedIn.value) return t('auth.login.alreadyTitle')
-    return step.value === 'credentials' ? t('auth.login.title') : t('auth.secondFactor.title')
+    if (step.value === 'credentials') return t('auth.login.title')
+    if (step.value === 'second-factor') return t('auth.secondFactor.title')
+    if (step.value === 'recovery-key') return t(`auth.recoveryLogin.titles.${recoveryPhase.value}`)
+    return t('auth.recoveryLogin.titles.done')
   })
   const subtitle = computed(() => {
     if (alreadySignedIn.value) return undefined
-    return step.value === 'credentials' ? t('auth.login.subtitle') : t('auth.secondFactor.subtitle')
+    if (step.value === 'credentials') return t('auth.login.subtitle')
+    if (step.value === 'second-factor') return t('auth.secondFactor.subtitle')
+    if (step.value === 'recovery-key') {
+      return t(`auth.recoveryLogin.subtitles.${recoveryPhase.value}`)
+    }
+    return t('auth.recoveryLogin.subtitles.done')
   })
 
   // ---------- шаг 1: логин + пароль ----------
@@ -141,6 +162,7 @@ export function useLoginView() {
     if (busy.value) return
     expired.value = false
     cancelled.value = false
+    cancelledAfterReset.value = false
     error.value = null
     const captured: { values?: { login: string; password: string } } = {}
     const valid = await form.submit(async (data) => {
@@ -156,11 +178,12 @@ export function useLoginView() {
     // Пароль больше нигде не держим: только в этом вызове KDF
     form.values.password = ''
     try {
-      pending = await accountFlow.login(login, password, flowOptions)
-      if (!pending) {
+      const next = await accountFlow.login(login, password, flowOptions)
+      if (!next) {
         await finish()
         return
       }
+      pending.value = next
       step.value = 'second-factor'
       mascot.react('happy')
     } catch (cause) {
@@ -187,7 +210,7 @@ export function useLoginView() {
   })
 
   async function submitCode(value?: unknown) {
-    if (busy.value || !pending) return
+    if (busy.value || !pending.value) return
     const parsed = totpCodeSchema.safeParse(typeof value === 'string' ? value : code.value)
     if (!parsed.success) {
       codeError.value = t('validation.code.format')
@@ -196,8 +219,8 @@ export function useLoginView() {
     }
     busy.value = true
     try {
-      await pending.verify(parsed.data, remember.value, report)
-      pending = null
+      await pending.value.verify(parsed.data, remember.value, report)
+      pending.value = null
       await finish()
     } catch (cause) {
       mascot.react('oops')
@@ -226,14 +249,50 @@ export function useLoginView() {
   }
 
   function restart() {
-    pending?.cancel()
-    pending = null
+    pending.value?.cancel()
+    pending.value = null
     step.value = 'credentials'
     code.value = ''
     form.values.password = ''
   }
 
-  onBeforeUnmount(() => pending?.cancel())
+  // ---------- путь B: нет доступа к приложению 2FA → Recovery Key вместо кода ----------
+  function chooseRecoveryKey() {
+    if (busy.value) return
+    error.value = null
+    codeError.value = null
+    step.value = 'recovery-key'
+  }
+
+  function onRecoveryPhase(phase: RecoveryKeyLoginPhase) {
+    recoveryPhase.value = phase
+  }
+
+  function backToCode() {
+    step.value = 'second-factor'
+  }
+
+  function onRecoveryExpired() {
+    restart()
+    expired.value = true
+  }
+
+  function onRecoveryCancelled() {
+    restart()
+    cancelled.value = true
+    cancelledAfterReset.value = true
+  }
+
+  function onRecovered(authKey: string) {
+    pending.value = null
+    currentAuthKey.value = authKey
+    step.value = 'recovered'
+  }
+
+  onBeforeUnmount(() => {
+    pending.value?.cancel()
+    currentAuthKey.value = null
+  })
 
   /** «Начать без регистрации»: локальное хранилище на этом устройстве */
   async function startLocal() {
@@ -261,6 +320,7 @@ export function useLoginView() {
     form,
     expired,
     cancelled,
+    cancelledAfterReset,
     busy,
     stage,
     error,
@@ -278,6 +338,15 @@ export function useLoginView() {
     otpRef,
     submitCode,
     restart,
+    pending,
+    chooseRecoveryKey,
+    onRecoveryPhase,
+    backToCode,
+    onRecoveryExpired,
+    onRecoveryCancelled,
+    onRecovered,
+    currentAuthKey,
+    finish,
     startLocal,
   }
 }

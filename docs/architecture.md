@@ -157,12 +157,21 @@ sequenceDiagram
 
 ### 5. Восстановление
 
-Логин + Recovery Key (`ILRK1-…`) → клиент проверяет контрольную сумму и выводит `recoveryAuthKey` →
-`POST /api/auth/recovery/begin` → recovery-конверт → Recovery KEK разворачивает MK локально → новый пароль
-и новый password-конверт того же MK → `POST /api/auth/recovery/complete` → все прочие сессии и доверие
-устройств сброшены, блокировка перебора TOTP снята, выдана новая сессия (в ней можно один раз
-перевыпустить 2FA без текущего кода) → pull. TOTP при этом не спрашивается: Recovery Key — главный ключ.
-[ADR-0006](adr/0006-crypto.md) §6, [ADR-0008](adr/0008-auth-devices.md) §8.
+Recovery Key (`ILRK1-…`) + ещё один фактор ([ADR-0008](adr/0008-auth-devices.md) §8):
+
+- **Забыл пароль** (`/recover`): логин + Recovery Key → клиент проверяет контрольную сумму и выводит
+  `recoveryAuthKey` → `POST /api/auth/recovery/begin` (конверт ещё не выдаётся) → код 2FA
+  `POST /api/auth/recovery/verify` → recovery-конверт → Recovery KEK разворачивает MK локально → новый пароль
+  и новый password-конверт того же MK → `POST /api/auth/recovery/complete` → прочие сессии и доверие устройств
+  сброшены → pull.
+- **Потерял телефон** (вход): пароль → на шаге 2FA Recovery Key вместо кода `POST /api/auth/login/recovery-key`
+  → новая 2FA → `POST /api/auth/login/totp-reset` → обычное завершение входа.
+- **Потерял всё** (`/recover`): begin → `POST /api/auth/recovery/delay` запускает отсчёт 48 часов; всё это время
+  вошедшие устройства видят предупреждение (`GET /api/auth/me` → `recoveryPending`) и могут отменить
+  (`POST /api/account/recovery/cancel`) → после срока begin → `POST /api/auth/recovery/resume` → конверт → новый
+  пароль → обязательная новая 2FA (сессия помечена via_recovery).
+
+[ADR-0006](adr/0006-crypto.md) §6.
 
 ### 6. Захват из расширения, CLI или VS Code
 

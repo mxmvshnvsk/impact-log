@@ -36,6 +36,8 @@
       </header>
 
       <main id="main-content" ref="mainRef" class="app-layout__content l-container" tabindex="-1">
+        <!-- отложенное восстановление по Recovery Key: предупреждение на любой странице приложения -->
+        <RecoveryPendingBanner />
         <slot />
       </main>
 
@@ -65,6 +67,7 @@ import { RouterLink } from 'vue-router'
 import { AccountMenu } from '@/components/AccountMenu'
 import { AppFooter } from '@/components/AppFooter'
 import { LocaleSwitcher } from '@/components/LocaleSwitcher'
+import { RecoveryPendingBanner } from '@/components/RecoveryPendingBanner'
 import { SyncIndicator } from '@/components/SyncIndicator'
 import { ThemeSwitcher } from '@/components/ThemeSwitcher'
 import { UiIconButton } from '@/ui/UiIconButton'

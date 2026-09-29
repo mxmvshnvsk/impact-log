@@ -52,6 +52,21 @@ export function isSignedOutError(error: unknown): boolean {
   )
 }
 
+/**
+ * 403 RECOVERY_NOT_READY: отложенное восстановление ещё не созрело → когда станет доступно (ISO);
+ * null — не начато или истекло (details без срока). undefined — это не RECOVERY_NOT_READY.
+ */
+export function recoveryNotReadyUntil(error: unknown): string | null | undefined {
+  if (!(error instanceof ApiError) || error.code !== 'RECOVERY_NOT_READY') return undefined
+  const details = error.details
+  if (details && typeof details === 'object' && 'availableAt' in details) {
+    const { availableAt } = details as { availableAt: unknown }
+    if (typeof availableAt === 'string' && !Number.isNaN(Date.parse(availableAt)))
+      return availableAt
+  }
+  return null
+}
+
 /** Сессия второго шага (код 2FA, восстановление) сгорела — начинать заново */
 export function isStepExpiredError(error: unknown): boolean {
   return (

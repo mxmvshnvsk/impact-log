@@ -250,6 +250,12 @@
   gap: var(--space-4);
 }
 
+.landing__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+}
+
 .landing__link {
   display: inline-flex;
   align-items: center;

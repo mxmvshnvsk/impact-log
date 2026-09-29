@@ -8,3 +8,5 @@ coverage/
 .env.*
 !.env.example
 .transfer/
+.private/
+apps/vscode-extension/LICENSE

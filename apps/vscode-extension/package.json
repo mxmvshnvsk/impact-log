@@ -5,7 +5,16 @@
   "publisher": "impact-log",
   "private": true,
   "version": "0.1.0",
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://github.com/mxmvshnvsk/impact-log/tree/main/apps/vscode-extension",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mxmvshnvsk/impact-log.git",
+    "directory": "apps/vscode-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/mxmvshnvsk/impact-log/issues"
+  },
   "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.90.0"
@@ -103,7 +112,7 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke.cjs",
-    "vscode:prepublish": "tsup"
+    "vscode:prepublish": "node -e \"require('node:fs').copyFileSync('../../LICENSE', 'LICENSE')\""
   },
   "devDependencies": {
     "@impact-log/core": "workspace:*",

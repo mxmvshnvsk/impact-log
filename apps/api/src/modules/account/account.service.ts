@@ -6,6 +6,7 @@ import type { Cipher } from '../../lib/crypto'
 import { AppError } from '../../lib/errors'
 import { recoveryAuthHash } from '../auth/auth.service'
 import { hashAuthKey, verifyAuthKey } from '../auth/authKey'
+import { CLEAR_DELAYED_RECOVERY, cancelDelayedRecovery } from '../auth/delayedRecovery'
 import type { FullSession } from '../auth/sessions'
 import { deleteOtherSessions, deleteRecoverySessions } from '../auth/sessions'
 import { generateTotpKey, totpEnrollment, verifyTotp } from '../auth/totp'
@@ -37,14 +38,17 @@ export function createAccountService({ db, cipher }: Deps) {
     return step
   }
 
-  /** Смена пароля: новый authKey/KDF/соль и новый конверт того же MK; остальные сессии завершаются */
+  /**
+   * Смена пароля: новый authKey/KDF/соль и новый конверт того же MK; остальные сессии завершаются
+   * (в том числе незавершённые восстановления), отложенное восстановление снимается — владелец в строю
+   */
   async function changePassword(current: FullSession, input: ChangePasswordRequest) {
     await reauthenticate(current, input.currentAuthKey)
     const authKeyHash = await hashAuthKey(input.authKey)
     await db.transaction(async (tx) => {
       await tx
         .update(users)
-        .set({ authKeyHash, kdfParams: input.kdf, kdfSalt: input.salt })
+        .set({ authKeyHash, kdfParams: input.kdf, kdfSalt: input.salt, ...CLEAR_DELAYED_RECOVERY })
         .where(eq(users.id, current.user.id))
       await putEnvelope(tx, current.user.id, 'password', input.passwordEnvelope)
       await deleteOtherSessions(tx, current.user.id, current.id)
@@ -53,14 +57,18 @@ export function createAccountService({ db, cipher }: Deps) {
 
   /**
    * Перевыпуск Recovery Key: старый перестаёт работать сразу — в том числе уже начатые им
-   * восстановления (recovery-сессии удаляются в той же транзакции)
+   * восстановления и сбросы 2FA (recovery- и totp-reset-сессии удаляются в той же транзакции) и
+   * отложенное восстановление
    */
   async function rotateRecoveryKey(current: FullSession, input: RotateRecoveryKeyRequest) {
     await reauthenticate(current, input.currentAuthKey)
     await db.transaction(async (tx) => {
       await tx
         .update(users)
-        .set({ recoveryAuthHash: recoveryAuthHash(input.recoveryAuthKey) })
+        .set({
+          recoveryAuthHash: recoveryAuthHash(input.recoveryAuthKey),
+          ...CLEAR_DELAYED_RECOVERY,
+        })
         .where(eq(users.id, current.user.id))
       await putEnvelope(tx, current.user.id, 'recovery', input.recoveryEnvelope)
       await deleteRecoverySessions(tx, current.user.id)
@@ -69,8 +77,9 @@ export function createAccountService({ db, cipher }: Deps) {
 
   /**
    * Перевыпуск 2FA, шаг 1: authKey + текущий код 2FA → новый секрет ждёт подтверждения, старый
-   * продолжает работать. Без кода — только в сессии после восстановления по Recovery Key (viaRecovery):
-   * телефон с приложением мог потеряться, а Recovery Key и так заменяет второй фактор.
+   * продолжает работать. Без кода — только в сессии после отложенного восстановления (viaRecovery,
+   * путь C): телефона нет, а второй фактор заменила выдержанная задержка с предупреждением на устройствах.
+   * (Потерянный телефон при известном пароле — путь B: /auth/login/recovery-key, без полной сессии.)
    */
   async function startTotpRotation(
     current: FullSession,
@@ -134,6 +143,14 @@ export function createAccountService({ db, cipher }: Deps) {
     })
   }
 
+  /**
+   * Отмена отложенного восстановления (и всех незавершённых действий по Recovery Key) с вошедшего
+   * устройства. Без повторного подтверждения: действие только защитное
+   */
+  async function cancelRecovery(current: FullSession) {
+    await db.transaction((tx) => cancelDelayedRecovery(tx, current.user.id))
+  }
+
   /** Удаление аккаунта: authKey + код 2FA. Каскадом уходят конверты, устройства, сессии, объекты */
   async function deleteAccount(
     current: FullSession,
@@ -149,6 +166,7 @@ export function createAccountService({ db, cipher }: Deps) {
     rotateRecoveryKey,
     startTotpRotation,
     confirmTotpRotation,
+    cancelRecovery,
     deleteAccount,
   }
 }

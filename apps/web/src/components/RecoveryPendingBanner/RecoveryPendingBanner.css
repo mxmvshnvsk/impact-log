@@ -1,0 +1,81 @@
+/*
+ * Предупреждение об отложенном восстановлении — над содержимым любой страницы приложения.
+ * mobile: иконка + текст, кнопка на всю строку ниже; tablet+: кнопка справа.
+ */
+.recovery-banner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-lg);
+  background: var(--color-warning-soft);
+}
+
+.recovery-banner--done {
+  border-color: var(--color-border);
+  background: var(--color-success-soft);
+}
+
+.recovery-banner__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-warning-text);
+}
+
+.recovery-banner--done .recovery-banner__icon {
+  color: var(--color-accent-strong);
+}
+
+.recovery-banner__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.recovery-banner__title {
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  padding-top: var(--space-2);
+}
+
+.recovery-banner__text {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+.recovery-banner__hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.recovery-banner__action,
+.recovery-banner__actions {
+  grid-column: 1 / -1;
+}
+
+.recovery-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@media (--tablet) {
+  .recovery-banner {
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+  }
+
+  .recovery-banner__action,
+  .recovery-banner__actions {
+    grid-column: 3;
+    align-self: center;
+  }
+}

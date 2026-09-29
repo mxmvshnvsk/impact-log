@@ -29,6 +29,13 @@
       "when": 1790633088850,
       "tag": "0003_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790665241815,
+      "tag": "0004_recovery_factors",
+      "breakpoints": true
     }
   ]
 }

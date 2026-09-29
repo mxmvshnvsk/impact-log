@@ -27,6 +27,8 @@ export const accountApi = {
       ...(code ? { code } : {}),
     }),
   confirmTotpRotation: (code: string) => post('/account/totp/confirm', okResponseSchema, { code }),
+  /** Отменить отложенное восстановление по Recovery Key (его начал кто-то без пароля и 2FA) */
+  cancelRecovery: () => post('/account/recovery/cancel', okResponseSchema, {}),
   deleteAccount: (body: { currentAuthKey: string; code: string }) =>
     post('/account/delete', okResponseSchema, body),
   entitlements: () => request('/entitlements', entitlementsResponseSchema),

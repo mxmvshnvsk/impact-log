@@ -13,6 +13,7 @@ import {
   UserRound,
 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+import { SOURCE_URL, sourceUrl } from '@/constants/links'
 
 /*
  * Структура страницы принципов. Тексты — в i18n (principles.*).
@@ -26,6 +27,28 @@ const VALUES = [
   { key: 'noTracking', icon: EyeOff },
   { key: 'yours', icon: KeyRound },
   { key: 'honest', icon: Sparkles },
+] as const
+
+/** Где проверить обещания этой страницы в коде */
+const SOURCE_LINKS = [
+  { key: 'repo', href: SOURCE_URL, path: null },
+  {
+    key: 'server',
+    href: sourceUrl('apps/api/src/db/schema.ts'),
+    path: 'apps/api/src/db/schema.ts',
+  },
+  {
+    key: 'crypto',
+    href: sourceUrl('packages/core/src/crypto', 'tree'),
+    path: 'packages/core/src/crypto',
+  },
+  { key: 'vault', href: sourceUrl('apps/web/src/vault', 'tree'), path: 'apps/web/src/vault' },
+  { key: 'adr', href: sourceUrl('docs/adr', 'tree'), path: 'docs/adr' },
+  {
+    key: 'deploy',
+    href: sourceUrl('.github/workflows/deploy.yml'),
+    path: '.github/workflows/deploy.yml',
+  },
 ] as const
 
 const DEVICE = [
@@ -108,6 +131,7 @@ export function usePrinciplesView() {
   return {
     t,
     values: VALUES,
+    sourceLinks: SOURCE_LINKS,
     device: DEVICE,
     crypto: CRYPTO,
     server: SERVER,

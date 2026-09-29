@@ -51,6 +51,14 @@ export const users = pgTable('users', {
   totpLockedUntil: timestamp('totp_locked_until', { withTimezone: true }),
   /** hex SHA-256 от recoveryAuthKey (256 бит энтропии — медленный хеш не нужен) */
   recoveryAuthHash: text('recovery_auth_hash').notNull(),
+  /**
+   * Отложенное восстановление (Recovery Key без пароля и без 2FA, ADR-0008 §8, путь C): когда запущен
+   * отсчёт и когда он истекает (started + RECOVERY_DELAY_HOURS). Доступно RECOVERY_READY_TTL_DAYS после
+   * созревания, потом считается несостоявшимся. Снимается отменой, завершением восстановления, сбросом 2FA
+   * по Recovery Key, сменой пароля и перевыпуском Recovery Key; истёкшее — уборкой.
+   */
+  recoveryStartedAt: timestamp('recovery_started_at', { withTimezone: true }),
+  recoveryAvailableAt: timestamp('recovery_available_at', { withTimezone: true }),
   /** pending — регистрация начата, 2FA ещё не подтверждена; active — полноценный аккаунт */
   status: text('status', { enum: ['pending', 'active'] })
     .notNull()
@@ -111,22 +119,34 @@ export const sessions = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    /** Для full — устройство сессии; для second-factor — кандидат, переданный при входе */
+    /** Для full — устройство сессии; для second-factor и totp-reset — кандидат, переданный при входе */
     deviceId: uuid('device_id').references(() => devices.id, { onDelete: 'cascade' }),
     /**
      * enrollment — регистрация до подтверждения 2FA;
-     * second-factor — authKey верный, ждём код;
-     * recovery — Recovery Key подтверждён, ждём новый пароль;
+     * second-factor — authKey верный, ждём код (или Recovery Key вместо кода);
+     * totp-reset — authKey и Recovery Key верны, ждём первый код новой 2FA;
+     * recovery — Recovery Key подтверждён, ждём второй фактор или задержку (recovery_stage), затем новый пароль;
      * full — полноценная сессия
      */
-    kind: text('kind', { enum: ['enrollment', 'second-factor', 'recovery', 'full'] }).notNull(),
+    kind: text('kind', {
+      enum: ['enrollment', 'second-factor', 'totp-reset', 'recovery', 'full'],
+    }).notNull(),
+    /**
+     * Только для recovery: key — Recovery Key проверен; unlocked-totp — плюс код 2FA (путь A);
+     * unlocked-delayed — плюс истекла задержка отложенного восстановления (путь C).
+     * recovery/complete — только из unlocked-*; null у recovery-сессии = key.
+     */
+    recoveryStage: text('recovery_stage', { enum: ['key', 'unlocked-totp', 'unlocked-delayed'] }),
+    /** Только для totp-reset: новый TOTP-секрет до подтверждения кодом, зашифрован как users.totp_secret */
+    totpPendingSecret: text('totp_pending_secret'),
     /** Неудачные попытки ввода кода в рамках этой сессии */
     attempts: integer('attempts').notNull().default(0),
     /** «Запомнить этот компьютер»: 30 дней и постоянная cookie; иначе — сутки и cookie до закрытия браузера */
     persistent: boolean('persistent').notNull().default(false),
     /**
-     * Полная сессия выдана recovery/complete (владение Recovery Key доказано): можно начать
-     * перевыпуск 2FA без текущего кода. После успешного перевыпуска флаг снимается.
+     * Полная сессия выдана recovery/complete после отложенного восстановления (путь C: Recovery Key без
+     * пароля и без 2FA — телефона нет): можно начать перевыпуск 2FA без текущего кода. После успешного
+     * перевыпуска флаг снимается. После пути A (Recovery Key + код 2FA) флаг не ставится.
      */
     viaRecovery: boolean('via_recovery').notNull().default(false),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -166,6 +186,7 @@ export type UserRow = typeof users.$inferSelect
 export type DeviceRow = typeof devices.$inferSelect
 export type SessionRow = typeof sessions.$inferSelect
 export type SessionKind = SessionRow['kind']
+export type RecoveryStage = NonNullable<SessionRow['recoveryStage']>
 export type ObjectRow = typeof objects.$inferSelect
 
 /** now() на стороне БД — чтобы не зависеть от часов приложения */

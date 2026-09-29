@@ -18,6 +18,7 @@
 | `recoveryAuthKey` (из Recovery Key) | SHA-256 (hex), сравнение за постоянное время |
 | TOTP-секрет | `v2:` + AES-256-GCM (тег 16 байт) ключом `HKDF(TOTP_ENCRYPTION_KEY, 'impact-log/v1/totp-secret')`, AAD = `users.id` |
 | Счётчик неудачных кодов 2FA | `totp_failed_count`, `totp_locked_until` (блокировка перебора) |
+| Отложенное восстановление | `recovery_started_at`, `recovery_available_at` (когда запущено и когда созреет) |
 | Объекты синхронизации | шифротекст ≤ 256 КиБ, версия, tombstone, `seq` |
 | Устройства | зашифрованное название, SHA-256 секрета устройства, SHA-256 trust-токена, срок, `last_seen_at`, отзыв |
 | Аккаунт | `accountId` (12 символов Crockford Base32 из 60 случайных бит), логин, тариф |
@@ -30,35 +31,46 @@
 
 - Cookie `il_session` (HttpOnly, SameSite=Strict, Path=/api, Secure в prod); в БД — SHA-256 токена.
 - Виды сессий: `enrollment` (30 мин, регистрация до подтверждения 2FA), `second-factor` (5 мин, authKey верный,
-  ждём код; хранит кандидата `deviceId`), `recovery` (15 мин, Recovery Key подтверждён), `full` (сутки,
+  ждём код или Recovery Key вместо кода; хранит кандидата `deviceId`), `totp-reset` (5 мин с момента перехода,
+  authKey и Recovery Key верны, ждём первый код новой 2FA; хранит кандидата и новый секрет
+  `sessions.totp_pending_secret`, зашифрованный как `users.totp_secret`), `recovery` (15 мин, Recovery Key
+  подтверждён; стадия `sessions.recovery_stage`: `key` → `unlocked-totp` | `unlocked-delayed`), `full` (сутки,
   продлевается при использовании; с «Запомнить этот компьютер» — 30 дней и постоянная cookie).
   Полная сессия всегда привязана к устройству.
-- Не больше 5 неверных кодов 2FA на сессию, дальше `SESSION_EXPIRED`. Повтор TOTP-кода отклоняется (`totp_last_step`).
-- **Блокировка перебора TOTP — на пользователя** (`modules/auth/totpGuard.ts`): каждая проверка кода
-  (register/confirm, login/verify, account/totp/start и /confirm, account/delete) атомарно увеличивает
-  `users.totp_failed_count` ещё до проверки; после 10 неудач подряд — `totp_locked_until = now + 15 мин`,
-  каждая следующая неудача без успеха между ними — снова блокировка, вдвое длиннее (30 мин, 1 ч, … не больше
-  24 ч). Во время блокировки код не проверяется: `429 RATE_LIMITED` (и попытка сессии не тратится). Верный код
-  и восстановление по Recovery Key обнуляют счётчик и снимают блокировку. Цена: тот, кто знает пароль, может
-  заблокировать вход по коду — выход для владельца — Recovery Key.
+- Не больше 5 неверных кодов 2FA (и неверных Recovery Key в `login/recovery-key`) на сессию, дальше
+  `SESSION_EXPIRED`. Повтор TOTP-кода отклоняется (`totp_last_step`).
+- **Блокировка перебора TOTP — на пользователя** (`modules/auth/totpGuard.ts`): каждая проверка кода по
+  действующему секрету (register/confirm, login/verify, recovery/verify, account/totp/start и /confirm,
+  account/delete) атомарно увеличивает `users.totp_failed_count` ещё до проверки; после 10 неудач подряд —
+  `totp_locked_until = now + 15 мин`, каждая следующая неудача без успеха между ними — снова блокировка, вдвое
+  длиннее (30 мин, 1 ч, … не больше 24 ч). Во время блокировки код не проверяется: `429 RATE_LIMITED` (и попытка
+  сессии не тратится). Верный код, recovery/complete и сброс 2FA (login/totp-reset) обнуляют счётчик и снимают
+  блокировку. `login/totp-reset` блокировку не проверяет и не увеличивает: его код — от секрета, который сессия
+  только что выдала сама после пароля и Recovery Key (подбирать нечего), а заблокированная чужим перебором 2FA
+  не должна мешать владельцу её сбросить; там действуют попытки сессии и лимит по IP. Цена блокировки: тот, кто
+  знает пароль, может заблокировать вход по коду — выход для владельца — путь B (пароль + Recovery Key).
 - **Секрет устройства** (`deviceSecret`, 32 байта base64url): выдаётся в ответе (`sessionResponseSchema`)
-  только когда устройство создано этим запросом (register/confirm, login/verify, recovery/complete); в БД —
+  только когда устройство создано этим запросом (register/confirm, login/verify, login/totp-reset,
+  recovery/complete); в БД —
   SHA-256 (`devices.secret_hash`). Переданный `deviceId` переиспользуется, только если вместе с ним пришёл
   верный секрет (сравнение за постоянное время), устройство принадлежит пользователю и не отозвано; иначе
   создаётся новое устройство с новым секретом. Вход с доверенного устройства (cookie `il_device`) секрета
   не требует.
 - «Запомнить этот компьютер» (`remember: true`): trust-токен в cookie `il_device` (Path=/api/auth, 30 дней),
   в БД — SHA-256 в `devices.trust_token_hash`. Вход с таким устройством требует authKey, но не код.
-  Доверие снимается при «выйти везде», восстановлении доступа и отзыве устройства.
+  Доверие снимается при «выйти везде», восстановлении доступа, сбросе 2FA по Recovery Key (со всех устройств) и
+  отзыве устройства.
 - CSRF: POST — только `application/json`; для всех изменяющих запросов `Origin` (если прислан) должен совпадать
   с хостом. PUT/PATCH/DELETE кросс-сайтово без preflight не отправить, поэтому Content-Type для них не требуется.
   Пустое JSON-тело трактуется как `{}`.
-- Ошибки: `{ error: { code, details? } }`, коды — `ERROR_CODES` из shared. Неизвестный логин и неверный authKey
+- Ошибки: `{ error: { code, details? } }`, коды — `ERROR_CODES` из shared (`details` — только несекретное,
+  например `availableAt` у `RECOVERY_NOT_READY`). Неизвестный логин и неверный authKey
   неразличимы (`INVALID_CREDENTIALS`, для неизвестного логина — проверка Argon2id «вхолостую»).
 - Лимиты частоты → `429 RATE_LIMITED` (заголовок `Retry-After`):
   - по IP (ключ: IPv4 целиком, IPv6 — префикс /64, IPv4-mapped — как IPv4): prelogin 30/5 мин,
-    register 5/60, login 10/5, коды 15/5–10, recovery/begin 5/15, recovery/complete 10/15, account/* 10/15,
-    region 60/5;
+    register 5/60, login 10/5, коды 15/5–10 (register/confirm, login/verify, login/totp-reset 15/5,
+    recovery/verify 15/10), login/recovery-key 10/15, recovery/begin 5/15, recovery/delay, recovery/resume и
+    recovery/complete 10/15, account/* (включая recovery/cancel) 10/15, region 60/5;
   - по паре «логин + IP» (IPv6 — /64): login 10/15 мин. Глобального счётчика по логину нет намеренно — иначе
     любой, кто знает логин, мог бы запереть владельца; распределённому перебору мешают Argon2id на стороне
     атакующего и обязательная 2FA с блокировкой на пользователя. prelogin и recovery/begin — только по IP
@@ -71,7 +83,8 @@
 
 ## Маршруты
 
-Сессия: «—» — не нужна; `full` / `enrollment` / `second-factor` / `recovery` — нужен этот вид сессии.
+Сессия: «—» — не нужна; `full` / `enrollment` / `second-factor` / `totp-reset` / `recovery` — нужен этот вид
+сессии (`recovery` — в любой стадии, `recovery (unlocked)` — только после verify или resume).
 
 | Метод и путь | Сессия | Тело → ответ | Примечания |
 | --- | --- | --- | --- |
@@ -81,14 +94,20 @@
 | `POST /api/auth/register/confirm` | enrollment | `{code, remember}` → `{user, deviceId, deviceSecret}` | Активирует аккаунт, создаёт первое устройство |
 | `POST /api/auth/login` | — | `{login, authKey, deviceId?, deviceSecret?}` → `{next:'second-factor'}` \| `{next:'done', user, deviceId}` | `done` — валидная cookie `il_device` этого пользователя (сессия на 30 дней). `deviceId` без верного `deviceSecret` игнорируется |
 | `POST /api/auth/login/verify` | second-factor | `{code, remember}` → `{user, deviceId, deviceSecret?}` | Устройство — кандидат из login (секрет совпал, не отозвано) или новое (тогда `deviceSecret`) |
-| `POST /api/auth/recovery/begin` | — | `{login, recoveryAuthKey}` → `{recoveryEnvelope}` | Ставит recovery-сессию. Ошибка — `INVALID_CREDENTIALS` |
-| `POST /api/auth/recovery/complete` | recovery | `{authKey, kdf, salt, passwordEnvelope, deviceId?, deviceSecret?}` → `{user, deviceId, deviceSecret?}` | Новый пароль; все сессии удаляются, доверие устройств снимается, блокировка TOTP снимается; обычная (не 30-дневная) сессия с флагом `via_recovery` |
+| `POST /api/auth/login/recovery-key` | second-factor | `{recoveryAuthKey}` → `{otpauthUri, secret}` | Путь B. Неверный ключ → `401 INVALID_CREDENTIALS` + попытка сессии (5-я → `SESSION_EXPIRED`). Верный → новая 2FA, сессия становится `totp-reset` (попытки с нуля, 5 мин) |
+| `POST /api/auth/login/totp-reset` | totp-reset | `{code, remember}` → `{user, deviceId, deviceSecret?}` | Код новой 2FA (блокировку перебора не проверяет, см. выше). Секрет заменён, `totp_last_step` — шаг этого кода, блокировка снята, все остальные сессии удалены, доверие снято со всех устройств (`remember` — доверие этому), отложенное восстановление снято. Сессия не `via_recovery` |
+| `POST /api/auth/recovery/begin` | — | `{login, recoveryAuthKey}` → `{delayed: {status: none\|pending\|ready, availableAt?}}` | Ставит recovery-сессию (стадия `key`), конверт **не** выдаёт. `delayed` — отложенное восстановление (истёкшее → `none`). Ошибка — `INVALID_CREDENTIALS` |
+| `POST /api/auth/recovery/verify` | recovery | `{code}` → `{recoveryEnvelope}` | Путь A: код 2FA (блокировка перебора, защита от повтора, попытки сессии) → стадия `unlocked-totp` |
+| `POST /api/auth/recovery/delay` | recovery | — → `{availableAt}` | Путь C: запускает отсчёт `RECOVERY_DELAY_HOURS` (48 ч); идёт или созрел и не истёк — прежний срок |
+| `POST /api/auth/recovery/resume` | recovery | — → `{recoveryEnvelope}` | Путь C: `availableAt ≤ now ≤ availableAt + RECOVERY_READY_TTL_DAYS` → стадия `unlocked-delayed`. Рано → `403 RECOVERY_NOT_READY` с `details.availableAt`; не начато / истекло → `403 RECOVERY_NOT_READY` без `details` |
+| `POST /api/auth/recovery/complete` | recovery (unlocked) | `{authKey, kdf, salt, passwordEnvelope, deviceId?, deviceSecret?}` → `{user, deviceId, deviceSecret?}` | До verify/resume → `403 FORBIDDEN`. Новый пароль; все сессии удаляются, доверие устройств снимается, блокировка TOTP и отложенное восстановление снимаются; обычная (не 30-дневная) сессия, `via_recovery` — только после пути C |
 | `POST /api/auth/logout` | full | `{everywhere?}` → `{ok}` | `everywhere` — все сессии и доверие всех устройств |
-| `GET /api/auth/me` | full | → `{user, deviceId}` | `deviceSecret` не отдаётся |
+| `GET /api/auth/me` | full | → `{user, deviceId, recoveryPending}` | `deviceSecret` не отдаётся. `recoveryPending: {availableAt} \| null` — не null, пока отсчёт идёт или созрел и не истёк |
 | `GET /api/keys` | full | → `{envelopes: [{type, envelope, updatedAt}]}` | |
-| `POST /api/account/password` | full | `{currentAuthKey, authKey, kdf, salt, passwordEnvelope}` → `{ok}` | Остальные сессии удаляются |
-| `POST /api/account/recovery-key` | full | `{currentAuthKey, recoveryEnvelope, recoveryAuthKey}` → `{ok}` | Старый Recovery Key сразу перестаёт работать; начатые им восстановления (recovery-сессии) удаляются |
-| `POST /api/account/totp/start` | full | `{currentAuthKey, code?}` → `{otpauthUri, secret}` | `code` — текущий код 2FA (блокировка перебора, защита от повтора); без него — `400 INVALID_CODE`, кроме сессии после recovery/complete (`via_recovery`). Новый секрет ждёт подтверждения, старый пока работает |
+| `POST /api/account/password` | full | `{currentAuthKey, authKey, kdf, salt, passwordEnvelope}` → `{ok}` | Остальные сессии удаляются, отложенное восстановление снимается |
+| `POST /api/account/recovery-key` | full | `{currentAuthKey, recoveryEnvelope, recoveryAuthKey}` → `{ok}` | Старый Recovery Key сразу перестаёт работать; начатые им восстановления и сбросы 2FA (recovery- и totp-reset-сессии) удаляются, отложенное восстановление снимается |
+| `POST /api/account/recovery/cancel` | full | — → `{ok}` | Снимает отложенное восстановление, удаляет recovery- и totp-reset-сессии пользователя. Без повторного подтверждения (действие только защитное) |
+| `POST /api/account/totp/start` | full | `{currentAuthKey, code?}` → `{otpauthUri, secret}` | `code` — текущий код 2FA (блокировка перебора, защита от повтора); без него — `400 INVALID_CODE`, кроме сессии после отложенного восстановления (путь C, `via_recovery`). Новый секрет ждёт подтверждения, старый пока работает |
 | `POST /api/account/totp/confirm` | full | `{code}` → `{ok}` | Код по новому секрету; остальные сессии удаляются, у текущей снимается `via_recovery` (без кода — только один перевыпуск) |
 | `POST /api/account/delete` | full | `{currentAuthKey, code}` → `{ok}` | Удаляет всё каскадом, сбрасывает cookie |
 | `GET /api/devices` | full | → `{devices: [{deviceId, encryptedLabel, trusted, createdAt, lastSeenAt, current}]}` | Только не отозванные |
@@ -101,6 +120,29 @@
 
 Повторное подтверждение в `/api/account/*`: неверный `currentAuthKey` → **403** `INVALID_CREDENTIALS`
 (не 401: сессия жива, клиент не должен разлогиниваться). Неверный / отсутствующий код → 400 `INVALID_CODE`.
+
+## Восстановление доступа (ADR-0008 §8)
+
+Recovery Key + ещё один фактор; без второго фактора — только с задержкой.
+
+| Путь | Что есть у пользователя | Маршруты | Результат |
+| --- | --- | --- | --- |
+| A. Забыт пароль | Recovery Key + код 2FA | `recovery/begin` → `recovery/verify` → `recovery/complete` | Новый пароль; 2FA прежняя; сессия не `via_recovery` |
+| B. Потерян телефон | пароль + Recovery Key | `login` → `login/recovery-key` → `login/totp-reset` | Новая 2FA; пароль прежний |
+| C. Потеряно всё | только Recovery Key | `recovery/begin` → `recovery/delay` … 48 ч … `recovery/begin` → `recovery/resume` → `recovery/complete` | Новый пароль; сессия `via_recovery` → перевыпуск 2FA без кода |
+
+- Конверт MK под Recovery Key (`recoveryEnvelope`) выдаётся только `recovery/verify` (A) и `recovery/resume` (C);
+  `recovery/begin` лишь доказывает владение ключом.
+- Отложенное восстановление (C): `users.recovery_available_at = started + RECOVERY_DELAY_HOURS`; `resume` доступен в
+  окне `[availableAt, availableAt + RECOVERY_READY_TTL_DAYS]` (7 дней), дальше — как не начатое (`begin` → `none`,
+  периодическая уборка обнуляет поля). Пока оно идёт или созрело, `GET /api/auth/me` на вошедших устройствах отдаёт
+  `recoveryPending`, и владелец может отменить (`POST /api/account/recovery/cancel`).
+- Снимается: отменой, завершением пути A или C, сбросом 2FA (B), сменой пароля, перевыпуском Recovery Key, удалением
+  аккаунта. Обычный вход и перевыпуск 2FA — не снимают. Отмена, смена пароля и перевыпуск ключа удаляют и
+  незавершённые recovery-/totp-reset-сессии, поэтому уже выданная стадия `unlocked-*` тоже теряется.
+- Стадии recovery-сессии: `verify` и `resume` работают в любой стадии (`resume` не понижает `unlocked-totp`);
+  `complete` — только из `unlocked-*`, одноразовый (сессия удаляется в той же транзакции).
+- Время отложенного восстановления — часы приложения (как сроки сессий).
 
 ## Синхронизация
 
@@ -183,6 +225,10 @@
 - `0003_hardening`: `users.totp_failed_count`, `users.totp_locked_until`, `devices.secret_hash`,
   `sessions.via_recovery`. TOTP-секреты теперь в формате `v2:` (AAD = id пользователя); секреты старого
   формата не читаются — аккаунты, созданные до 0003 (если есть), нужно создать заново.
+- `0004_recovery_factors`: `users.recovery_started_at`, `users.recovery_available_at` (отложенное восстановление),
+  `sessions.recovery_stage` (стадия recovery-сессии; `null` у старых = `key`), `sessions.totp_pending_secret`
+  (новый секрет в `totp-reset`-сессии). Новый вид сессии `totp-reset` — в колонке `text`, миграция не нужна.
+  Recovery-сессии, начатые до 0004, завершить нельзя (стадия `key`) — начать заново.
 - E2E: при запущенном API (`TRUST_PROXY=true`, чтобы «пользователи» скрипта шли с разных IP) и чистой БД —
   `cd apps/api && node scripts/e2e.mjs` (переменные `API_URL`, `DATABASE_URL` — по умолчанию локальные;
   `API_LOG_FILE` — лог API этого прогона, по умолчанию `/tmp/api.log`: проверяется, что в нём нет секретов

@@ -17,6 +17,24 @@
       </div>
     </section>
 
+    <section class="principles__section" aria-labelledby="source-title">
+      <UiCard class="principles__callout principles__source">
+        <span class="principles__icon"><CodeXml :size="20" aria-hidden="true" /></span>
+        <h2 id="source-title" class="principles__h3">{{ t('principles.source.title') }}</h2>
+        <p class="principles__text">{{ t('principles.source.text') }}</p>
+        <ul class="principles__source-links">
+          <li v-for="link in sourceLinks" :key="link.key" class="principles__source-item">
+            <a :href="link.href" target="_blank" rel="noopener noreferrer" class="principles__source-link">
+              {{ t(`principles.source.links.${link.key}`) }}<ExternalLink :size="14" aria-hidden="true" />
+              <span class="sr-only">{{ t('footer.newTab') }}</span>
+            </a>
+            <code v-if="link.path" class="principles__source-path">{{ link.path }}</code>
+          </li>
+        </ul>
+        <p class="principles__text principles__source-note">{{ t('principles.source.note') }}</p>
+      </UiCard>
+    </section>
+
     <section class="principles__section" aria-labelledby="device-title">
       <h2 id="device-title" class="principles__h2">{{ t('principles.device.title') }}</h2>
       <p class="principles__section-lead l-content">{{ t('principles.device.lead') }}</p>
@@ -138,14 +156,26 @@
 </template>
 
 <script setup lang="ts">
-import { Ban, EyeOff, KeyRound } from 'lucide-vue-next'
+import { Ban, CodeXml, ExternalLink, EyeOff, KeyRound } from 'lucide-vue-next'
 import { UiAlert } from '@/ui/UiAlert'
 import { UiCard } from '@/ui/UiCard'
 import { UiEyebrow } from '@/ui/UiEyebrow'
 import { usePrinciplesView } from './usePrinciplesView'
 
-const { t, values, device, crypto, server, never, limits, cookies, notCollected, infra, control } =
-  usePrinciplesView()
+const {
+  t,
+  values,
+  sourceLinks,
+  device,
+  crypto,
+  server,
+  never,
+  limits,
+  cookies,
+  notCollected,
+  infra,
+  control,
+} = usePrinciplesView()
 </script>
 
 <style scoped src="./PrinciplesView.css"></style>

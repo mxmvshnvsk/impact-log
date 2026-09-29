@@ -9,7 +9,7 @@
  * API_LOG_FILE (по умолчанию /tmp/api.log) — лог API этого прогона: проверяется, что в нём нет секретов
  * и параметров SQL. Если в файл ничего не пишется, проверка пропускается (SKIP).
  */
-import { randomBytes, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { decodeBase32IgnorePadding } from '@oslojs/encoding'
 import { generateHOTP } from '@oslojs/otp'
@@ -221,7 +221,8 @@ const impact = (objectId, baseVersion, ciphertext) => ({
 const sql = postgres(DATABASE_URL, { max: 1, onnotice: () => {} })
 const userRow = async (login) =>
   (
-    await sql`select id, totp_failed_count, totp_locked_until, totp_secret, totp_last_step
+    await sql`select id, totp_failed_count, totp_locked_until, totp_secret, totp_last_step,
+      recovery_started_at, recovery_available_at
       from users where login = ${login}`
   )[0]
 /** Сколько минут до конца блокировки TOTP (по часам БД) */
@@ -232,6 +233,16 @@ const lockMinutes = async (login) =>
         from users where login = ${login}`
     )[0]?.m ?? Number.NaN,
   )
+/** Строка сессии клиента (по cookie il_session; в БД — SHA-256 токена) */
+const sessionRow = async (client) => {
+  const token = client.cookies.get('il_session')?.value
+  if (!token) return undefined
+  const id = createHash('sha256').update(token).digest('hex')
+  return (
+    await sql`select kind, attempts, recovery_stage, via_recovery, totp_pending_secret
+      from sessions where id = ${id}`
+  )[0]
+}
 const unlockTotp = (login) =>
   sql`update users set totp_locked_until = now() - interval '1 second' where login = ${login}`
 
@@ -451,13 +462,18 @@ r = await a1.post('/auth/login', { login: 'alice', authKey: password2.authKey })
 check('новый authKey работает (устройство доверенное → done)', r.json?.next === 'done', r)
 
 // ---------------------------------------------------------------------------------------------
-section('Recovery Key (alice)')
+section('Recovery Key: путь A — Recovery Key + код 2FA (alice)')
 const rcOld = new Client(a1.ip)
 r = await rcOld.post('/auth/recovery/begin', {
   login: 'alice',
   recoveryAuthKey: alice.recoveryAuthKey,
 })
-check('recovery/begin действующим ключом → recovery-сессия', r.status === 200, r)
+check(
+  'recovery/begin действующим ключом → recovery-сессия, конверта нет, delayed.status = none',
+  r.status === 200 && r.json.delayed?.status === 'none' && r.json.recoveryEnvelope === undefined,
+  r,
+)
+check('recovery-сессия в стадии key', (await sessionRow(rcOld))?.recovery_stage === 'key')
 const recovery2 = { recoveryEnvelope: envelope('alice-recovery-2'), recoveryAuthKey: newKey() }
 r = await a1.post('/account/recovery-key', { currentAuthKey: newKey(), ...recovery2 })
 check('перевыпуск с неверным currentAuthKey → 403', isError(r, 403, 'INVALID_CREDENTIALS'), r)
@@ -465,17 +481,19 @@ r = await a1.post('/account/recovery-key', { currentAuthKey: password2.authKey, 
 check('перевыпуск Recovery Key → ok', r.status === 200 && r.json.ok === true, r)
 r = await a1.get('/keys')
 check('recovery-конверт обновлён', envelopeOf(r, 'recovery') === recovery2.recoveryEnvelope, r)
+r = await rcOld.post('/auth/recovery/verify', { code: aliceTotp.now() })
+check(
+  'recovery-сессия, начатая старым ключом, после перевыпуска мертва (verify) → 401 SESSION_EXPIRED',
+  isError(r, 401, 'SESSION_EXPIRED'),
+  r,
+)
 r = await rcOld.post('/auth/recovery/complete', {
   authKey: newKey(),
   kdf: KDF,
   salt: newSalt(),
   passwordEnvelope: envelope('alice-hijack'),
 })
-check(
-  'recovery-сессия, начатая старым ключом, после перевыпуска мертва → 401 SESSION_EXPIRED',
-  isError(r, 401, 'SESSION_EXPIRED'),
-  r,
-)
+check('…и complete → 401 SESSION_EXPIRED', isError(r, 401, 'SESSION_EXPIRED'), r)
 
 const rc = new Client(a1.ip)
 r = await rc.post('/auth/recovery/begin', { login: 'nobody', recoveryAuthKey: newKey() })
@@ -494,8 +512,10 @@ r = await rc.post('/auth/recovery/begin', {
   recoveryAuthKey: recovery2.recoveryAuthKey,
 })
 check(
-  'recovery/begin: верный ключ → recovery-конверт',
-  r.status === 200 && r.json.recoveryEnvelope === recovery2.recoveryEnvelope,
+  'recovery/begin: верный ключ → конверт НЕ выдаётся, delayed.status = none',
+  r.status === 200 &&
+    r.json.recoveryEnvelope === undefined &&
+    JSON.stringify(r.json) === JSON.stringify({ delayed: { status: 'none' } }),
   r,
 )
 r = await rc.get('/auth/me')
@@ -511,6 +531,32 @@ const password3 = {
 }
 r = await new Client(a1.ip).post('/auth/recovery/complete', password3)
 check('recovery/complete без recovery-сессии → 401', r.status === 401, r)
+r = await new Client(a1.ip).post('/auth/recovery/verify', { code: aliceTotp.now() })
+check('recovery/verify без recovery-сессии → 401', isError(r, 401, 'SESSION_EXPIRED'), r)
+r = await rc.post('/auth/recovery/complete', password3)
+check('recovery/complete до второго фактора → 403 FORBIDDEN', isError(r, 403, 'FORBIDDEN'), r)
+r = await rc.post('/auth/recovery/verify', { code: aliceTotp.wrong() })
+check('recovery/verify неверным кодом → INVALID_CODE', isError(r, 400, 'INVALID_CODE'), r)
+check(
+  'неверный код в recovery/verify считается в блокировке перебора TOTP',
+  (await userRow('alice'))?.totp_failed_count === 1,
+  await userRow('alice'),
+)
+r = await rc.post('/auth/recovery/verify', { code: aliceRegisterCode })
+check(
+  'recovery/verify повтором использованного кода → INVALID_CODE',
+  isError(r, 400, 'INVALID_CODE'),
+  r,
+)
+r = await rc.post('/auth/recovery/verify', { code: await aliceTotp.next() })
+check(
+  'recovery/verify верным кодом → recovery-конверт, стадия unlocked-totp, счётчик неудач сброшен',
+  r.status === 200 &&
+    r.json.recoveryEnvelope === recovery2.recoveryEnvelope &&
+    (await sessionRow(rc))?.recovery_stage === 'unlocked-totp' &&
+    (await userRow('alice'))?.totp_failed_count === 0,
+  r,
+)
 const recoverySession = rc.clone()
 r = await rc.post('/auth/recovery/complete', {
   ...password3,
@@ -525,20 +571,16 @@ check(
     r.json.deviceSecret === undefined,
   r,
 )
+check('после пути A сессия НЕ via_recovery', (await sessionRow(rc))?.via_recovery === false)
 r = await rc.get('/auth/me')
-check('me после восстановления → 200', r.status === 200 && r.json.deviceId === aliceDevice, r)
-r = await rc.post('/account/totp/start', { currentAuthKey: password3.authKey })
 check(
-  'сессия после восстановления: totp/start без кода 2FA → новый секрет',
-  r.status === 200 && r.json.otpauthUri.startsWith('otpauth://totp/'),
+  'me после восстановления → 200, recoveryPending = null',
+  r.status === 200 && r.json.deviceId === aliceDevice && r.json.recoveryPending === null,
   r,
 )
-const aliceTotp2 = r.status === 200 ? new Totp(r.json.secret) : null
-r = await rc.post('/account/totp/confirm', { code: await aliceTotp2?.next() })
-check('totp/confirm по новому секрету → ok', r.status === 200 && r.json.ok === true, r)
 r = await rc.post('/account/totp/start', { currentAuthKey: password3.authKey })
 check(
-  'после перевыпуска 2FA повторный totp/start без кода → INVALID_CODE (только один раз)',
+  'после пути A totp/start без кода 2FA → INVALID_CODE (телефон у пользователя есть)',
   isError(r, 400, 'INVALID_CODE'),
   r,
 )
@@ -565,6 +607,402 @@ r = await rc.post('/auth/logout', { everywhere: true })
 check('logout everywhere → ok', r.status === 200 && !rc.has('il_session'), r)
 r = await rc.get('/auth/me')
 check('после logout everywhere → 401', r.status === 401, r)
+
+// ---------------------------------------------------------------------------------------------
+section('Recovery Key: путь B — пароль + Recovery Key вместо кода, новая 2FA (oscar)')
+const os1 = new Client()
+const oscar = await register(os1, 'oscar', { remember: true })
+const os2 = new Client()
+await os2.post('/auth/login', { login: 'oscar', authKey: oscar.authKey })
+r = await os2.post('/auth/login/verify', { code: await oscar.totp.next() })
+check('вторая полная сессия (os2)', r.status === 200, r)
+// «Вор» с одним Recovery Key запускает отложенное восстановление — путь B его снимет
+const osThief = new Client()
+await osThief.post('/auth/recovery/begin', {
+  login: 'oscar',
+  recoveryAuthKey: oscar.recoveryAuthKey,
+})
+r = await osThief.post('/auth/recovery/delay')
+const oscarPending = r.json?.availableAt
+r = await os1.get('/auth/me')
+check(
+  'отложенное восстановление видно на вошедшем устройстве',
+  r.status === 200 && r.json.recoveryPending?.availableAt === oscarPending,
+  r,
+)
+// 2FA заблокирована чужим перебором — сбросу по паролю и Recovery Key это не мешает
+await sql`update users set totp_failed_count = 10,
+  totp_locked_until = now() + interval '15 minutes' where login = 'oscar'`
+const oscarSecretBefore = (await userRow('oscar'))?.totp_secret
+const os3 = new Client()
+r = await os3.post('/auth/login', {
+  login: 'oscar',
+  authKey: oscar.authKey,
+  deviceId: oscar.deviceId,
+  deviceSecret: oscar.deviceSecret,
+})
+check('login (пароль) → second-factor', r.json?.next === 'second-factor', r)
+r = await os3.post('/auth/login/verify', { code: oscar.totp.now() })
+check('2FA заблокирована перебором → login/verify 429', isError(r, 429, 'RATE_LIMITED'), r)
+r = await os3.post('/auth/login/totp-reset', { code: '123456' })
+check('login/totp-reset до Recovery Key → 401', isError(r, 401, 'UNAUTHORIZED'), r)
+r = await os3.post('/auth/login/recovery-key', { recoveryAuthKey: newKey() })
+check(
+  'login/recovery-key неверным ключом → 401 INVALID_CREDENTIALS, попытка сессии учтена',
+  isError(r, 401, 'INVALID_CREDENTIALS') && (await sessionRow(os3))?.attempts === 1,
+  r,
+)
+r = await os3.post('/auth/login/recovery-key', { recoveryAuthKey: 'short' })
+check('login/recovery-key с кривым ключом → 400', isError(r, 400, 'VALIDATION_ERROR'), r)
+r = await os3.post('/auth/login/recovery-key', { recoveryAuthKey: oscar.recoveryAuthKey })
+const os3Session = await sessionRow(os3)
+check(
+  'login/recovery-key верным ключом → новая 2FA (otpauth), сессия totp-reset, попытки обнулены',
+  r.status === 200 &&
+    r.json.otpauthUri.startsWith('otpauth://totp/') &&
+    r.json.secret.length > 20 &&
+    os3Session?.kind === 'totp-reset' &&
+    os3Session.attempts === 0 &&
+    os3Session.totp_pending_secret?.startsWith('v2:'),
+  { r, os3Session },
+)
+const oscarTotp2 = new Totp(r.json?.secret ?? '')
+r = await os3.get('/auth/me')
+check('me с totp-reset-сессией → 401', r.status === 401, r)
+r = await os3.post('/auth/login/recovery-key', { recoveryAuthKey: oscar.recoveryAuthKey })
+check('повторный login/recovery-key (уже totp-reset) → 401', r.status === 401, r)
+check(
+  'старый секрет 2FA пока на месте',
+  (await userRow('oscar'))?.totp_secret === oscarSecretBefore,
+)
+r = await os3.post('/auth/login/totp-reset', { code: oscarTotp2.wrong() })
+check('login/totp-reset неверным кодом → INVALID_CODE', isError(r, 400, 'INVALID_CODE'), r)
+check(
+  'неверный код новой 2FA не трогает блокировку перебора на пользователя',
+  (await userRow('oscar'))?.totp_failed_count === 10,
+  await userRow('oscar'),
+)
+r = await os3.post('/auth/login/totp-reset', { code: await oscarTotp2.next(), remember: true })
+check(
+  'login/totp-reset верным кодом → полная сессия на устройстве-кандидате, remember → il_device',
+  r.status === 200 &&
+    r.json.user.login === 'oscar' &&
+    r.json.deviceId === oscar.deviceId &&
+    r.json.deviceSecret === undefined &&
+    os3.has('il_device'),
+  r,
+)
+const oscarRow = await userRow('oscar')
+check(
+  'секрет 2FA заменён, блокировка перебора и отложенное восстановление сняты',
+  oscarRow?.totp_secret !== oscarSecretBefore &&
+    oscarRow?.totp_failed_count === 0 &&
+    oscarRow?.totp_locked_until === null &&
+    oscarRow?.recovery_available_at === null &&
+    oscarRow?.recovery_started_at === null,
+  oscarRow,
+)
+r = await os3.get('/auth/me')
+check('me → 200, recoveryPending = null', r.status === 200 && r.json.recoveryPending === null, r)
+check('после пути B сессия не via_recovery', (await sessionRow(os3))?.via_recovery === false)
+r = await os1.get('/auth/me')
+check('другие сессии мертвы (os1)', r.status === 401, r)
+r = await os2.get('/auth/me')
+check('другие сессии мертвы (os2)', r.status === 401, r)
+r = await osThief.post('/auth/recovery/resume')
+check('recovery-сессия «вора» мертва', isError(r, 401, 'SESSION_EXPIRED'), r)
+r = await os3.post('/account/totp/start', { currentAuthKey: oscar.authKey })
+check('totp/start без кода → INVALID_CODE', isError(r, 400, 'INVALID_CODE'), r)
+r = await os1.post('/auth/login', { login: 'oscar', authKey: oscar.authKey })
+check('старое «доверие» другого клиента снято → second-factor', r.json?.next === 'second-factor', r)
+r = await os1.post('/auth/login/verify', { code: oscar.totp.now() })
+check('код по старому секрету 2FA → INVALID_CODE', isError(r, 400, 'INVALID_CODE'), r)
+r = await os1.post('/auth/login/verify', { code: await oscarTotp2.next() })
+check('код новой 2FA при следующем входе → вход', r.status === 200, r)
+r = await os3.post('/auth/logout', {})
+r = await os3.post('/auth/login', { login: 'oscar', authKey: oscar.authKey })
+check(
+  'remember при сбросе: это устройство доверенное → done без кода',
+  r.json?.next === 'done' && r.json.deviceId === oscar.deviceId,
+  r,
+)
+const os4 = new Client()
+await os4.post('/auth/login', { login: 'oscar', authKey: oscar.authKey })
+const os4Codes = []
+for (let i = 0; i < 5; i++) {
+  os4Codes.push(code(await os4.post('/auth/login/recovery-key', { recoveryAuthKey: newKey() })))
+}
+check(
+  '5 неверных Recovery Key в одной сессии → 4× INVALID_CREDENTIALS, затем SESSION_EXPIRED',
+  JSON.stringify(os4Codes) ===
+    JSON.stringify([...Array(4).fill('INVALID_CREDENTIALS'), 'SESSION_EXPIRED']),
+  os4Codes,
+)
+r = await os4.post('/auth/login/recovery-key', { recoveryAuthKey: oscar.recoveryAuthKey })
+check('…после этого и верный ключ → 401 (сессия сгорела)', r.status === 401, r)
+const os5 = new Client()
+await os5.post('/auth/login', { login: 'oscar', authKey: oscar.authKey })
+r = await os5.post('/auth/login/recovery-key', { recoveryAuthKey: oscar.recoveryAuthKey })
+check('ещё один сброс 2FA начат (os5, totp-reset)', r.status === 200, r)
+const oscarTotp3 = new Totp(r.json?.secret ?? '')
+r = await os3.post('/account/recovery-key', {
+  currentAuthKey: oscar.authKey,
+  recoveryEnvelope: envelope('oscar-recovery-2'),
+  recoveryAuthKey: newKey(),
+})
+check('перевыпуск Recovery Key → ok', r.status === 200, r)
+r = await os5.post('/auth/login/totp-reset', { code: oscarTotp3.now() })
+check(
+  'totp-reset-сессия, начатая старым ключом, после перевыпуска мертва',
+  isError(r, 401, 'SESSION_EXPIRED'),
+  r,
+)
+
+// ---------------------------------------------------------------------------------------------
+section('Recovery Key: путь C — без пароля и 2FA, через 48 часов (pat)')
+const p1 = new Client()
+const pat = await register(p1, 'pat')
+const patBegin = async () => {
+  const client = new Client()
+  const res = await client.post('/auth/recovery/begin', {
+    login: 'pat',
+    recoveryAuthKey: pat.recoveryAuthKey,
+  })
+  return { client, res }
+}
+const { client: pc, res: pcBegin } = await patBegin()
+check(
+  'begin → delayed.status = none, конверта нет',
+  pcBegin.status === 200 &&
+    pcBegin.json.delayed.status === 'none' &&
+    pcBegin.json.recoveryEnvelope === undefined,
+  pcBegin,
+)
+r = await pc.post('/auth/recovery/resume')
+check(
+  'resume до delay → 403 RECOVERY_NOT_READY без details',
+  isError(r, 403, 'RECOVERY_NOT_READY') && r.json.error.details === undefined,
+  r,
+)
+const delayRequestedAt = Date.now()
+r = await pc.post('/auth/recovery/delay')
+const patAvailableAt = r.json?.availableAt
+check(
+  'delay → {availableAt} ≈ now + 48 ч',
+  r.status === 200 &&
+    Math.abs(Date.parse(patAvailableAt) - delayRequestedAt - 48 * 3600_000) < 60_000,
+  r,
+)
+let patRow = await userRow('pat')
+check(
+  'в БД: recovery_started_at и recovery_available_at',
+  patRow?.recovery_started_at instanceof Date &&
+    patRow?.recovery_available_at?.toISOString() === patAvailableAt,
+  patRow,
+)
+r = await pc.post('/auth/recovery/delay')
+check('повторный delay → тот же срок', r.status === 200 && r.json.availableAt === patAvailableAt, r)
+r = await pc.post('/auth/recovery/resume')
+check(
+  'resume раньше срока → 403 RECOVERY_NOT_READY с details.availableAt',
+  isError(r, 403, 'RECOVERY_NOT_READY') && r.json.error.details?.availableAt === patAvailableAt,
+  r,
+)
+const patPassword2 = {
+  authKey: newKey(),
+  kdf: KDF,
+  salt: newSalt(),
+  passwordEnvelope: envelope('pat-password-2'),
+}
+r = await pc.post('/auth/recovery/complete', patPassword2)
+check('complete до resume → 403 FORBIDDEN', isError(r, 403, 'FORBIDDEN'), r)
+const { client: pc2, res: pc2Begin } = await patBegin()
+check(
+  'новый begin → delayed.status = pending с тем же сроком',
+  pc2Begin.json?.delayed?.status === 'pending' &&
+    pc2Begin.json.delayed.availableAt === patAvailableAt,
+  pc2Begin,
+)
+r = await pc2.post('/auth/recovery/delay')
+check('delay из другой сессии → тот же срок', r.json?.availableAt === patAvailableAt, r)
+r = await p1.get('/auth/me')
+check(
+  'me на вошедшем устройстве → recoveryPending.availableAt',
+  r.status === 200 && r.json.recoveryPending?.availableAt === patAvailableAt,
+  r,
+)
+const p2 = new Client()
+await p2.post('/auth/login', { login: 'pat', authKey: pat.authKey })
+r = await p2.post('/auth/login/verify', { code: await pat.totp.next() })
+r = await p2.get('/auth/me')
+check(
+  'обычный вход не снимает отложенное восстановление',
+  r.status === 200 && r.json.recoveryPending?.availableAt === patAvailableAt,
+  r,
+)
+await sql`update users set recovery_available_at = now() - interval '1 minute' where login = 'pat'`
+patRow = await userRow('pat')
+const patReadyAt = patRow?.recovery_available_at?.toISOString()
+const { client: pc3, res: pc3Begin } = await patBegin()
+check(
+  'после срока begin → delayed.status = ready',
+  pc3Begin.json?.delayed?.status === 'ready' && pc3Begin.json.delayed.availableAt === patReadyAt,
+  pc3Begin,
+)
+r = await p1.get('/auth/me')
+check(
+  'созревшее (не истёкшее) восстановление видно в me',
+  r.json?.recoveryPending?.availableAt === patReadyAt,
+  r,
+)
+r = await pc.post('/auth/recovery/delay')
+check('delay после созревания не перезапускает отсчёт', r.json?.availableAt === patReadyAt, r)
+r = await pc.post('/auth/recovery/resume')
+check(
+  'resume после срока → recovery-конверт, стадия unlocked-delayed',
+  r.status === 200 &&
+    r.json.recoveryEnvelope === pat.recoveryEnvelope &&
+    (await sessionRow(pc))?.recovery_stage === 'unlocked-delayed',
+  r,
+)
+r = await pc.post('/auth/recovery/complete', patPassword2)
+check(
+  'complete → полная сессия на новом устройстве',
+  r.status === 200 &&
+    r.json.user.login === 'pat' &&
+    r.json.deviceId !== pat.deviceId &&
+    DEVICE_SECRET.test(secret(r.json.deviceSecret) ?? ''),
+  r,
+)
+check('после пути C сессия помечена via_recovery', (await sessionRow(pc))?.via_recovery === true)
+r = await pc.get('/auth/me')
+check('me → recoveryPending = null', r.status === 200 && r.json.recoveryPending === null, r)
+patRow = await userRow('pat')
+check(
+  'в БД отложенное восстановление снято',
+  patRow?.recovery_available_at === null && patRow?.recovery_started_at === null,
+  patRow,
+)
+r = await p1.get('/auth/me')
+check('старые полные сессии мертвы (p1)', r.status === 401, r)
+r = await p2.get('/auth/me')
+check('старые полные сессии мертвы (p2)', r.status === 401, r)
+r = await pc3.post('/auth/recovery/resume')
+check('другие recovery-сессии мертвы', isError(r, 401, 'SESSION_EXPIRED'), r)
+r = await pc.post('/account/totp/start', { currentAuthKey: patPassword2.authKey })
+check(
+  'via_recovery: totp/start без кода 2FA → новый секрет',
+  r.status === 200 && r.json.otpauthUri.startsWith('otpauth://totp/'),
+  r,
+)
+const patTotp2 = r.status === 200 ? new Totp(r.json.secret) : null
+r = await pc.post('/account/totp/confirm', { code: await patTotp2?.next() })
+check('totp/confirm по новому секрету → ok', r.status === 200 && r.json.ok === true, r)
+r = await pc.post('/account/totp/start', { currentAuthKey: patPassword2.authKey })
+check(
+  'после перевыпуска 2FA повторный totp/start без кода → INVALID_CODE (только один раз)',
+  isError(r, 400, 'INVALID_CODE'),
+  r,
+)
+check('via_recovery снят', (await sessionRow(pc))?.via_recovery === false)
+
+// ---------------------------------------------------------------------------------------------
+section('отложенное восстановление: отмена, истечение, снятие (quinn)')
+const q1 = new Client()
+const quinn = await register(q1, 'quinn')
+const quinnBegin = async () => {
+  const client = new Client()
+  const res = await client.post('/auth/recovery/begin', {
+    login: 'quinn',
+    recoveryAuthKey: quinn.recoveryAuthKey,
+  })
+  return { client, res }
+}
+const quinnPending = async () => (await q1.get('/auth/me')).json?.recoveryPending
+const { client: qa } = await quinnBegin()
+r = await qa.post('/auth/recovery/delay')
+const quinnAvailableAt = r.json?.availableAt
+const { client: qb } = await quinnBegin()
+check('отсчёт идёт, me → recoveryPending', (await quinnPending())?.availableAt === quinnAvailableAt)
+r = await guest.post('/account/recovery/cancel')
+check('cancel без сессии → 401', isError(r, 401, 'UNAUTHORIZED'), r)
+r = await qa.post('/account/recovery/cancel')
+check('cancel с recovery-сессией → 401', isError(r, 401, 'UNAUTHORIZED'), r)
+r = await q1.call('POST', '/account/recovery/cancel', undefined, {
+  'content-type': 'application/json',
+})
+check('cancel с полной сессии (без тела) → ok', r.status === 200 && r.json.ok === true, r)
+check('после отмены me → recoveryPending = null', (await quinnPending()) === null)
+r = await qa.post('/auth/recovery/resume')
+check('recovery-сессия «злоумышленника» мертва (resume)', isError(r, 401, 'SESSION_EXPIRED'), r)
+r = await qb.post('/auth/recovery/delay')
+check('…и вторая (delay)', isError(r, 401, 'SESSION_EXPIRED'), r)
+const { client: qc, res: qcBegin } = await quinnBegin()
+check('begin после отмены → delayed.status = none', qcBegin.json?.delayed?.status === 'none')
+r = await qc.post('/auth/recovery/resume')
+check(
+  'resume после отмены → 403 RECOVERY_NOT_READY без details',
+  isError(r, 403, 'RECOVERY_NOT_READY') && r.json.error.details === undefined,
+  r,
+)
+r = await qc.post('/auth/recovery/delay')
+const quinnAvailableAt2 = r.json?.availableAt
+check('отсчёт после отмены можно начать заново', r.status === 200, r)
+await sql`update users set recovery_available_at = now() - interval '7 days' - interval '1 minute'
+  where login = 'quinn'`
+const { client: qd, res: qdBegin } = await quinnBegin()
+check(
+  'истёкшее (созрело больше 7 дней назад) → begin: delayed.status = none',
+  qdBegin.json?.delayed?.status === 'none',
+  qdBegin,
+)
+r = await qd.post('/auth/recovery/resume')
+check(
+  'resume истёкшего → 403 RECOVERY_NOT_READY без details',
+  isError(r, 403, 'RECOVERY_NOT_READY') && r.json.error.details === undefined,
+  r,
+)
+check('истёкшее не показывается в me', (await quinnPending()) === null)
+const delayAgainAt = Date.now()
+r = await qd.post('/auth/recovery/delay')
+const quinnAvailableAt3 = r.json?.availableAt
+check(
+  'delay после истечения → новый отсчёт (now + 48 ч)',
+  r.status === 200 &&
+    quinnAvailableAt3 !== quinnAvailableAt2 &&
+    Math.abs(Date.parse(quinnAvailableAt3) - delayAgainAt - 48 * 3600_000) < 60_000,
+  r,
+)
+check('me → recoveryPending', (await quinnPending())?.availableAt === quinnAvailableAt3)
+const quinnPassword2 = {
+  authKey: newKey(),
+  kdf: KDF,
+  salt: newSalt(),
+  passwordEnvelope: envelope('quinn-password-2'),
+}
+r = await q1.post('/account/password', { currentAuthKey: quinn.authKey, ...quinnPassword2 })
+check('смена пароля → ok', r.status === 200, r)
+check('смена пароля снимает отложенное восстановление', (await quinnPending()) === null)
+r = await qd.post('/auth/recovery/resume')
+check('…и удаляет recovery-сессии', isError(r, 401, 'SESSION_EXPIRED'), r)
+const { client: qe } = await quinnBegin()
+r = await qe.post('/auth/recovery/delay')
+check('снова запущено', (await quinnPending())?.availableAt === r.json?.availableAt, r)
+r = await q1.post('/account/recovery-key', {
+  currentAuthKey: quinnPassword2.authKey,
+  recoveryEnvelope: envelope('quinn-recovery-2'),
+  recoveryAuthKey: newKey(),
+})
+check('перевыпуск Recovery Key → ok', r.status === 200, r)
+check('перевыпуск Recovery Key снимает отложенное восстановление', (await quinnPending()) === null)
+r = await qe.post('/auth/recovery/resume')
+check('…и удаляет recovery-сессии', isError(r, 401, 'SESSION_EXPIRED'), r)
+const quinnRow = await userRow('quinn')
+check(
+  'в БД отложенное восстановление снято',
+  quinnRow?.recovery_available_at === null && quinnRow?.recovery_started_at === null,
+  quinnRow,
+)
 
 // ---------------------------------------------------------------------------------------------
 section('устройства и перевыпуск 2FA (bob)')
@@ -1132,13 +1570,21 @@ r = await new Client().post('/auth/login', {
   deviceSecret: 'short',
 })
 check('кривой deviceSecret → 400 VALIDATION_ERROR', isError(r, 400, 'VALIDATION_ERROR'), r)
-/** Восстановление по Recovery Key с новым паролем; возвращает ответ recovery/complete */
+/**
+ * Восстановление по Recovery Key с новым паролем (путь C, задержка «проматывается» в БД);
+ * возвращает ответ recovery/complete
+ */
 const ivanRecover = async (client, device) => {
   const begun = await client.post('/auth/recovery/begin', {
     login: 'ivan',
     recoveryAuthKey: ivan.recoveryAuthKey,
   })
   if (begun.status !== 200) throw new Error(`ivan recovery: ${JSON.stringify(begun)}`)
+  await client.post('/auth/recovery/delay')
+  await sql`update users set recovery_available_at = now() - interval '1 minute'
+    where login = 'ivan'`
+  const resumed = await client.post('/auth/recovery/resume')
+  if (resumed.status !== 200) throw new Error(`ivan resume: ${JSON.stringify(resumed)}`)
   ivan.authKey = newKey()
   return client.post('/auth/recovery/complete', {
     authKey: ivan.authKey,

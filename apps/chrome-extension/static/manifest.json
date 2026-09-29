@@ -4,6 +4,7 @@
   "short_name": "impact log",
   "description": "__MSG_extDescription__",
   "version": "0.0.0",
+  "homepage_url": "https://github.com/mxmvshnvsk/impact-log",
   "default_locale": "en",
   "minimum_chrome_version": "120",
   "icons": {

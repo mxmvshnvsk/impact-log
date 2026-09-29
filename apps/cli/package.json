@@ -3,6 +3,16 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://github.com/mxmvshnvsk/impact-log/tree/main/apps/cli",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mxmvshnvsk/impact-log.git",
+    "directory": "apps/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/mxmvshnvsk/impact-log/issues"
+  },
   "description": "impact log quick capture from the terminal: builds a draft and opens it in the web app",
   "bin": {
     "impact": "./dist/impact.js"

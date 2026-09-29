@@ -22,7 +22,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://127.0.0.1:3000',
+      // changeOrigin: false — api сверяет Origin с Host (защита от CSRF, plugins/csrf.ts), а строковая форма
+      // прокси в Vite подменяет Host на адрес api → любой POST из dev-сервера получал бы 403
+      '/api': { target: 'http://127.0.0.1:3000', changeOrigin: false },
     },
   },
   build: {

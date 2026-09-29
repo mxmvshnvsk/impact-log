@@ -86,20 +86,18 @@
 - Коммиты — Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:` …).
 
 ## Инфраструктура
-- VPS: один сервер с Docker Compose (детали доступа — вне репозитория).
-- Домен: impact-log.com (A-записи `@` и `www`).
-- Открыты порты: 22, 80, 443. Наружу публикуется только Caddy (авто-TLS, раздаёт SPA и проксирует `/api`);
-  БД и api — только во внутренней docker-сети (Docker обходит ufw!).
-- Код на сервере: `/opt/impact-log` (клон репозитория).
-- Секреты прод-окружения — `/opt/impact-log/.env` на сервере (шаблон `.env.example`).
-- Репозиторий приватный → образы в GHCR приватные, сервер логинится в ghcr.io токеном с `read:packages`.
-- GitHub Actions secrets: `SSH_HOST`, `SSH_USER`, `SSH_KNOWN_HOSTS`, `SSH_PRIVATE_KEY` (ключ CI → сервер).
-- Деплой (`.github/workflows/deploy.yml`): push в `main` → lint + typecheck → сборка образов api и web
-  → GHCR → ssh на сервер → `git pull && docker compose pull && docker compose up -d`.
-  Миграции БД применяет одноразовый сервис `migrate` перед стартом api.
-- Бэкапы: pg_dump в S3 (настроить).
+- Репозиторий **публичный** (лицензия AGPL-3.0): никаких секретов, адресов серверов, логинов и деталей доступа
+  в коде, коммитах и документах. Локальные заметки об инфраструктуре — `.private/` (в `.gitignore`), если есть.
+- Прод — один VPS с Docker Compose ([docs/deploy.md](docs/deploy.md)). Наружу публикуется только Caddy
+  (TLS, SPA, прокси `/api`); api и БД — только во внутренних docker-сетях (Docker обходит ufw!).
+- Деплой (`.github/workflows/deploy.yml`): push в `main` → проверки → образы api и web в GHCR → обновление
+  на сервере по SSH. Миграции БД применяет одноразовый сервис `migrate` перед стартом api.
+- Секреты: прод — `.env` на сервере (шаблон `.env.example`), CI — GitHub Secrets.
 - Прод-переменные api: `TOTP_ENCRYPTION_KEY` (обязательна, не менять после появления пользователей),
-  `REGISTRATION_ENABLED` (по умолчанию true), `REGION`, `PUBLIC_API_BASE_URL`, `SYNC_RATE_LIMIT_MAX` — см. docs/deploy.md.
-- CSP (Caddy): `script-src 'self' 'wasm-unsafe-eval'` — WebAssembly нужен Argon2id (hash-wasm); `worker-src 'self'` — KDF
-  в Web Worker и service worker. Сторонних скриптов, CDN и шрифтов не подключаем.
+  `REGISTRATION_ENABLED`, `REGION`, `PUBLIC_API_BASE_URL`, `SYNC_RATE_LIMIT_MAX` — см. docs/deploy.md.
+- CSP (Caddy): `script-src 'self' 'wasm-unsafe-eval'` — WebAssembly нужен Argon2id (hash-wasm); `worker-src 'self'` —
+  KDF в Web Worker и service worker. Сторонних скриптов, CDN и шрифтов не подключаем.
+- AGPL §13: пользователи сервиса должны иметь доступ к исходному коду — ссылка «Исходный код» в подвале и на
+  странице «Принципы» (`apps/web/src/constants/links.ts`); не убирать.
 - Логи контейнеров: json-file, ротация по объёму (5 × 10 МБ); IP в логах Caddy усечены.
+- Бэкапы: pg_dump (настроить).

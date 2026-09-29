@@ -6,9 +6,9 @@ import {
   type RecoveryCompleteRequest,
   type RegisterRequest,
 } from '@impact-log/shared'
-import { and, eq, gt, isNull, lt, or } from 'drizzle-orm'
+import { and, eq, gt, isNotNull, isNull, lt, or } from 'drizzle-orm'
 import type { Database, Executor } from '../../db/client'
-import { keyEnvelopes, sessions, type UserRow, users } from '../../db/schema'
+import { keyEnvelopes, type RecoveryStage, sessions, type UserRow, users } from '../../db/schema'
 import {
   type Cipher,
   decodeBase64Url,
@@ -31,6 +31,11 @@ import {
 } from '../devices/devices'
 import { putEnvelope } from '../keys/envelopes'
 import { hashAuthKey, verifyAuthKey, verifyDummy } from './authKey'
+import {
+  CLEAR_DELAYED_RECOVERY,
+  delayedRecoveryStatus,
+  startDelayedRecovery,
+} from './delayedRecovery'
 import { fakeSalt } from './prelogin'
 import {
   type ActiveSession,
@@ -172,8 +177,24 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
     await reserveTotpAttempt(db, user.id)
     return (
       verifyTotp(cipher.decrypt(user.totpSecret, user.id), code, user.totpLastStep) ??
-      (await failCode(current))
+      (await failAttempt(current, new AppError('INVALID_CODE', 400)))
     )
+  }
+
+  /**
+   * Фиксирует использованный шаг TOTP и сбрасывает счётчик неудач. Условное обновление: два параллельных
+   * запроса с одним кодом не пройдут оба (второй — INVALID_CODE)
+   */
+  async function commitTotpStep(tx: Executor, userId: string, step: number): Promise<UserRow> {
+    const [updated] = await tx
+      .update(users)
+      .set({ totpLastStep: step, ...TOTP_SUCCESS_RESET })
+      .where(
+        and(eq(users.id, userId), or(isNull(users.totpLastStep), lt(users.totpLastStep, step))),
+      )
+      .returning()
+    if (!updated) throw new AppError('INVALID_CODE', 400)
+    return updated
   }
 
   /** Шаг 2 регистрации: первый код из приложения → аккаунт активен, первое устройство, полная сессия */
@@ -243,15 +264,7 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
     const trust = input.remember ? newDeviceTrust() : null
 
     return db.transaction(async (tx) => {
-      // Условное обновление: два параллельных запроса с одним кодом не пройдут оба
-      const [updated] = await tx
-        .update(users)
-        .set({ totpLastStep: step, ...TOTP_SUCCESS_RESET })
-        .where(
-          and(eq(users.id, user.id), or(isNull(users.totpLastStep), lt(users.totpLastStep, step))),
-        )
-        .returning()
-      if (!updated) throw new AppError('INVALID_CODE', 400)
+      const updated = await commitTotpStep(tx, user.id, step)
       // Кандидат уже прошёл проверку секрета при login — здесь только «не отозван ли с тех пор»
       const candidate = current.deviceId
         ? await findUsableDevice(tx, user.id, current.deviceId)
@@ -285,8 +298,87 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
   }
 
   /**
-   * Восстановление, шаг 1: владение Recovery Key (recoveryAuthKey) → recovery-конверт и короткая сессия.
-   * Неверный логин и неверный ключ неразличимы: одинаковые запрос в БД, хеш и сравнение.
+   * Вход, второй фактор — Recovery Key вместо кода (путь B: пароль уже проверен в /login, телефона нет).
+   * Неверный ключ — попытка сессии, как неверный код (после MAX_CODE_ATTEMPTS сессия сгорает).
+   * Верный — новый TOTP-секрет ждёт подтверждения в той же сессии, она становится totp-reset
+   * (попытки обнуляются, срок — заново). Старая 2FA работает, пока новая не подтверждена.
+   */
+  async function loginWithRecoveryKey(current: ActiveSession, recoveryAuthKey: string) {
+    const { user } = current
+    if (!safeEqualHex(recoveryAuthHash(recoveryAuthKey), user.recoveryAuthHash)) {
+      return failAttempt(current, new AppError('INVALID_CREDENTIALS', 401))
+    }
+    const key = generateTotpKey()
+    const [updated] = await db
+      .update(sessions)
+      .set({
+        kind: 'totp-reset',
+        attempts: 0,
+        expiresAt: new Date(Date.now() + SESSION_TTL['totp-reset']),
+        totpPendingSecret: cipher.encrypt(key, user.id),
+      })
+      .where(and(eq(sessions.id, current.id), eq(sessions.kind, 'second-factor')))
+      .returning({ id: sessions.id })
+    if (!updated) throw new AppError('SESSION_EXPIRED', 401)
+    return totpEnrollment(key, user.login)
+  }
+
+  /**
+   * Путь B, шаг 2: первый код новой 2FA → старый секрет заменён, все остальные сессии завершены, доверие
+   * снято со всех устройств (remember — доверие только этому), отложенное восстановление снято.
+   *
+   * Блокировка перебора TOTP (totpGuard) здесь не проверяется и не растёт: она защищает действующий
+   * секрет от того, кто знает пароль, а этот код — от секрета, который сессия только что выдала сама
+   * после пароля и Recovery Key; подбирать нечего. Иначе заблокированная чужим перебором 2FA мешала бы
+   * владельцу её сбросить. Перебор ограничен попытками сессии и лимитом по IP; успех снимает блокировку.
+   */
+  async function confirmTotpReset(current: ActiveSession, input: CodeInput) {
+    const { user } = current
+    const pending = current.totpPendingSecret
+    if (!pending) throw new AppError('SESSION_EXPIRED', 401)
+    const step =
+      verifyTotp(cipher.decrypt(pending, user.id), input.code, null) ??
+      (await failAttempt(current, new AppError('INVALID_CODE', 400)))
+    const trust = input.remember ? newDeviceTrust() : null
+
+    return db.transaction(async (tx) => {
+      // Сессия одноразовая: параллельный запрос с тем же кодом (или после перевыпуска ключа) не пройдёт
+      const [consumed] = await tx
+        .delete(sessions)
+        .where(and(eq(sessions.id, current.id), eq(sessions.kind, 'totp-reset')))
+        .returning({ secret: sessions.totpPendingSecret })
+      if (consumed?.secret !== pending) throw new AppError('SESSION_EXPIRED', 401)
+      const [updated] = await tx
+        .update(users)
+        .set({
+          totpSecret: pending,
+          totpPendingSecret: null,
+          totpLastStep: step,
+          ...TOTP_SUCCESS_RESET,
+          ...CLEAR_DELAYED_RECOVERY,
+        })
+        .where(eq(users.id, user.id))
+        .returning()
+      if (!updated) throw new AppError('SESSION_EXPIRED', 401)
+      await deleteUserSessions(tx, user.id)
+      await forgetDeviceTrust(tx, user.id)
+      const candidate = current.deviceId
+        ? await findUsableDevice(tx, user.id, current.deviceId)
+        : null
+      const device = await useOrCreateDevice(tx, user.id, candidate, trust)
+      const session = await createSession(tx, user.id, 'full', {
+        persistent: input.remember,
+        deviceId: device.deviceId,
+      })
+      return { user: updated, ...device, session, trust }
+    })
+  }
+
+  /**
+   * Восстановление, шаг 1: владение Recovery Key (recoveryAuthKey) → recovery-сессия в стадии key
+   * и состояние отложенного восстановления. Конверт здесь НЕ выдаётся — только после второго фактора
+   * (verify) или задержки (resume). Неверный логин и неверный ключ неразличимы: одинаковые запрос в БД,
+   * хеш и сравнение.
    */
   async function beginRecovery(input: { login: string; recoveryAuthKey: string }) {
     const [row] = await db
@@ -305,24 +397,110 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
     if (!active || !matches || !active.envelope) throw new AppError('INVALID_CREDENTIALS', 401)
 
     const session = await createSession(db, active.user.id, 'recovery')
-    return { session, recoveryEnvelope: active.envelope }
+    return { session, delayed: delayedRecoveryStatus(active.user.recoveryAvailableAt) }
+  }
+
+  /** Recovery-конверт (есть у каждого активного аккаунта) */
+  async function recoveryEnvelopeOf(tx: Executor, userId: string): Promise<string> {
+    const [row] = await tx
+      .select({ envelope: keyEnvelopes.envelope })
+      .from(keyEnvelopes)
+      .where(and(eq(keyEnvelopes.userId, userId), eq(keyEnvelopes.type, 'recovery')))
+    if (!row) throw new AppError('SESSION_EXPIRED', 401)
+    return row.envelope
   }
 
   /**
-   * Восстановление, шаг 2: новый пароль (authKey, KDF, соль, конверт того же MK).
-   * Все сессии пользователя удаляются, «доверие» снимается со всех устройств, блокировка перебора TOTP
-   * снимается (владение Recovery Key доказано, а все, кто подбирал код, потеряли и пароль, и сессии).
-   * Новая сессия помечена viaRecovery: в ней можно перевыпустить 2FA без текущего кода.
+   * Новая стадия recovery-сессии и recovery-конверт — в одной транзакции. Сессию успели удалить
+   * (отмена, перевыпуск ключа, смена пароля) → 401: конверт не выдаётся.
+   */
+  async function unlockRecovery(tx: Executor, current: ActiveSession, stage: RecoveryStage) {
+    const [updated] = await tx
+      .update(sessions)
+      .set({ recoveryStage: stage })
+      .where(and(eq(sessions.id, current.id), eq(sessions.kind, 'recovery')))
+      .returning({ id: sessions.id })
+    if (!updated) throw new AppError('SESSION_EXPIRED', 401)
+    return { recoveryEnvelope: await recoveryEnvelopeOf(tx, current.user.id) }
+  }
+
+  /**
+   * Путь A: код 2FA в recovery-сессии → стадия unlocked-totp и recovery-конверт. Проверка — как при входе:
+   * блокировка перебора на пользователя (totpGuard), защита от повтора, попытки сессии.
+   */
+  async function verifyRecovery(current: ActiveSession, code: string) {
+    const step = await checkSessionCode(current, code)
+    return db.transaction(async (tx) => {
+      await commitTotpStep(tx, current.user.id, step)
+      return unlockRecovery(tx, current, 'unlocked-totp')
+    })
+  }
+
+  /** Путь C: запустить отсчёт (или вернуть идущий срок) */
+  async function delayRecovery(current: ActiveSession) {
+    return startDelayedRecovery(db, current.user.id)
+  }
+
+  /**
+   * Путь C: задержка прошла → стадия unlocked-delayed и recovery-конверт. Рано → 403 RECOVERY_NOT_READY
+   * с details.availableAt; не начато или истекло → 403 RECOVERY_NOT_READY без details.
+   * Если код 2FA в этой сессии уже подтверждён (unlocked-totp), стадия остаётся более сильной.
+   */
+  async function resumeRecovery(current: ActiveSession) {
+    const delayed = delayedRecoveryStatus(current.user.recoveryAvailableAt)
+    if (delayed.status === 'none') throw new AppError('RECOVERY_NOT_READY', 403)
+    if (delayed.status === 'pending') {
+      throw new AppError('RECOVERY_NOT_READY', 403, { availableAt: delayed.availableAt })
+    }
+    const stage = current.recoveryStage === 'unlocked-totp' ? 'unlocked-totp' : 'unlocked-delayed'
+    return db.transaction((tx) => unlockRecovery(tx, current, stage))
+  }
+
+  /**
+   * Восстановление, последний шаг — только после verify (A) или resume (C), иначе 403 FORBIDDEN:
+   * новый пароль (authKey, KDF, соль, конверт того же MK). Все сессии пользователя удаляются, «доверие»
+   * снимается со всех устройств, блокировка перебора TOTP снимается, отложенное восстановление снимается.
+   * Новая сессия помечена viaRecovery только после пути C (перевыпуск 2FA без текущего кода — телефона нет);
+   * после пути A 2FA у пользователя есть.
    */
   async function completeRecovery(current: ActiveSession, input: RecoveryCompleteRequest) {
+    const stage = current.recoveryStage
+    if (stage !== 'unlocked-totp' && stage !== 'unlocked-delayed') {
+      throw new AppError('FORBIDDEN', 403)
+    }
+    const delayed = stage === 'unlocked-delayed'
     const authKeyHash = await hashAuthKey(input.authKey)
     return db.transaction(async (tx) => {
+      // Recovery-сессия одноразовая: параллельный complete (или после отмены) не пройдёт
+      const [consumed] = await tx
+        .delete(sessions)
+        .where(
+          and(
+            eq(sessions.id, current.id),
+            eq(sessions.kind, 'recovery'),
+            eq(sessions.recoveryStage, stage),
+          ),
+        )
+        .returning({ id: sessions.id })
+      if (!consumed) throw new AppError('SESSION_EXPIRED', 401)
       const [user] = await tx
         .update(users)
-        .set({ authKeyHash, kdfParams: input.kdf, kdfSalt: input.salt, ...TOTP_SUCCESS_RESET })
-        .where(eq(users.id, current.user.id))
+        .set({
+          authKeyHash,
+          kdfParams: input.kdf,
+          kdfSalt: input.salt,
+          ...TOTP_SUCCESS_RESET,
+          ...CLEAR_DELAYED_RECOVERY,
+        })
+        // Путь C: отложенное восстановление не отменили с тех пор (отмена удаляет и сессию — это запас)
+        .where(
+          and(
+            eq(users.id, current.user.id),
+            delayed ? isNotNull(users.recoveryAvailableAt) : undefined,
+          ),
+        )
         .returning()
-      if (!user) throw new AppError('SESSION_EXPIRED', 401)
+      if (!user) throw new AppError('RECOVERY_NOT_READY', 403)
       await putEnvelope(tx, user.id, 'password', input.passwordEnvelope)
       await deleteUserSessions(tx, user.id)
       await forgetDeviceTrust(tx, user.id)
@@ -330,7 +508,7 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
       const device = await useOrCreateDevice(tx, user.id, candidate, null)
       const session = await createSession(tx, user.id, 'full', {
         deviceId: device.deviceId,
-        viaRecovery: true,
+        viaRecovery: delayed,
       })
       return { user, ...device, session }
     })
@@ -357,14 +535,17 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
     })
   }
 
-  /** Неверный код: считаем попытку; после лимита сессия сгорает и нужно начинать заново */
-  async function failCode(current: ActiveSession): Promise<never> {
+  /**
+   * Неверный код (или Recovery Key вместо кода): считаем попытку сессии и бросаем error;
+   * после лимита сессия сгорает (SESSION_EXPIRED) и нужно начинать заново
+   */
+  async function failAttempt(current: ActiveSession, error: AppError): Promise<never> {
     const attempts = await registerFailedAttempt(db, current.id)
     if (attempts >= MAX_CODE_ATTEMPTS) {
       await deleteSession(db, current.id)
       throw new AppError('SESSION_EXPIRED', 401)
     }
-    throw new AppError('INVALID_CODE', 400)
+    throw error
   }
 
   return {
@@ -373,7 +554,12 @@ export function createAuthService({ db, cipher, preloginKey, registrationEnabled
     confirmRegistration,
     login,
     verifySecondFactor,
+    loginWithRecoveryKey,
+    confirmTotpReset,
     beginRecovery,
+    verifyRecovery,
+    delayRecovery,
+    resumeRecovery,
     completeRecovery,
     logout,
   }

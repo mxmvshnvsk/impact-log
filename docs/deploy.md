@@ -13,10 +13,12 @@ db — в сети `backend` без выхода наружу.
 
 ## Первичная подготовка сервера (один раз)
 
-Все команды — на сервере, в каталоге клона репозитория.
+Все команды — на сервере, в каталоге клона репозитория (в примерах — `/opt/impact-log`: этот же путь
+использует `.github/workflows/deploy.yml`). Адреса, логины и доступы к серверу в репозитории не храним.
 
-### 1. Доступ к приватным образам GHCR
-Репозиторий приватный, поэтому образы тоже приватные.
+### 1. Доступ к образам GHCR (если они приватные)
+Нужно, только если пакеты `impact-log-api` и `impact-log-web` в GHCR приватные (Package settings → visibility);
+для публичных образов шаг пропускается.
 
 1. GitHub → Settings → Developer settings → Personal access tokens → **Tokens (classic)** →
    Generate new token (classic). Scope — **только `read:packages`**, срок — например, 1 год.
@@ -82,6 +84,7 @@ curl -s https://impact-log.com/api/health
 | `0000_init`, `0001_trusted_devices` | Схема модели ADR-0001 (исторические) |
 | `0002_e2ee` | **Удаляет** старые таблицы (`users`, `sessions`, `recovery_codes`, `trusted_devices`) со всеми данными и создаёт схему local-first + E2EE: `users`, `key_envelopes`, `devices`, `sessions`, `objects`, последовательность `object_seq`. Проходит и поверх 0000–0001, и на пустой базе |
 | `0003_hardening` | Добавляет `devices.secret_hash`, `sessions.via_recovery`, `users.totp_failed_count`, `users.totp_locked_until` |
+| `0004_recovery_factors` | Восстановление «Recovery Key + второй фактор»: `users.recovery_started_at`, `users.recovery_available_at`, `sessions.recovery_stage`, `sessions.totp_pending_secret` |
 
 **TOTP-секреты — формат v2** (`v2:` + AES-256-GCM, ключ из HKDF, AAD = id пользователя): секреты старого
 формата сервер не читает, и такие аккаунты не смогут войти — их нужно создать заново. На проде аккаунтов,
@@ -115,7 +118,7 @@ cd /opt/impact-log
 docker compose ps                         # состояние сервисов
 docker compose logs -f api                # логи api (caddy, db — аналогично)
 IMAGE_TAG=<sha> docker compose up -d      # откат на конкретную версию (sha коммита)
-docker compose exec db psql -U impact impact   # консоль БД
+docker compose exec db sh -c 'psql -U "$POSTGRES_USER" "$POSTGRES_DB"'   # консоль БД
 ```
 
 Откат образа не откатывает миграции БД: версия до `0002_e2ee` с новой схемой не работает.

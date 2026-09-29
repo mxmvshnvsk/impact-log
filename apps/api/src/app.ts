@@ -117,7 +117,7 @@ export async function buildApp({ config, db, ping }: Deps) {
 
   app.setErrorHandler<FastifyError>((error, request, reply) => {
     if (error instanceof AppError) {
-      return reply.status(error.statusCode).send(errorBody(error.code))
+      return reply.status(error.statusCode).send(errorBody(error.code, error.details))
     }
     if (error.validation) {
       return reply.status(400).send(errorBody('VALIDATION_ERROR', error.validation))

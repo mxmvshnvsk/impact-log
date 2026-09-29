@@ -1,7 +1,13 @@
 {
   "name": "impact-log",
   "private": true,
+  "license": "AGPL-3.0-only",
   "type": "module",
+  "homepage": "https://impact-log.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mxmvshnvsk/impact-log.git"
+  },
   "packageManager": "pnpm@10.28.0",
   "engines": {
     "node": ">=22.12"

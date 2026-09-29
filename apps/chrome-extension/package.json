@@ -3,6 +3,13 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://github.com/mxmvshnvsk/impact-log/tree/main/apps/chrome-extension",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mxmvshnvsk/impact-log.git",
+    "directory": "apps/chrome-extension"
+  },
   "description": "impact log quick capture for Chrome (Manifest V3)",
   "scripts": {
     "build": "tsup && node scripts/copy-static.mjs",

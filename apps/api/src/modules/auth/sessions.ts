@@ -1,6 +1,13 @@
-import { and, eq, lt, ne, sql } from 'drizzle-orm'
+import { and, eq, inArray, lt, ne, sql } from 'drizzle-orm'
 import type { Executor } from '../../db/client'
-import { devices, type SessionKind, sessions, type UserRow, users } from '../../db/schema'
+import {
+  devices,
+  type RecoveryStage,
+  type SessionKind,
+  sessions,
+  type UserRow,
+  users,
+} from '../../db/schema'
 import { generateToken, sha256Hex } from '../../lib/crypto'
 
 const MINUTE = 60_000
@@ -10,6 +17,8 @@ const DAY = 24 * 60 * MINUTE
 export const SESSION_TTL: Record<SessionKind, number> = {
   enrollment: 30 * MINUTE,
   'second-factor': 5 * MINUTE,
+  /** Как у second-factor: из неё и получается (Recovery Key вместо кода → первый код новой 2FA) */
+  'totp-reset': 5 * MINUTE,
   recovery: 15 * MINUTE,
   full: DAY,
 }
@@ -30,12 +39,16 @@ export type ActiveSession = {
   attempts: number
   persistent: boolean
   expiresAt: Date
-  /** full — устройство сессии; second-factor — кандидат из запроса входа; иначе null */
+  /** full — устройство сессии; second-factor и totp-reset — кандидат из запроса входа; иначе null */
   deviceId: string | null
   /** Когда устройство сессии последний раз было активно (null — устройства нет) */
   deviceLastSeenAt: Date | null
-  /** Полная сессия после восстановления по Recovery Key: перевыпуск 2FA без текущего кода */
+  /** Полная сессия после отложенного восстановления (путь C): перевыпуск 2FA без текущего кода */
   viaRecovery: boolean
+  /** recovery: стадия (null у старых recovery-сессий = key); у других видов — null */
+  recoveryStage: RecoveryStage | null
+  /** totp-reset: новый TOTP-секрет (зашифрован) до подтверждения кодом; у других видов — null */
+  totpPendingSecret: string | null
   user: UserRow
 }
 
@@ -61,6 +74,7 @@ export async function createSession(
     expiresAt,
     deviceId: options.deviceId ?? null,
     viaRecovery: kind === 'full' && (options.viaRecovery ?? false),
+    recoveryStage: kind === 'recovery' ? 'key' : null,
   })
   return { token, expiresAt, persistent }
 }
@@ -103,6 +117,8 @@ export async function findSession(db: Executor, token: string): Promise<ActiveSe
     deviceId: row.session.deviceId,
     deviceLastSeenAt: row.device?.lastSeenAt ?? null,
     viaRecovery: row.session.viaRecovery,
+    recoveryStage: row.session.recoveryStage,
+    totpPendingSecret: row.session.totpPendingSecret,
     user: row.user,
   }
 }
@@ -120,9 +136,14 @@ export async function deleteOtherSessions(db: Executor, userId: string, keepId: 
   await db.delete(sessions).where(and(eq(sessions.userId, userId), ne(sessions.id, keepId)))
 }
 
-/** Незавершённые восстановления (перевыпуск Recovery Key: старый ключ не должен дать доступ) */
+/**
+ * Незавершённые действия по Recovery Key: восстановления (recovery) и сбросы 2FA при входе (totp-reset).
+ * Перевыпуск Recovery Key (старый ключ не должен дать доступ), отмена отложенного восстановления, смена пароля
+ */
 export async function deleteRecoverySessions(db: Executor, userId: string) {
-  await db.delete(sessions).where(and(eq(sessions.userId, userId), eq(sessions.kind, 'recovery')))
+  await db
+    .delete(sessions)
+    .where(and(eq(sessions.userId, userId), inArray(sessions.kind, ['recovery', 'totp-reset'])))
 }
 
 export async function deleteDeviceSessions(db: Executor, deviceId: string) {

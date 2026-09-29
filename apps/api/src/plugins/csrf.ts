@@ -27,7 +27,14 @@ export const csrfPlugin = fp(async (app) => {
       } catch {
         throw new AppError('FORBIDDEN', 403)
       }
-      if (originHost !== request.host) throw new AppError('FORBIDDEN', 403)
+      if (originHost !== request.host) {
+        // Origin и Host не секретны; подсказка для диагностики прокси (например, подмена Host)
+        request.log.warn(
+          { origin: originHost, host: request.host },
+          'csrf: origin does not match host',
+        )
+        throw new AppError('FORBIDDEN', 403)
+      }
     }
   })
 })

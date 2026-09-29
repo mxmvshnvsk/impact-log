@@ -101,9 +101,18 @@ export const sessionResponseSchema = z.object({
   deviceSecret: deviceSecretSchema.optional(),
 })
 export type SessionResponse = z.infer<typeof sessionResponseSchema>
-/** @deprecated совместимость имён */
-export const meResponseSchema = sessionResponseSchema
-export type MeResponse = SessionResponse
+/** Идёт восстановление доступа с задержкой (Recovery Key без пароля и без 2FA) — показать предупреждение */
+export const recoveryPendingSchema = z.object({
+  /** Когда восстановление станет доступно (started + 48 ч) */
+  availableAt: z.string(),
+})
+export type RecoveryPending = z.infer<typeof recoveryPendingSchema>
+
+/** GET /api/auth/me — сессия + состояние безопасности аккаунта */
+export const meResponseSchema = sessionResponseSchema.extend({
+  recoveryPending: recoveryPendingSchema.nullable(),
+})
+export type MeResponse = z.infer<typeof meResponseSchema>
 
 // ---------- prelogin ----------
 
@@ -169,22 +178,63 @@ export type LoginResponse = z.infer<typeof loginResponseSchema>
 export const secondFactorRequestSchema = codeRequestSchema
 export type SecondFactorRequest = CodeRequest
 
-// ---------- восстановление доступа по Recovery Key ----------
+// ---------- восстановление доступа по Recovery Key (ADR-0008 §7) ----------
+/*
+ * Recovery Key + ЕЩЁ ОДИН фактор:
+ *   A. забыл пароль:   Recovery Key + код 2FA          → новый пароль (/recover);
+ *   B. потерял телефон: пароль + Recovery Key вместо кода → новая 2FA   (/login, шаг второго фактора);
+ *   C. потерял всё:    Recovery Key без пароля и кода   → новый пароль и новая 2FA, но только через
+ *                      RECOVERY_DELAY_HOURS после запуска; всё это время вошедшие устройства видят
+ *                      предупреждение (GET /api/auth/me → recoveryPending) и могут отменить.
+ * Конверт MK под Recovery Key сервер отдаёт только после второго фактора (A) или по истечении задержки (C).
+ */
+export const RECOVERY_DELAY_HOURS = 48
+/** Сколько отложенное восстановление остаётся доступным после созревания, потом его нужно начинать заново */
+export const RECOVERY_READY_TTL_DAYS = 7
 
 /**
- * POST /api/auth/recovery/begin — доказать владение Recovery Key (recoveryAuthKey выводится из него
- * на клиенте). Ответ — конверт MK под Recovery Key и короткая recovery-сессия.
- * Recovery Key заменяет и пароль, и второй фактор: это единственный «аварийный комплект».
+ * POST /api/auth/recovery/begin — доказать владение Recovery Key (recoveryAuthKey выводится из него на клиенте).
+ * Создаёт короткую recovery-сессию; конверт ещё НЕ выдаётся. Неверный ключ/логин → 401 INVALID_CREDENTIALS.
  */
 export const recoveryBeginRequestSchema = z.object({
   login: loginSchema,
   recoveryAuthKey: authKeySchema,
 })
-export const recoveryBeginResponseSchema = z.object({ recoveryEnvelope: envelopeTextSchema })
+export const recoveryBeginResponseSchema = z.object({
+  /**
+   * Отложенное восстановление этого аккаунта: none — не начато; pending — идёт отсчёт;
+   * ready — задержка прошла, можно продолжить без 2FA (POST /recovery/resume)
+   */
+  delayed: z.discriminatedUnion('status', [
+    z.object({ status: z.literal('none') }),
+    z.object({ status: z.literal('pending'), availableAt: z.string() }),
+    z.object({ status: z.literal('ready'), availableAt: z.string() }),
+  ]),
+})
+export type RecoveryBeginResponse = z.infer<typeof recoveryBeginResponseSchema>
+
+/** Конверт MK под Recovery Key — выдаётся после второго фактора или после задержки */
+export const recoveryUnlockResponseSchema = z.object({ recoveryEnvelope: envelopeTextSchema })
+
+/** A. POST /api/auth/recovery/verify (recovery-сессия) — код 2FA; учитывается в блокировке перебора TOTP */
+export const recoveryVerifyRequestSchema = z.object({ code: totpCodeSchema })
 
 /**
- * POST /api/auth/recovery/complete (recovery-сессия) — новый пароль: новый authKey, KDF, соль и конверт.
- * Все остальные сессии и доверенные устройства сбрасываются. Ответ — sessionResponseSchema.
+ * C. POST /api/auth/recovery/delay (recovery-сессия, без тела) — запустить отсчёт RECOVERY_DELAY_HOURS.
+ * Идемпотентно: если отсчёт уже идёт, возвращает прежний срок.
+ */
+export const recoveryDelayResponseSchema = recoveryPendingSchema
+
+/**
+ * C. POST /api/auth/recovery/resume (recovery-сессия, без тела) — задержка прошла → recoveryUnlockResponseSchema.
+ * Рано → 403 RECOVERY_NOT_READY (details.availableAt); не начато или истекло → 403 RECOVERY_NOT_READY без details.
+ */
+
+/**
+ * POST /api/auth/recovery/complete (recovery-сессия после verify или resume) — новый пароль: authKey, KDF, соль,
+ * конверт. Все остальные сессии и «Запомнить компьютер» сбрасываются, отложенное восстановление снимается.
+ * После пути C новая сессия помечена via_recovery: перевыпуск 2FA без текущего кода (телефона-то нет).
+ * Ответ — sessionResponseSchema. До verify/resume → 403 FORBIDDEN.
  */
 export const recoveryCompleteRequestSchema = z.object({
   authKey: authKeySchema,
@@ -195,6 +245,22 @@ export const recoveryCompleteRequestSchema = z.object({
   deviceSecret: deviceSecretSchema.optional(),
 })
 export type RecoveryCompleteRequest = z.infer<typeof recoveryCompleteRequestSchema>
+
+/**
+ * B. POST /api/auth/login/recovery-key (second-factor-сессия: пароль уже проверен) — Recovery Key вместо кода.
+ * Ответ — новая 2FA для приложения (как registerStartResponseSchema); сессия переходит в kind 'totp-reset'.
+ * Неверный ключ → 401 INVALID_CREDENTIALS (считается попыткой сессии, как неверный код).
+ */
+export const loginRecoveryKeyRequestSchema = z.object({ recoveryAuthKey: authKeySchema })
+
+/**
+ * B. POST /api/auth/login/totp-reset (totp-reset-сессия) — первый код новой 2FA → sessionResponseSchema.
+ * Старая 2FA заменяется, все остальные сессии и «Запомнить компьютер» сбрасываются, отложенное восстановление
+ * снимается. remember — как при обычном входе.
+ */
+export const loginTotpResetRequestSchema = codeRequestSchema
+
+/** POST /api/account/recovery/cancel (полная сессия, без тела) — отменить отложенное восстановление → ok */
 
 // ---------- прочее ----------
 

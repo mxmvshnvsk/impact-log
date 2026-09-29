@@ -30,7 +30,9 @@
     "skip": "Skip to content"
   },
   "footer": {
-    "label": "Links"
+    "label": "Links",
+    "source": "Source code",
+    "newTab": "(opens in a new tab)"
   },
   "ui": {
     "input": {
@@ -295,7 +297,8 @@
         "sync": "Sync between devices — only if you want it",
         "noTracking": "No analytics, trackers or ads",
         "yours": "Export to JSON, CSV and Markdown, full deletion — at any time"
-      }
+      },
+      "source": "Source code on GitHub"
     },
     "final": {
       "title": "Start your impact log today",

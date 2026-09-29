@@ -45,6 +45,15 @@ export const accountRoutes: FastifyPluginAsyncZod<Options> = async (app, { accou
   )
 
   app.post(
+    '/recovery/cancel',
+    { config: rateLimit(10, 15), schema: { response: { 200: okResponseSchema } } },
+    async (request) => {
+      await account.cancelRecovery(fullSessionOf(request))
+      return ok
+    },
+  )
+
+  app.post(
     '/totp/start',
     {
       config: rateLimit(10, 15),

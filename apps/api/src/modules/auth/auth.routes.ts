@@ -1,14 +1,20 @@
 import {
   codeRequestSchema,
+  loginRecoveryKeyRequestSchema,
   loginRequestSchema,
   loginResponseSchema,
+  loginTotpResetRequestSchema,
   logoutRequestSchema,
+  meResponseSchema,
   okResponseSchema,
   preloginRequestSchema,
   preloginResponseSchema,
   recoveryBeginRequestSchema,
   recoveryBeginResponseSchema,
   recoveryCompleteRequestSchema,
+  recoveryDelayResponseSchema,
+  recoveryUnlockResponseSchema,
+  recoveryVerifyRequestSchema,
   registerRequestSchema,
   registerStartResponseSchema,
   sessionResponseSchema,
@@ -18,6 +24,7 @@ import type { UserRow } from '../../db/schema'
 import { perLoginRateLimit, rateLimit } from '../../lib/rateLimit'
 import { DEVICE_COOKIE, fullSessionOf, requireSession, sessionOf } from '../../plugins/session'
 import type { AuthService } from './auth.service'
+import { recoveryPendingOf } from './delayedRecovery'
 import { toUserDto } from './user'
 
 type Options = { auth: AuthService }
@@ -103,6 +110,36 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
     },
   )
 
+  // B. Потерян телефон: пароль (уже проверен в /login) + Recovery Key вместо кода → новая 2FA
+  app.post(
+    '/login/recovery-key',
+    {
+      config: rateLimit(10, 15),
+      preHandler: requireSession('second-factor'),
+      schema: {
+        body: loginRecoveryKeyRequestSchema,
+        response: { 200: registerStartResponseSchema },
+      },
+    },
+    async (request) => auth.loginWithRecoveryKey(sessionOf(request), request.body.recoveryAuthKey),
+  )
+
+  app.post(
+    '/login/totp-reset',
+    {
+      config: rateLimit(15, 5),
+      preHandler: requireSession('totp-reset'),
+      schema: { body: loginTotpResetRequestSchema, response: { 200: sessionResponseSchema } },
+    },
+    async (request, reply) => {
+      const result = await auth.confirmTotpReset(sessionOf(request), request.body)
+      reply.setSessionCookie(result.session)
+      if (result.trust) reply.setDeviceCookie(result.trust)
+      return sessionBody(result)
+    },
+  )
+
+  // Восстановление по Recovery Key: begin → verify (A) | delay … resume (C) → complete
   app.post(
     '/recovery/begin',
     {
@@ -110,10 +147,43 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
       schema: { body: recoveryBeginRequestSchema, response: { 200: recoveryBeginResponseSchema } },
     },
     async (request, reply) => {
-      const { session, recoveryEnvelope } = await auth.beginRecovery(request.body)
+      const { session, delayed } = await auth.beginRecovery(request.body)
       reply.setSessionCookie(session)
-      return { recoveryEnvelope }
+      return { delayed }
     },
+  )
+
+  app.post(
+    '/recovery/verify',
+    {
+      config: rateLimit(15, 10),
+      preHandler: requireSession('recovery'),
+      schema: {
+        body: recoveryVerifyRequestSchema,
+        response: { 200: recoveryUnlockResponseSchema },
+      },
+    },
+    async (request) => auth.verifyRecovery(sessionOf(request), request.body.code),
+  )
+
+  app.post(
+    '/recovery/delay',
+    {
+      config: rateLimit(10, 15),
+      preHandler: requireSession('recovery'),
+      schema: { response: { 200: recoveryDelayResponseSchema } },
+    },
+    async (request) => auth.delayRecovery(sessionOf(request)),
+  )
+
+  app.post(
+    '/recovery/resume',
+    {
+      config: rateLimit(10, 15),
+      preHandler: requireSession('recovery'),
+      schema: { response: { 200: recoveryUnlockResponseSchema } },
+    },
+    async (request) => auth.resumeRecovery(sessionOf(request)),
   )
 
   app.post(
@@ -148,10 +218,14 @@ export const authRoutes: FastifyPluginAsyncZod<Options> = async (app, { auth }) 
 
   app.get(
     '/me',
-    { preHandler: requireSession('full'), schema: { response: { 200: sessionResponseSchema } } },
+    { preHandler: requireSession('full'), schema: { response: { 200: meResponseSchema } } },
     async (request) => {
       const session = fullSessionOf(request)
-      return { user: toUserDto(session.user), deviceId: session.deviceId }
+      return {
+        user: toUserDto(session.user),
+        deviceId: session.deviceId,
+        recoveryPending: recoveryPendingOf(session.user.recoveryAvailableAt),
+      }
     },
   )
 }

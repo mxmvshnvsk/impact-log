@@ -83,21 +83,50 @@
     },
     "recoveryKey": {
       "title": "Recovery Key",
-      "text": "Restores access if you forget your password. A new key replaces the old one immediately.",
+      "text": "The emergency key to your data. It works together with a second factor, and without one — only after 48 hours. A new key replaces the old one immediately.",
       "action": "Reissue",
       "confirmPassword": "Confirm with your current password",
       "submit": "Save the new key",
       "done": "The new Recovery Key is active, the old one no longer works."
     },
+    "scheme": {
+      "password": {
+        "lost": "Forgot your password",
+        "how": "“Recover with Recovery Key” on the sign-in page: the key and a 2FA code."
+      },
+      "phone": {
+        "lost": "Lost your 2FA phone",
+        "how": "Sign in with your password and choose “No access to my 2FA app” at the code step: the key replaces the code."
+      },
+      "all": {
+        "lost": "Lost both",
+        "how": "The key alone — access opens after 48 hours, and your signed-in devices see a warning and can cancel it."
+      }
+    },
     "totp": {
       "title": "Two-factor protection",
-      "text": "Codes from an authenticator app. Reissue it if you changed phones or doubt the old one is safe.",
+      "text": "Codes from an authenticator app. Reissue it if you changed phones. Lost it? At sign-in, choose “No access to my 2FA app” and sign in with your password and Recovery Key.",
       "action": "Reissue 2FA",
       "start": "Continue",
       "currentCode": "Current code from the app",
-      "lostPhone": "No access to your authenticator app? Recover access with your Recovery Key — after that, 2FA can be reissued without a code.",
+      "lostPhone": "No access to your authenticator app? Sign out and sign in again: at the code step, choose “No access to my 2FA app” — your password and Recovery Key set up new 2FA.",
       "done": "2FA reissued. Other sessions were ended."
     }
+  },
+  "recoveryPending": {
+    "title": "Account recovery with your Recovery Key has started",
+    "text": "Without your password and 2FA, it becomes available {date} ({relative}). If this isn’t you, cancel it and issue a new Recovery Key.",
+    "textReady": "It’s already available without your password and 2FA (since {date}). If this isn’t you, cancel it right now and issue a new Recovery Key.",
+    "itsMe": "If this is you, there’s nothing to do.",
+    "cancel": "Cancel recovery",
+    "confirmTitle": "Cancel account recovery?",
+    "confirmText": "Whoever started it won’t be able to continue without the password or a 2FA code. The Recovery Key itself keeps working — issue a new one after cancelling.",
+    "confirm": "Cancel recovery",
+    "keep": "Don’t cancel",
+    "doneTitle": "Recovery cancelled",
+    "doneText": "The Recovery Key still works. If you didn’t start the recovery, someone else has the key — issue a new one and the old one stops working immediately.",
+    "reissue": "Issue a new Recovery Key",
+    "dismiss": "Dismiss"
   },
   "session": {
     "title": "Sign out",

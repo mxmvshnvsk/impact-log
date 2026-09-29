@@ -17,7 +17,9 @@
     >
       <UiAlert v-if="mode === 'signed-out'" tone="info">{{ t('auth.login.reauth') }}</UiAlert>
       <UiAlert v-else-if="expired" tone="warning">{{ t('errors.SESSION_EXPIRED') }}</UiAlert>
-      <UiAlert v-if="cancelled" tone="info">{{ t('auth.login.cancelled') }}</UiAlert>
+      <UiAlert v-if="cancelled" tone="info">
+        {{ cancelledAfterReset ? t('auth.recoveryLogin.cancelled') : t('auth.login.cancelled') }}
+      </UiAlert>
       <UiInput
         v-model="form.values.login"
         name="username"
@@ -56,7 +58,7 @@
       </p>
     </form>
 
-    <form v-else class="login__form" novalidate @submit.prevent="submitCode()">
+    <form v-else-if="step === 'second-factor'" class="login__form" novalidate @submit.prevent="submitCode()">
       <UiOtpInput
         ref="otpRef"
         v-model="code"
@@ -76,17 +78,44 @@
       <UiAlert v-if="error" tone="danger">{{ t(error) }}</UiAlert>
       <UiButton type="submit" size="lg" block :loading="busy">{{ t('auth.secondFactor.submit') }}</UiButton>
       <div class="login__links">
-        <RouterLink :to="{ name: 'recover' }" class="login__link">{{ t('auth.secondFactor.lostPhone') }}</RouterLink>
+        <button type="button" class="login__link" :disabled="busy" @click="chooseRecoveryKey">
+          <KeyRound :size="14" aria-hidden="true" />{{ t('auth.secondFactor.lostPhone') }}
+        </button>
         <button type="button" class="login__link login__link--muted" :disabled="busy" @click="restart()">
           <ArrowLeft :size="14" aria-hidden="true" />{{ t('auth.secondFactor.back') }}
         </button>
       </div>
     </form>
 
+    <!-- путь B: пароль верный, телефона нет — Recovery Key вместо кода и новая 2FA -->
+    <RecoveryKeyLogin
+      v-else-if="step === 'recovery-key' && pending"
+      :pending="pending"
+      :mascot="mascot"
+      @phase="onRecoveryPhase"
+      @back="backToCode"
+      @expired="onRecoveryExpired"
+      @cancelled="onRecoveryCancelled"
+      @done="onRecovered"
+    />
+
+    <!-- вошли по Recovery Key: им воспользовались — предложить перевыпустить -->
+    <div v-else-if="step === 'recovered'" class="login__form">
+      <RecoveryKeyReissue
+        v-if="currentAuthKey"
+        :current-auth-key="currentAuthKey"
+        :login="account?.login ?? form.values.login"
+        @mood="mascot.react"
+      />
+      <UiButton size="lg" block @click="finish">
+        {{ t('auth.recoveryLogin.continue') }}<ArrowRight :size="18" aria-hidden="true" />
+      </UiButton>
+    </div>
+
     <MergeDialog :request="mergeRequest" @choose="answerMerge" />
     <KdfChangeDialog :change="kdfChange" @answer="answerKdf" />
 
-    <template v-if="!alreadySignedIn" #footer>
+    <template v-if="!alreadySignedIn && step !== 'recovered'" #footer>
       {{ t('auth.login.noAccount') }}
       <RouterLink v-if="hasVault" :to="{ name: 'register' }">{{ t('auth.login.enableSync') }}</RouterLink>
       <button v-else-if="!vaultUnavailable" type="button" class="login__footer-button" @click="startLocal">
@@ -97,11 +126,13 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowLeft, KeyRound } from 'lucide-vue-next'
+import { ArrowLeft, ArrowRight, KeyRound } from 'lucide-vue-next'
 import { AuthCard } from '@/components/AuthCard'
 import { CryptoProgress } from '@/components/CryptoProgress'
 import { KdfChangeDialog } from '@/components/KdfChangeDialog'
 import { MergeDialog } from '@/components/MergeDialog'
+import { RecoveryKeyLogin } from '@/components/RecoveryKeyLogin'
+import { RecoveryKeyReissue } from '@/components/RecoveryKeyReissue'
 import { UiAlert } from '@/ui/UiAlert'
 import { UiButton } from '@/ui/UiButton'
 import { UiCheckbox } from '@/ui/UiCheckbox'
@@ -125,6 +156,7 @@ const {
   form,
   expired,
   cancelled,
+  cancelledAfterReset,
   busy,
   stage,
   error,
@@ -142,6 +174,15 @@ const {
   otpRef,
   submitCode,
   restart,
+  pending,
+  chooseRecoveryKey,
+  onRecoveryPhase,
+  backToCode,
+  onRecoveryExpired,
+  onRecoveryCancelled,
+  onRecovered,
+  currentAuthKey,
+  finish,
   startLocal,
 } = useLoginView()
 </script>

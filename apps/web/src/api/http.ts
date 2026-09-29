@@ -7,12 +7,15 @@ export type ClientErrorCode = ErrorCode | 'NETWORK_ERROR' | 'UNKNOWN_ERROR'
 export class ApiError extends Error {
   readonly status: number
   readonly code: ClientErrorCode
+  /** Подробности из тела ошибки (например, availableAt у RECOVERY_NOT_READY) — не проверены схемой */
+  readonly details: unknown
 
-  constructor(status: number, code: ClientErrorCode) {
+  constructor(status: number, code: ClientErrorCode, details?: unknown) {
     super(code)
     this.name = 'ApiError'
     this.status = status
     this.code = code
+    this.details = details
   }
 }
 
@@ -38,7 +41,8 @@ export async function request<T>(
 
   if (!response.ok) {
     const parsed = apiErrorSchema.safeParse(body)
-    throw new ApiError(response.status, parsed.success ? parsed.data.error.code : 'UNKNOWN_ERROR')
+    if (!parsed.success) throw new ApiError(response.status, 'UNKNOWN_ERROR')
+    throw new ApiError(response.status, parsed.data.error.code, parsed.data.error.details)
   }
 
   const parsed = schema.safeParse(body)

@@ -43,7 +43,7 @@ pnpm --filter impact-log-vscode smoke       # бандл с заглушкой v
 
 ```sh
 cd apps/vscode-extension
-npx @vscode/vsce package --no-dependencies --skip-license --allow-missing-repository
+npx @vscode/vsce package --no-dependencies
 code --install-extension impact-log-vscode-0.1.0.vsix
 ```
 

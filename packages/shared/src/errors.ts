@@ -17,6 +17,8 @@ export const ERROR_CODES = [
   'SESSION_EXPIRED',
   'REGISTRATION_CLOSED',
   'PAYLOAD_TOO_LARGE',
+  // отложенное восстановление ещё не готово (или не начато / истекло) — 403, details.availableAt
+  'RECOVERY_NOT_READY',
   // устройства
   'DEVICE_REVOKED',
   // регион

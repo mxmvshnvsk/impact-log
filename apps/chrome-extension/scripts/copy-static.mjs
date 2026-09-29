@@ -12,6 +12,8 @@ const dist = join(root, 'dist')
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'))
 
 cpSync(join(root, 'static'), dist, { recursive: true })
+// Лицензия (AGPL-3.0) едет вместе с каждой распространяемой сборкой
+cpSync(join(root, '..', '..', 'LICENSE'), join(dist, 'LICENSE'))
 
 const { version } = readJson(join(root, 'package.json'))
 const manifest = readJson(join(dist, 'manifest.json'))

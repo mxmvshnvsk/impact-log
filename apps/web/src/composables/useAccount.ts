@@ -2,6 +2,8 @@ import { CryptoError, generateMasterKey } from '@impact-log/core/crypto'
 import {
   DEFAULT_PLAN,
   type EntitlementsResponse,
+  type RecoveryBeginResponse,
+  type RecoveryPending,
   type RegisterStartResponse,
   type SessionResponse,
 } from '@impact-log/shared'
@@ -84,6 +86,20 @@ type AdoptionPlan = 'create' | 'same' | 'merge' | 'wipe'
 /** Вход прошёл пароль, ждём код 2FA. KEK держим в замыкании до ответа, затем обнуляем */
 export type PendingSecondFactor = {
   verify(code: string, remember: boolean, onStage?: StageReporter): Promise<void>
+  /**
+   * Путь B (телефона нет): Recovery Key вместо кода → новая 2FA для приложения. Неверный ключ —
+   * 401 INVALID_CREDENTIALS (считается попыткой, как неверный код).
+   */
+  submitRecoveryKey(recoveryKey: string, onStage?: StageReporter): Promise<RegisterStartResponse>
+  /**
+   * Путь B: первый код новой 2FA → вход (старая 2FA, остальные сессии и «запомненные» компьютеры
+   * сброшены сервером). Возвращает authKey пароля — перевыпустить Recovery Key без повторного ввода.
+   */
+  resetTotp(
+    code: string,
+    remember: boolean,
+    onStage?: StageReporter,
+  ): Promise<{ currentAuthKey: string }>
   cancel(): void
 }
 
@@ -94,15 +110,32 @@ export type PreparedRegistration = {
   password: PasswordMaterial
 }
 
+/** Отложенное восстановление аккаунта на момент begin: none | pending | ready */
+export type DelayedRecovery = RecoveryBeginResponse['delayed']
+
+/**
+ * Recovery Key подтверждён (recovery-сессия), нужен второй фактор (ADR-0008 §7):
+ * A — код 2FA (verify); C — без него, через RECOVERY_DELAY_HOURS (startDelay → позже resume).
+ * Recovery Key держим в замыкании до выдачи конверта, MK — до complete.
+ */
 export type PendingRecovery = {
+  readonly delayed: DelayedRecovery
+  /** A. Код 2FA → конверт → MK. Неверный код — INVALID_CODE; блокировка перебора — RATE_LIMITED */
+  verify(code: string, onStage?: StageReporter): Promise<void>
+  /** C. Запустить отсчёт (идемпотентно) → когда станет доступно */
+  startDelay(): Promise<RecoveryPending>
+  /** C. Задержка прошла → конверт → MK. Рано или не начато — 403 RECOVERY_NOT_READY */
+  resume(onStage?: StageReporter): Promise<void>
   /**
-   * Новый пароль → recovery/complete. Возвращает authKey нового пароля (для перевыпуска 2FA/ключа).
-   * Если на устройстве чужие для аккаунта записи — сначала спрашивает decideMerge (до запроса к серверу).
+   * Новый пароль → recovery/complete (только после verify/resume). Возвращает authKey нового пароля
+   * (для перевыпуска 2FA/ключа) и totpRequired — доступ открыт без второго фактора (C): телефона нет,
+   * 2FA нужно привязать заново сразу же. Если на устройстве чужие для аккаунта записи — сначала
+   * спрашивает decideMerge (до запроса к серверу).
    */
   complete(
     newPassword: string,
     options?: { onStage?: StageReporter; decideMerge?: MergeDecider },
-  ): Promise<{ currentAuthKey: string }>
+  ): Promise<{ currentAuthKey: string; totpRequired: boolean }>
   cancel(): void
 }
 
@@ -416,6 +449,26 @@ export function useAccount() {
           throw error
         }
       },
+      async submitRecoveryKey(recoveryKey, stage = noop) {
+        if (used) throw new ApiError(401, 'SESSION_EXPIRED')
+        stage('verify')
+        const recoveryAuthKey = await recoveryAuthKeyFrom(recoveryKey)
+        stage('server')
+        return authApi.loginRecoveryKey(recoveryAuthKey)
+      },
+      async resetTotp(code, remember, stage = noop) {
+        if (used) throw new ApiError(401, 'SESSION_EXPIRED')
+        stage('server')
+        const response = await authApi.loginTotpReset({ code, remember })
+        used = true
+        try {
+          await unlockAfterLogin(kek, response, kdfPin, options, stage)
+        } catch (error) {
+          resumeSync()
+          throw error
+        }
+        return { currentAuthKey: authKey }
+      },
       cancel() {
         const pending = !used
         used = true
@@ -427,6 +480,10 @@ export function useAccount() {
 
   // ---------- восстановление по Recovery Key ----------
 
+  /**
+   * Шаг 1: Recovery Key → recoveryAuthKey → recovery-сессия. Конверт MK сервер отдаст только после
+   * второго фактора (verify) или задержки (resume); до тех пор ключ — только в замыкании.
+   */
   async function beginRecovery(
     loginName: string,
     recoveryKey: string,
@@ -435,13 +492,40 @@ export function useAccount() {
     onStage('verify')
     const recoveryAuthKey = await recoveryAuthKeyFrom(recoveryKey)
     onStage('server')
-    const { recoveryEnvelope } = await authApi.recoveryBegin({ login: loginName, recoveryAuthKey })
-    onStage('unlock')
-    const masterKey = await openRecoveryEnvelopeText(recoveryEnvelope, recoveryKey)
+    const { delayed } = await authApi.recoveryBegin({ login: loginName, recoveryAuthKey })
+    let key: string | null = recoveryKey
+    let masterKey: Uint8Array | null = null
+    let unlockedBy: 'code' | 'delay' | null = null
     let done = false
+
+    async function unlock(envelope: string, by: 'code' | 'delay', stage: StageReporter) {
+      if (!key) throw new ApiError(401, 'SESSION_EXPIRED')
+      stage('unlock')
+      masterKey = await openRecoveryEnvelopeText(envelope, key)
+      key = null
+      unlockedBy = by
+    }
+
     return {
-      async complete(newPassword, options = {}) {
+      delayed,
+      async verify(code, stage = noop) {
         if (done) throw new ApiError(401, 'SESSION_EXPIRED')
+        stage('server')
+        const { recoveryEnvelope } = await authApi.recoveryVerify(code)
+        await unlock(recoveryEnvelope, 'code', stage)
+      },
+      async startDelay() {
+        if (done) throw new ApiError(401, 'SESSION_EXPIRED')
+        return authApi.recoveryDelay()
+      },
+      async resume(stage = noop) {
+        if (done) throw new ApiError(401, 'SESSION_EXPIRED')
+        stage('server')
+        const { recoveryEnvelope } = await authApi.recoveryResume()
+        await unlock(recoveryEnvelope, 'delay', stage)
+      },
+      async complete(newPassword, options = {}) {
+        if (done || !masterKey) throw new ApiError(401, 'SESSION_EXPIRED')
         const stage = options.onStage ?? noop
         // Что делать с локальными записями — спрашиваем до запроса к серверу: отмена ничего не меняет
         const plan = await planAdoption(masterKey, loginName, options.decideMerge)
@@ -471,13 +555,25 @@ export function useAccount() {
           { login: response.user.login, kdf: password.kdf, salt: password.salt },
           plan,
         )
-        return { currentAuthKey: password.authKey }
+        masterKey = null
+        return { currentAuthKey: password.authKey, totpRequired: unlockedBy === 'delay' }
       },
       cancel() {
         done = true
-        masterKey.fill(0)
+        key = null
+        masterKey?.fill(0)
+        masterKey = null
       },
     }
+  }
+
+  /**
+   * Отменить отложенное восстановление (с вошедшего устройства): кто-то запустил его без пароля и 2FA.
+   * Recovery Key при этом остаётся действующим — его стоит перевыпустить.
+   */
+  async function cancelDelayedRecovery() {
+    await accountApi.cancelRecovery().catch(handle)
+    session.clearRecoveryPending()
   }
 
   // ---------- действия с повторным подтверждением паролем ----------
@@ -507,6 +603,8 @@ export function useAccount() {
       const next = await createPasswordMaterial(newPassword, masterKey)
       onStage('server')
       await accountApi.changePassword({ currentAuthKey: authKey, ...next }).catch(handle)
+      // Смена пароля снимает и отложенное восстановление (сервер), предупреждение больше не нужно
+      session.clearRecoveryPending()
       // Новые соль и параметры KDF — это наша смена, при следующем входе предупреждать не о чем
       const current = account.value
       if (current) {
@@ -556,6 +654,8 @@ export function useAccount() {
         recoveryAuthKey: material.recoveryAuthKey,
       })
       .catch(handle)
+    // Старый ключ больше не действует — отложенное восстановление по нему сервер снял
+    session.clearRecoveryPending()
   }
 
   /**
@@ -656,6 +756,7 @@ export function useAccount() {
     confirmRegistration,
     login,
     beginRecovery,
+    cancelDelayedRecovery,
     currentAuthKey,
     changePassword,
     prepareRecoveryKey,
