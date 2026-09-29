@@ -9,5 +9,6 @@ coverage/
 !.env.example
 .transfer/
 .private/
+docs/reports/
 apps/vscode-extension/LICENSE
 /apps/chrome-extension/store/*.zip
