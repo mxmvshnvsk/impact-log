@@ -144,9 +144,12 @@ router.beforeEach(async (to) => {
   return true
 })
 
+/** Заголовок вкладки и описание для поисковиков — на языке интерфейса (статичные теги — src/seo/seoPlugin.ts) */
 function applyTitle(to: RouteLocationNormalized) {
-  const title = to.meta.title ? i18n.global.t(to.meta.title) : null
-  document.title = title ? `${title} · impact log` : 'impact log'
+  const { t } = i18n.global
+  const title = to.meta.title ? t(to.meta.title) : null
+  document.title = title ? `${title} · impact log` : t('seo.title')
+  document.querySelector('meta[name="description"]')?.setAttribute('content', t('seo.description'))
 }
 
 router.afterEach((to) => {

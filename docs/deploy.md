@@ -110,6 +110,9 @@ curl -s https://impact-log.com/api/health
   вместо неизвестных путей SPA), `/sw.js` и `/manifest.webmanifest` — `no-cache`, иначе новая версия PWA
   может «застрять» в HTTP-кеше; манифест — `Content-Type: application/manifest+json` ([docs/pwa.md](pwa.md)).
 - Sourcemaps (`*.map`) есть в образе, но наружу не отдаются (404).
+- **Превью ссылок:** `?lang=en` на любом пути отдаёт `index.en.html` — ту же оболочку SPA с английскими
+  Open Graph-тегами (русские — в `index.html`). Теги, `robots.txt` и `sitemap.xml` собирает
+  `apps/web/src/seo/seoPlugin.ts` из строк `seo.*` и картинок `apps/web/public/og/`.
 - Логи доступа: IP усечены (IPv4 /24, IPv6 /48), заголовки запросов и ответов не пишутся.
 
 Аварийно выключить PWA у всех пользователей — нельзя просто удалить `sw.js`, нужен «самоудаляющийся»

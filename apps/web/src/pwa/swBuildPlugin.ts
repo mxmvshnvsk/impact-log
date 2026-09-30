@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { type Plugin, type ResolvedConfig, transformWithEsbuild } from 'vite'
+import { SEO_FILES } from '../seo/seoPlugin'
 
 /*
  * Vite-плагин (только build, выполняется в Node — приложение его не импортирует): собирает /sw.js
@@ -19,12 +20,14 @@ export interface PwaServiceWorkerOptions {
 }
 
 /**
- * Что не кладём в кеш: sourcemaps (наружу не отдаются), сам sw.js, служебные файлы (.vite/…, .DS_Store)
- * и media/ — картинки для витрин (README расширения VS Code в Marketplace), приложению они не нужны
+ * Что не кладём в кеш: sourcemaps (наружу не отдаются), сам sw.js, служебные файлы (.vite/…, .DS_Store),
+ * media/ — картинки для витрин (README расширения VS Code в Marketplace) и всё для превью ссылок и поисковиков
+ * (og/, index.en.html, robots.txt, sitemap.xml — src/seo/seoPlugin.ts): приложению они не нужны
  */
 function isShellFile(fileName: string, swFileName: string): boolean {
   if (fileName === swFileName || fileName.endsWith('.map')) return false
-  if (fileName.startsWith('media/')) return false
+  if (fileName.startsWith('media/') || fileName.startsWith('og/')) return false
+  if ((SEO_FILES as readonly string[]).includes(fileName)) return false
   return !fileName.split('/').some((part) => part.startsWith('.'))
 }
 

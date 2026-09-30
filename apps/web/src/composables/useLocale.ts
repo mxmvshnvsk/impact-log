@@ -1,6 +1,7 @@
 import { isLocale, type Locale, SUPPORTED_LOCALES } from '@impact-log/shared'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { dropUrlLocale } from '@/utils/locale'
 import { writeStoredLocale } from '@/utils/localeStorage'
 
 export function useLocale() {
@@ -11,6 +12,7 @@ export function useLocale() {
   function setLocale(next: Locale) {
     locale.value = next
     writeStoredLocale(next)
+    dropUrlLocale()
     document.documentElement.lang = next
   }
 

@@ -53,6 +53,11 @@
 		@manifest path /manifest.webmanifest
 		header @manifest Content-Type "application/manifest+json"
 
+		# Превью ссылок на английском: ?lang=en — та же оболочка SPA, но с английскими мета-тегами
+		# (index.en.html собирает apps/web/src/seo/seoPlugin.ts); язык интерфейса приложение переключит само
+		@en query lang=en
+		rewrite @en /index.en.html
+
 		# SPA: неизвестные пути отдаём index.html (vue-router, history mode)
 		try_files {path} /index.html
 		file_server

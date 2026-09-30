@@ -339,5 +339,11 @@
       "title": "Start your impact log today",
       "text": "One button and your journal is ready. Six months from now, you’ll thank yourself."
     }
+  },
+  "seo": {
+    "title": "impact log — a work journal for your performance review",
+    "ogTitle": "Your impact — in facts, not memories",
+    "description": "Log what you did and what it led to — your performance review summary will be ready. Works without sign-up; entries are encrypted on your device.",
+    "imageAlt": "impact log — a work journal: the entry “Cut CI time from 24 to 9 minutes” and its ciphertext"
   }
 }
