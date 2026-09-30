@@ -40,6 +40,10 @@ storage`, ключи локалей совпадают. При ошибке сб
 
 ## Установка
 
+Из магазина: [Chrome Web Store](https://chromewebstore.google.com/detail/jlgeedpgolalalfnecjcjhoflimbfpag).
+
+Из исходников (для разработки):
+
 1. `chrome://extensions` → включить «Режим разработчика».
 2. «Загрузить распакованное расширение» → папка `apps/chrome-extension/dist`.
 3. После пересборки — кнопка «Обновить» на карточке расширения.

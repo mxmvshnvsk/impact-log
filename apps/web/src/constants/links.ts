@@ -28,7 +28,7 @@ export interface CaptureClient {
 
 /** Клиенты быстрой записи — секция на лендинге */
 export const CAPTURE_CLIENTS: readonly CaptureClient[] = [
-  { key: 'chrome', url: CHROME_WEB_STORE_URL, published: false },
+  { key: 'chrome', url: CHROME_WEB_STORE_URL, published: true },
   { key: 'vscode', url: VSCODE_MARKETPLACE_URL, published: true },
   { key: 'cli', url: CLI_NPM_URL, published: true },
 ]

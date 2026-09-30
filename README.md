@@ -14,6 +14,14 @@ Local-first и сквозное шифрование: приложение ра�
 что уходит в сеть), можно проверить здесь — схема БД в `apps/api/src/db/schema.ts`, криптография в
 `packages/core/src/crypto`, хранилище в браузере в `apps/web/src/vault`.
 
+## Быстрая запись
+
+Черновик записи — из браузера, редактора или терминала; он открывается в impact log и через сервер не идёт.
+
+- Chrome — [Chrome Web Store](https://chromewebstore.google.com/detail/jlgeedpgolalalfnecjcjhoflimbfpag)
+- VS Code — [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=impact-log.impact-log-vscode)
+- Терминал — `npm install --global impact-log` ([npm](https://www.npmjs.com/package/impact-log))
+
 ## Структура
 
 ```
